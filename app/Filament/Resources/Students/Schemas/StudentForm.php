@@ -11,21 +11,28 @@ class StudentForm {
         return $schema
             ->components([
                 TextInput::make('full_name')
+                    ->label('Họ và tên')
                     ->required(),
                 TextInput::make('phone')
+                    ->label('Số điện thoại')
                     ->tel()
                     ->required(),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('Email')
                     ->email(),
                 TextInput::make('organization_id')
+                    ->label('Tổ chức')
                     ->required()
                     ->numeric(),
                 TextInput::make('collaborator_id')
+                    ->label('CTV giới thiệu')
                     ->numeric(),
-                TextInput::make('current_college'),
-                TextInput::make('target_university'),
-                TextInput::make('major'),
+                TextInput::make('current_college')
+                    ->label('Trường đang học'),
+                TextInput::make('target_university')
+                    ->label('Trường muốn học'),
+                TextInput::make('major')
+                    ->label('Ngành học'),
                 \Filament\Forms\Components\Select::make('source')
                     ->label('Nguồn')
                     ->options([
@@ -60,6 +67,7 @@ class StudentForm {
                     ->required()
                     ->default('new'),
                 Textarea::make('notes')
+                    ->label('Ghi chú')
                     ->columnSpanFull(),
             ]);
     }

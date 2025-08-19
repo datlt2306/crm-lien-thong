@@ -15,13 +15,15 @@ class CollaboratorsTable {
         return $table
             ->columns([
                 TextColumn::make('full_name')
+                    ->label('Họ và tên')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('phone')
+                    ->label('Số điện thoại')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('Email')
                     ->searchable(),
                 // TextColumn::make('organization.name')
                 //     ->label('Tổ chức')
@@ -29,10 +31,9 @@ class CollaboratorsTable {
                 TextColumn::make('ref_id')
                     ->label('Mã giới thiệu')
                     ->badge()
-                    ->copyable(fn($record) => url('/apply?ref=' . $record->ref_id))
+                    ->copyable(fn($record) => 'https://lienthongdaihoc.com/ref/' . $record->ref_id)
                     ->copyMessage('Đã copy link!')
                     ->copyMessageDuration(1500)
-                    ->formatStateUsing(fn($state) => $state)
                     ->extraAttributes(['class' => 'cursor-pointer']),
                 TextColumn::make('status')
                     ->label('Trạng thái')
@@ -40,10 +41,12 @@ class CollaboratorsTable {
                     ->color(fn($state) => $state === 'active' ? 'success' : 'danger')
                     ->formatStateUsing(fn($state) => $state === 'active' ? 'Kích hoạt' : 'Vô hiệu'),
                 TextColumn::make('created_at')
+                    ->label('Ngày tạo')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
+                    ->label('Ngày cập nhật')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
