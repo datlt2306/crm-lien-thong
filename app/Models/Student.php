@@ -17,6 +17,8 @@ class Student extends Model {
         'source',
         'status',
         'notes',
+        'dob',
+        'address',
     ];
 
     // Enum StudentStatus

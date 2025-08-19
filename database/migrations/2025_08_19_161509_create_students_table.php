@@ -19,6 +19,8 @@ return new class extends Migration {
             $table->string('current_college')->nullable();
             $table->string('target_university')->nullable();
             $table->string('major')->nullable();
+            $table->date('dob')->nullable();
+            $table->string('address')->nullable();
             $table->enum('source', ['form', 'ref', 'facebook', 'zalo', 'tiktok', 'hotline', 'event', 'school', 'walkin', 'other'])->default('form');
             $table->enum('status', ['new', 'contacted', 'submitted', 'approved', 'enrolled', 'rejected', 'pending', 'interviewed', 'deposit_paid', 'offer_sent', 'offer_accepted'])->default('new');
             $table->longText('notes')->nullable();
