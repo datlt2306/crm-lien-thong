@@ -23,6 +23,8 @@ class OrganizationResource extends Resource {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Setup';
 
+    protected static ?string $navigationLabel = 'Đơn vị';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Schema $schema): Schema {

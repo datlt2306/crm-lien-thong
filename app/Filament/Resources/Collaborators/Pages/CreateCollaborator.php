@@ -23,4 +23,11 @@ class CreateCollaborator extends CreateRecord {
         }
         return $data;
     }
+
+    public function getTitle(): string {
+        return 'Thêm cộng tác viên mới';
+    }
+    public function getBreadcrumb(): string {
+        return 'Thêm cộng tác viên mới';
+    }
 }

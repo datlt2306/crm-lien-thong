@@ -14,16 +14,16 @@ class OrganizationsTable {
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('Tên tổ chức')
+                    ->label('Tên đơn vị')
                     ->searchable(),
-                TextColumn::make('code')
-                    ->label('Mã tổ chức')
-                    ->searchable(),
+                // TextColumn::make('code')
+                //     ->label('Mã đơn vị')
+                //     ->searchable(),
                 TextColumn::make('contact_name')
                     ->label('Người liên hệ')
                     ->searchable(),
                 TextColumn::make('contact_phone')
-                    ->label('SĐT liên hệ')
+                    ->label('Số điện thoại liên hệ')
                     ->searchable(),
                 TextColumn::make('status')
                     ->label('Trạng thái')
@@ -31,10 +31,12 @@ class OrganizationsTable {
                     ->color(fn($state) => $state === 'active' ? 'success' : 'danger')
                     ->formatStateUsing(fn($state) => $state === 'active' ? 'Kích hoạt' : 'Vô hiệu'),
                 TextColumn::make('created_at')
+                    ->label('Ngày tạo')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
+                    ->label('Ngày cập nhật')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

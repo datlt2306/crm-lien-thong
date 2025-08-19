@@ -10,14 +10,14 @@ class OrganizationForm {
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label('Tên tổ chức')
+                    ->label('Tên đơn vị')
                     ->required()
                     ->live(onBlur: true)
                     ->afterStateUpdated(function ($state, callable $set) {
                         $set('code', \Str::slug($state));
                     }),
                 TextInput::make('code')
-                    ->label('Mã tổ chức')
+                    ->label('Mã đơn vị')
                     ->required()
                     ->disabled(),
                 TextInput::make('contact_name')
@@ -26,7 +26,7 @@ class OrganizationForm {
                     ->label('Số điện thoại liên hệ')
                     ->tel(),
                 \Filament\Forms\Components\Select::make('owner_id')
-                    ->label('Chủ tổ chức')
+                    ->label('Chủ đơn vị')
                     ->relationship('owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'user']))
                     ->searchable()
                     ->preload(),
