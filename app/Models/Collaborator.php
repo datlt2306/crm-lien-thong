@@ -20,7 +20,7 @@ class Collaborator extends Model {
      * Quan hệ: Thuộc tổ chức
      */
     public function organization() {
-        return $this->belongsTo(Organization::class);
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     /**

@@ -33,8 +33,8 @@ class CollaboratorsTable {
                 TextColumn::make('ref_id')
                     ->label('Mã giới thiệu')
                     ->badge()
-                    ->copyable()
-                    ->copyMessage('Đã copy!')
+                    ->copyable(fn($record) => url('/apply?ref=' . $record->ref_id))
+                    ->copyMessage('Đã copy link!')
                     ->copyMessageDuration(1500)
                     ->formatStateUsing(fn($state) => $state)
                     ->extraAttributes(['class' => 'cursor-pointer']),
@@ -67,11 +67,6 @@ class CollaboratorsTable {
                     ]),
             ])
             ->recordActions([
-                Action::make('copy_ref_link')
-                    ->label('Copy ref link')
-                    ->icon('heroicon-o-clipboard')
-                    ->action(fn($record) => \Filament\Support\Facades\FilamentCopy::copy(url('/apply?ref=' . $record->ref_id)))
-                    ->tooltip('Copy đường dẫn giới thiệu'),
                 EditAction::make(),
             ])
             ->toolbarActions([

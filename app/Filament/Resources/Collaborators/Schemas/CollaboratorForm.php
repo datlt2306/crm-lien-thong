@@ -5,18 +5,12 @@ namespace App\Filament\Resources\Collaborators\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class CollaboratorForm {
     public static function configure(Schema $schema): Schema {
         return $schema
             ->components([
-                \Filament\Forms\Components\Select::make('upline_id')
-                    ->label('CTV giới thiệu (Upline)')
-                    ->relationship('upline', 'full_name')
-                    ->searchable()
-                    ->preload()
-                    ->nullable()
-                    ->helperText('Chọn CTV đã có để làm người giới thiệu/upline. Nếu không có, để trống.'),
                 TextInput::make('full_name')
                     ->label('Họ tên')
                     ->required(),
@@ -31,20 +25,22 @@ class CollaboratorForm {
                     ->unique(ignoreRecord: true)
                     ->nullable(),
                 \Filament\Forms\Components\TextInput::make('ref_id')
-                    ->label('Mã giới thiệu')
+                    ->label('Link giới thiệu')
                     ->readOnly()
                     ->unique(ignoreRecord: true)
                     ->required()
-                    ->visibleOn('edit')
-                    ->afterStateHydrated(function ($state, $component) {
-                        if ($state) {
-                            $component->helperText('Link giới thiệu: <a href="https://lienthongdaihoc.com/ref/' . $state . '" target="_blank" class="text-blue-600 underline">https://lienthongdaihoc.com/ref/' . $state . '</a>');
-                        }
-                    }),
+                    ->default(fn() => strtoupper(Str::random(8)))
+                    ->formatStateUsing(
+                        fn($state) =>
+                        $state ? 'https://lienthongdaihoc.com/ref/' . $state : ''
+                    )
+                    ->dehydrateStateUsing(
+                        fn($state) =>
+                        $state ? Str::afterLast($state, '/') : null
+                    ),
                 \Filament\Forms\Components\Select::make('organization_id')
                     ->label('Tổ chức')
                     ->relationship('organization', 'name')
-                    ->searchable()
                     ->required()
                     ->visible(fn() => auth()->user()?->role === 'super_admin'),
                 \Filament\Forms\Components\Textarea::make('note')
