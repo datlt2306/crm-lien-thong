@@ -47,7 +47,6 @@ class OrganizationResource extends Resource {
         return [
             'index' => ListOrganizations::route('/'),
             'create' => CreateOrganization::route('/create'),
-            'view' => ViewOrganization::route('/{record}'),
             'edit' => EditOrganization::route('/{record}/edit'),
         ];
     }
