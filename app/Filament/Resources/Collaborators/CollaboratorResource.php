@@ -15,6 +15,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class CollaboratorResource extends Resource {
     protected static ?string $model = Collaborator::class;
@@ -48,5 +50,19 @@ class CollaboratorResource extends Resource {
             'create' => CreateCollaborator::route('/create'),
             'edit' => EditCollaborator::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+        if ($user && $user->role === 'user') {
+            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+            if ($org) {
+                $query->where('organization_id', $org->id);
+            } else {
+                $query->whereNull('id'); // Không có tổ chức nào, không trả về gì
+            }
+        }
+        return $query;
     }
 }

@@ -8,6 +8,8 @@ use App\Models\Organization;
 use App\Policies\OrganizationPolicy;
 use App\Models\Collaborator;
 use App\Policies\CollaboratorPolicy;
+use App\Models\User;
+use App\Policies\UserPolicy;
 
 class AppServiceProvider extends ServiceProvider {
     /**
@@ -23,5 +25,6 @@ class AppServiceProvider extends ServiceProvider {
     public function boot(): void {
         Gate::policy(Organization::class, OrganizationPolicy::class);
         Gate::policy(Collaborator::class, CollaboratorPolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
     }
 }

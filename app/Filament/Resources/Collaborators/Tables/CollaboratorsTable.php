@@ -15,21 +15,17 @@ class CollaboratorsTable {
         return $table
             ->columns([
                 TextColumn::make('full_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('phone')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
-                TextColumn::make('organization_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('organization.name')
-                    ->label('Tổ chức')
-                    ->searchable(),
-                TextColumn::make('upline.full_name')
-                    ->label('Upline')
-                    ->searchable(),
+                // TextColumn::make('organization.name')
+                //     ->label('Tổ chức')
+                //     ->searchable(),
                 TextColumn::make('ref_id')
                     ->label('Mã giới thiệu')
                     ->badge()
@@ -38,9 +34,6 @@ class CollaboratorsTable {
                     ->copyMessageDuration(1500)
                     ->formatStateUsing(fn($state) => $state)
                     ->extraAttributes(['class' => 'cursor-pointer']),
-                TextColumn::make('upline_id')
-                    ->numeric()
-                    ->sortable(),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
