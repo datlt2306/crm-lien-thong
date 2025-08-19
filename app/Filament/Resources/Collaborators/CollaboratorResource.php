@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Auth;
 class CollaboratorResource extends Resource {
     protected static ?string $model = Collaborator::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Admissions';
+    protected static string|\UnitEnum|null $navigationGroup = null;
     protected static ?string $navigationLabel = 'Partners';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
