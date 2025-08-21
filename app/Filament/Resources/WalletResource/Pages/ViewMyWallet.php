@@ -14,10 +14,24 @@ class ViewMyWallet extends Page
 
     public function mount(): void
     {
-        $user = Auth::user();
-        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-        
-        if ($collaborator && $collaborator->wallet) {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                $this->data = ['error' => 'User not authenticated'];
+                return;
+            }
+            
+            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+            if (!$collaborator) {
+                $this->data = ['error' => 'Collaborator not found'];
+                return;
+            }
+            
+            if (!$collaborator->wallet) {
+                $this->data = ['error' => 'Wallet not found'];
+                return;
+            }
+            
             $this->data = [
                 'balance' => $collaborator->wallet->balance,
                 'total_received' => $collaborator->wallet->total_received,
@@ -25,6 +39,8 @@ class ViewMyWallet extends Page
                 'collaborator_name' => $collaborator->full_name,
                 'organization_name' => $collaborator->organization->name ?? 'N/A',
             ];
+        } catch (\Exception $e) {
+            $this->data = ['error' => $e->getMessage()];
         }
     }
 
@@ -46,6 +62,10 @@ class ViewMyWallet extends Page
 
     public function getContent(): string
     {
+        if (isset($this->data['error'])) {
+            return "<div class='p-4 bg-red-100 border border-red-400 text-red-700 rounded'>Lỗi: {$this->data['error']}</div>";
+        }
+        
         $balance = $this->data['balance'] ?? 0;
         $totalReceived = $this->data['total_received'] ?? 0;
         $totalPaid = $this->data['total_paid'] ?? 0;
