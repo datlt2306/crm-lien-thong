@@ -127,7 +127,7 @@ class WalletResource extends Resource {
                 \Filament\Actions\Action::make('transactions')
                     ->label('Giao dịch')
                     ->icon('heroicon-o-arrow-path')
-                    ->url(fn(Wallet $record): string => route('filament.admin.resources.wallet-transactions.index', ['wallet_id' => $record->id])),
+                    ->url(fn(Wallet $record): string => route('filament.admin.resources.wallet-transactions.index')),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
