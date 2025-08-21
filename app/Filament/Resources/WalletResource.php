@@ -28,6 +28,26 @@ class WalletResource extends Resource {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Quản lý hoa hồng';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = auth()->user();
+        
+        if ($user->role === 'super_admin') {
+            // Super admin luôn thấy menu này
+            return true;
+        }
+        
+        // Kiểm tra xem user có phải là CTV cấp 1 không và có tuyến dưới không
+        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+        
+        if (!$collaborator) {
+            return false;
+        }
+        
+        // Chỉ hiển thị nếu là CTV cấp 1 (không có upline) và có tuyến dưới
+        return $collaborator->isLevel1() && $collaborator->downlines()->exists();
+    }
+
     public static function form(Schema $schema): Schema {
         return $schema
             ->schema([
