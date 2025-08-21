@@ -35,8 +35,8 @@ class CollaboratorsTable {
                     ->counts('downlines')
                     ->badge()
                     ->color('info')
-                    ->formatStateUsing(function ($state, $record) {
-                        return $state > 0 ? $state : null;
+                    ->visible(function ($record) {
+                        return $record && $record->downlines()->count() > 0;
                     }),
                 // TextColumn::make('organization.name')
                 //     ->label('Tổ chức')
@@ -44,10 +44,10 @@ class CollaboratorsTable {
                 TextColumn::make('ref_id')
                     ->label('Mã giới thiệu')
                     ->badge()
+                    ->color('warning')
                     ->copyable(fn($record) => 'https://lienthongdaihoc.com/ref/' . $record->ref_id)
-                    ->copyMessage('Đã copy link!')
-                    ->copyMessageDuration(1500)
-                    ->extraAttributes(['class' => 'cursor-pointer']),
+                    ->copyMessage('Đã copy link giới thiệu!')
+                    ->copyMessageDuration(2000),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
