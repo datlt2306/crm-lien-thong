@@ -43,14 +43,14 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('program_type')
                     ->label('Loại chương trình')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'cq' => 'success',
-                        'vhvlv' => 'warning',
+                    ->color(fn(string $state): string => match (strtoupper($state)) {
+                        'REGULAR' => 'success',
+                        'PART_TIME' => 'warning',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'cq' => 'Chính quy',
-                        'vhvlv' => 'VHVLV',
+                    ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'VHVLV',
                         default => $state,
                     }),
 
@@ -62,14 +62,14 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
                     ->colors([
-                        'warning' => 'pending',
-                        'success' => 'verified',
-                        'danger' => 'rejected',
+                        'warning' => 'SUBMITTED',
+                        'success' => 'VERIFIED',
+                        'danger' => 'REJECTED',
                     ])
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'pending' => 'Chờ xác nhận',
-                        'verified' => 'Đã xác nhận',
-                        'rejected' => 'Từ chối',
+                    ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
+                        'SUBMITTED' => 'Chờ xác nhận',
+                        'VERIFIED' => 'Đã xác nhận',
+                        'REJECTED' => 'Từ chối',
                         default => $state,
                     }),
 
@@ -90,8 +90,9 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Filters\SelectFilter::make('program_type')
                     ->label('Loại chương trình')
                     ->options([
-                        'cq' => 'Chính quy',
-                        'vhvlv' => 'VHVLV',
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'VHVLV',
+                        'DISTANCE' => 'Đào tạo từ xa',
                     ]),
             ])
             ->actions([
@@ -101,13 +102,26 @@ class PaymentResource extends Resource {
                     ->color('success')
                     ->requiresConfirmation()
                     ->modalHeading('Xác nhận thanh toán')
-                    ->modalDescription('Bạn có chắc chắn muốn xác nhận thanh toán này? Hệ thống sẽ tự động tạo commission cho CTV.')
+                    ->modalDescription('Xác nhận đã nhận tiền và chọn hệ đào tạo cho sinh viên. Hệ thống sẽ tự động tạo commission cho CTV.')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn(Payment $record): bool => $record->status === 'pending')
-                    ->action(function (Payment $record) {
+                    ->visible(fn(Payment $record): bool => strtoupper($record->status) === 'SUBMITTED')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('program_type')
+                            ->label('Hệ đào tạo')
+                            ->options([
+                                'REGULAR' => 'Chính quy',
+                                'PART_TIME' => 'VHVLV',
+                            ])
+                            ->required(),
+                    ])
+                    ->fillForm(fn(Payment $record): array => [
+                        'program_type' => strtoupper($record->program_type),
+                    ])
+                    ->action(function (Payment $record, array $data) {
                         $record->update([
-                            'status' => 'verified',
+                            'status' => 'VERIFIED',
+                            'program_type' => $data['program_type'],
                             'verified_by' => auth()->id(),
                             'verified_at' => now(),
                         ]);
@@ -118,7 +132,7 @@ class PaymentResource extends Resource {
 
                         \Filament\Notifications\Notification::make()
                             ->title('Đã xác nhận thanh toán')
-                            ->body('Commission đã được tạo tự động.')
+                            ->body('Commission đã được tạo tự động theo hệ đào tạo đã chọn.')
                             ->success()
                             ->send();
                     }),

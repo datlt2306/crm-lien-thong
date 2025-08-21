@@ -13,6 +13,7 @@
     <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
         <h1 class="text-2xl font-bold mb-4 text-center">Đăng ký xét tuyển</h1>
         <p class="mb-2 text-center text-gray-600">Mã giới thiệu: <span class="font-semibold text-blue-600">{{ $ref_id }}</span></p>
+        <p class="mb-4 text-center text-gray-600">Trường muốn học: <span class="font-semibold text-green-600">{{ $collaborator->organization->name ?? 'N/A' }}</span></p>
         @if($success)
         <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center">{{ $success }}</div>
         @endif
@@ -41,7 +42,12 @@
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Trường đang học</label>
-                <input type="text" name="current_college" value="{{ old('current_college') }}" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
+                <select name="current_college" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                    <option value="">-- Chọn trường --</option>
+                    @foreach(($organizations ?? []) as $orgName)
+                    <option value="{{ $orgName }}" {{ old('current_college') == $orgName ? 'selected' : '' }}>{{ $orgName }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ngày tháng năm sinh *</label>
@@ -52,16 +58,8 @@
                 <input type="text" name="address" value="{{ old('address') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
             </div>
             <div class="mb-3">
-                <label class="block font-medium mb-1">Trường muốn học *</label>
-                <select name="target_university" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
-                    <option value="">-- Chọn trường --</option>
-                    <option value="Đại học Giao thông Vận tải" {{ old('target_university') == 'Đại học Giao thông Vận tải' ? 'selected' : '' }}>Đại học Giao thông Vận tải</option>
-                    <option value="Đại học Mở" {{ old('target_university') == 'Đại học Mở' ? 'selected' : '' }}>Đại học Mở</option>
-                    <option value="Đại học Bách Khoa" {{ old('target_university') == 'Đại học Bách Khoa' ? 'selected' : '' }}>Đại học Bách Khoa</option>
-                    <option value="Đại học Kinh tế Quốc dân" {{ old('target_university') == 'Đại học Kinh tế Quốc dân' ? 'selected' : '' }}>Đại học Kinh tế Quốc dân</option>
-                    <option value="Đại học Ngoại thương" {{ old('target_university') == 'Đại học Ngoại thương' ? 'selected' : '' }}>Đại học Ngoại thương</option>
-                    <option value="Khác" {{ old('target_university') == 'Khác' ? 'selected' : '' }}>Khác</option>
-                </select>
+                <label class="block font-medium mb-1">Trường muốn học</label>
+                <input type="text" value="{{ $collaborator->organization->name ?? '' }}" disabled class="w-full border rounded px-3 py-2 bg-gray-100" />
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ngành học</label>

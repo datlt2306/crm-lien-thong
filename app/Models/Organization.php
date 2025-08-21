@@ -32,4 +32,12 @@ class Organization extends Model {
     public function owner() {
         return $this->belongsTo(User::class, 'owner_id');
     }
+
+    public function majors() {
+        return $this->belongsToMany(Major::class, 'major_organization')->withPivot(['quota'])->withTimestamps();
+    }
+
+    public function programs() {
+        return $this->belongsToMany(Program::class, 'organization_program')->withTimestamps();
+    }
 }

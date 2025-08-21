@@ -178,9 +178,16 @@ class CommissionService {
      * Lấy số tiền commission trực tiếp theo loại chương trình
      */
     private function getDirectCommissionAmount(string $programType): float {
+        // Đọc theo cấu hình bảng programs nếu có
+        $program = \App\Models\Program::where('code', strtoupper($programType))->first();
+        if ($program && $program->direct_commission_amount > 0) {
+            return (float) $program->direct_commission_amount;
+        }
+        // Fallback cứng
         return match (strtolower($programType)) {
-            'cq', 'regular' => 1750000, // 1.750k cho Chính quy/Regular
-            'vhvlv', 'part_time' => 750000, // 750k cho VHVLV/Part-time
+            'cq', 'regular' => 1750000,
+            'vhvlv', 'part_time' => 750000,
+            'distance' => 500000,
             default => 0,
         };
     }

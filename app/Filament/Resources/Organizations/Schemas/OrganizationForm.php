@@ -24,6 +24,57 @@ class OrganizationForm {
                     ->required()
                     ->disabled(),
 
+                Section::make('Đào tạo')
+                    ->description('Chọn ngành, chỉ tiêu và hệ đào tạo (cùng 1 dòng)')
+                    ->schema([
+                        \Filament\Forms\Components\Repeater::make('training_rows')
+                            ->label('Ngành / Chỉ tiêu / Hệ đào tạo')
+                            ->schema([
+                                \Filament\Forms\Components\Select::make('major_id')
+                                    ->label('Ngành')
+                                    ->options(fn() => \App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray())
+                                    ->required()
+                                    ->searchable(),
+                                \Filament\Forms\Components\TextInput::make('quota')
+                                    ->label('Chỉ tiêu')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->required(),
+                                \Filament\Forms\Components\Select::make('program_ids')
+                                    ->label('Hệ đào tạo')
+                                    // ->multiple()
+                                    ->options(fn() => \App\Models\Program::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray())
+                                    ->preload()
+                                    ->searchable(),
+                            ])
+                            ->columns(3)
+                            ->default(function (\App\Models\Organization $record = null) {
+                                if (!$record) return [];
+                                $defaultProgramIds = $record->programs()->pluck('program_id')->toArray();
+                                return $record->majors->map(fn($m) => [
+                                    'major_id' => $m->id,
+                                    'quota' => $m->pivot->quota,
+                                    'program_ids' => $defaultProgramIds,
+                                ])->toArray();
+                            })
+                            ->afterStateUpdated(function ($state, \App\Models\Organization $record = null) {
+                                if (!$record) return;
+                                // Sync majors + quota
+                                $syncMajors = [];
+                                $allProgramIds = [];
+                                foreach (($state ?? []) as $row) {
+                                    if (!empty($row['major_id'])) {
+                                        $syncMajors[$row['major_id']] = ['quota' => (int) ($row['quota'] ?? 0)];
+                                    }
+                                    if (!empty($row['program_ids']) && is_array($row['program_ids'])) {
+                                        $allProgramIds = array_merge($allProgramIds, $row['program_ids']);
+                                    }
+                                }
+                                $record->majors()->sync($syncMajors);
+                                $record->programs()->sync(array_values(array_unique($allProgramIds)));
+                            }),
+                    ]),
+
                 Section::make('Chủ đơn vị')
                     ->description('Chọn tài khoản có sẵn hoặc tạo mới')
                     ->visible(fn($context) => Auth::user()?->role === 'super_admin')

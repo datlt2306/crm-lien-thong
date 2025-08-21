@@ -20,11 +20,11 @@ class DownlineCommissionConfigResource extends Resource {
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static ?string $navigationLabel = 'Cấu hình hoa hồng tuyến dưới';
+    protected static ?string $navigationLabel = 'Hoa Hồng';
 
-    protected static ?string $modelLabel = 'Cấu hình hoa hồng tuyến dưới';
+    protected static ?string $modelLabel = 'Hoa Hồng';
 
-    protected static ?string $pluralModelLabel = 'Cấu hình hoa hồng tuyến dưới';
+    protected static ?string $pluralModelLabel = 'Hoa Hồng';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Quản lý hoa hồng';
 

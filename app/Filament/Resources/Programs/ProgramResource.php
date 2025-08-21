@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Filament\Resources\Programs;
+
+use App\Models\Program;
+use BackedEnum;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Filament\Actions\CreateAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Illuminate\Support\Facades\Auth;
+
+class ProgramResource extends Resource {
+    protected static ?string $model = Program::class;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
+    protected static ?string $navigationLabel = 'Hệ liên thông';
+    protected static string|\UnitEnum|null $navigationGroup = 'Setup';
+
+    public static function shouldRegisterNavigation(): bool {
+        $user = Auth::user();
+        if (!$user) return false;
+        return in_array($user->role, ['super_admin', 'chủ đơn vị']);
+    }
+
+    public static function form(Schema $schema): Schema {
+        return $schema->components([
+            \Filament\Forms\Components\TextInput::make('code')
+                ->label('Mã hệ')
+                ->required()
+                ->unique(ignoreRecord: true)
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn($state, callable $set) => $set('code', strtoupper($state))),
+            \Filament\Forms\Components\TextInput::make('name')
+                ->label('Tên hệ')
+                ->required(),
+            \Filament\Forms\Components\TextInput::make('direct_commission_amount')
+                ->label('Hoa hồng CTV1 mặc định (VND)')
+                ->numeric()
+                ->minValue(0)
+                ->required(),
+            \Filament\Forms\Components\Toggle::make('is_active')
+                ->label('Kích hoạt')
+                ->default(true),
+        ]);
+    }
+
+    public static function table(Table $table): Table {
+        return $table->columns([
+            \Filament\Tables\Columns\TextColumn::make('code')
+                ->label('Mã')
+                ->sortable()
+                ->searchable(),
+            \Filament\Tables\Columns\TextColumn::make('name')
+                ->label('Tên hệ')
+                ->sortable()
+                ->searchable(),
+            \Filament\Tables\Columns\TextColumn::make('direct_commission_amount')
+                ->label('Hoa hồng mặc định')
+                ->money('VND')
+                ->sortable(),
+            \Filament\Tables\Columns\BadgeColumn::make('is_active')
+                ->label('Trạng thái')
+                ->formatStateUsing(fn($state) => $state ? 'Kích hoạt' : 'Vô hiệu')
+                ->colors([
+                    'success' => fn($state) => $state === true,
+                    'danger' => fn($state) => $state === false,
+                ]),
+        ])->recordActions([
+            EditAction::make(),
+            DeleteAction::make(),
+        ])->headerActions([
+            CreateAction::make(),
+        ]);
+    }
+
+    public static function getPages(): array {
+        return [
+            'index' => Pages\ListPrograms::route('/'),
+            'create' => Pages\CreateProgram::route('/create'),
+            'edit' => Pages\EditProgram::route('/{record}/edit'),
+        ];
+    }
+}

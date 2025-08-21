@@ -51,6 +51,12 @@ class DatabaseSeeder extends Seeder {
             $superAdmin->syncPermissions(Permission::all());
         }
 
+        // Seed chương trình đào tạo
+        $this->call(ProgramSeeder::class);
+
+        // Majors
+        $this->call(MajorSeeder::class);
+
         // Sau đó mới tạo collaborators và students
         $this->call(CollaboratorSeeder::class);
         $this->call(StudentSeeder::class);

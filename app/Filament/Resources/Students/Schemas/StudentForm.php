@@ -31,12 +31,41 @@ class StudentForm {
                     ->relationship('collaborator', 'full_name')
                     // ->searchable()
                     ->helperText('Chọn người giới thiệu cho sinh viên này'),
-                TextInput::make('current_college')
-                    ->label('Trường đang học'),
-                TextInput::make('target_university')
-                    ->label('Trường muốn học'),
-                TextInput::make('major')
-                    ->label('Ngành học'),
+                \Filament\Forms\Components\Select::make('current_college')
+                    ->label('Trường đang học')
+                    ->options(function () {
+                        return \App\Models\Organization::orderBy('name')->pluck('name', 'name')->toArray();
+                    })
+                    ->searchable(),
+                \Filament\Forms\Components\TextInput::make('target_university')
+                    ->label('Trường muốn học')
+                    ->disabled()
+                    ->dehydrateStateUsing(function ($state, callable $get) {
+                        // Tự động set theo tên tổ chức
+                        $organizationId = $get('organization_id');
+                        if (!$organizationId) return $state;
+                        $org = \App\Models\Organization::find($organizationId);
+                        return $org?->name;
+                    })
+                    ->helperText('Tự động theo tên đơn vị'),
+                \Filament\Forms\Components\Select::make('program_type')
+                    ->label('Hệ liên thông')
+                    ->options(function () {
+                        return \App\Models\Program::where('is_active', true)->orderBy('name')->pluck('name', 'code')->toArray();
+                    })
+                    ->searchable()
+                    ->helperText('Chọn hệ dự kiến cho sinh viên'),
+                \Filament\Forms\Components\Select::make('major')
+                    ->label('Ngành học')
+                    ->options(function (callable $get) {
+                        $orgId = $get('organization_id');
+                        if (!$orgId) {
+                            return \App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray();
+                        }
+                        $org = \App\Models\Organization::with('majors')->find($orgId);
+                        return $org?->majors()->where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray() ?? [];
+                    })
+                    ->searchable(),
                 \Filament\Forms\Components\Select::make('source')
                     ->label('Nguồn')
                     ->options([
