@@ -275,6 +275,23 @@ class WalletTransactionResource extends Resource
         ];
     }
 
+    public static function getNavigationUrl(): string
+    {
+        $user = auth()->user();
+        
+        if ($user->role === 'super_admin') {
+            return static::getUrl('index');
+        }
+        
+        if ($user->role === 'user') {
+            // CTV sẽ được chuyển đến trang xem giao dịch của mình
+            return static::getUrl('index');
+        }
+        
+        // Org admin vẫn xem danh sách
+        return static::getUrl('index');
+    }
+
     public static function getPages(): array
     {
         return [

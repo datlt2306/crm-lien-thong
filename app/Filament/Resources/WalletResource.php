@@ -187,10 +187,28 @@ class WalletResource extends Resource {
         ];
     }
 
+    public static function getNavigationUrl(): string
+    {
+        $user = auth()->user();
+        
+        if ($user->role === 'super_admin') {
+            return static::getUrl('index');
+        }
+        
+        if ($user->role === 'user') {
+            // CTV sẽ được chuyển đến trang xem ví của mình
+            return static::getUrl('my-wallet');
+        }
+        
+        // Org admin vẫn xem danh sách
+        return static::getUrl('index');
+    }
+
     public static function getPages(): array {
         return [
             'index' => Pages\ListWallets::route('/'),
             'view' => Pages\ViewWallet::route('/{record}'),
+            'my-wallet' => Pages\ViewMyWallet::route('/my-wallet'),
         ];
     }
 }
