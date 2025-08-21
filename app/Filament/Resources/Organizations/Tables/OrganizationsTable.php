@@ -19,12 +19,29 @@ class OrganizationsTable {
                 // TextColumn::make('code')
                 //     ->label('Mã đơn vị')
                 //     ->searchable(),
-                TextColumn::make('owner.name')
+                TextColumn::make('owner_contact')
                     ->label('Chủ đơn vị')
-                    ->searchable()
-                    ->description(fn($record) => $record->owner?->email)
-                    ->badge()
-                    ->color('info'),
+                    ->state(fn($record) => $record->owner)
+                    ->formatStateUsing(function ($owner) {
+                        if (!$owner) return '—';
+                        $name = $owner->name ?? '';
+                        $email = $owner->email ?? '';
+                        $lines = [];
+                        if ($name) {
+                            $lines[] = e($name);
+                        }
+                        if ($email) {
+                            $lines[] = '<span class="text-gray-500">' . e($email) . '</span>';
+                        }
+                        return implode('<br>', $lines) ?: '—';
+                    })
+                    ->html()
+                    ->searchable(query: function ($query, $search) {
+                        return $query->whereHas('owner', function ($q) use ($search) {
+                            $q->where('name', 'like', "%$search%")
+                                ->orWhere('email', 'like', "%$search%");
+                        });
+                    }),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()

@@ -17,12 +17,28 @@ class StudentsTable {
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
                     ->searchable(),
-                TextColumn::make('phone')
-                    ->label('Số điện thoại')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->label('Email')
-                    ->searchable(),
+                TextColumn::make('contact')
+                    ->label('Liên hệ')
+                    ->state(fn($record) => $record)
+                    ->formatStateUsing(function ($record) {
+                        $phone = $record->phone ?: '';
+                        $email = $record->email ?: '';
+                        $lines = [];
+                        if ($phone) {
+                            $lines[] = '📞 ' . e($phone);
+                        }
+                        if ($email) {
+                            $lines[] = '✉️ ' . e($email);
+                        }
+                        return implode('<br>', $lines) ?: '—';
+                    })
+                    ->html()
+                    ->searchable(query: function ($query, $search) {
+                        return $query->where(function ($q) use ($search) {
+                            $q->where('phone', 'like', "%$search%")
+                                ->orWhere('email', 'like', "%$search%");
+                        });
+                    }),
                 TextColumn::make('collaborator.full_name')
                     ->label('Người giới thiệu')
                     ->searchable()
