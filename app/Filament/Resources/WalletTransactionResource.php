@@ -36,15 +36,15 @@ class WalletTransactionResource extends Resource
             return true;
         }
         
-        // Kiểm tra xem user có phải là CTV cấp 1 không và có tuyến dưới không
+        // Kiểm tra xem user có phải là CTV không
         $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
         
         if (!$collaborator) {
             return false;
         }
         
-        // Chỉ hiển thị nếu là CTV cấp 1 (không có upline) và có tuyến dưới
-        return $collaborator->isLevel1() && $collaborator->downlines()->exists();
+        // Tất cả CTV đều thấy menu giao dịch để xem lịch sử của mình
+        return true;
     }
 
     public static function form(Schema $schema): Schema
@@ -241,7 +241,23 @@ class WalletTransactionResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->modifyQueryUsing(function (Builder $query) {
                 $user = auth()->user();
-                if ($user->role !== 'super_admin') {
+                if ($user->role === 'super_admin') {
+                    // Super admin thấy tất cả
+                    return;
+                }
+                
+                if ($user->role === 'user') {
+                    // CTV chỉ thấy giao dịch của mình
+                    $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                    if ($collaborator) {
+                        $query->whereHas('wallet', function ($q) use ($collaborator) {
+                            $q->where('collaborator_id', $collaborator->id);
+                        });
+                    } else {
+                        $query->whereNull('id'); // Không trả về gì nếu không tìm thấy collaborator
+                    }
+                } else {
+                    // Org admin chỉ thấy giao dịch của tổ chức mình
                     $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                     if ($org) {
                         $query->whereHas('wallet.collaborator', function ($q) use ($org) {
