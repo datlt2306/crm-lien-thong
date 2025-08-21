@@ -19,12 +19,12 @@ class OrganizationsTable {
                 // TextColumn::make('code')
                 //     ->label('Mã đơn vị')
                 //     ->searchable(),
-                TextColumn::make('contact_name')
-                    ->label('Người liên hệ')
-                    ->searchable(),
-                TextColumn::make('contact_phone')
-                    ->label('Số điện thoại liên hệ')
-                    ->searchable(),
+                TextColumn::make('owner.name')
+                    ->label('Chủ đơn vị')
+                    ->searchable()
+                    ->description(fn($record) => $record->owner?->email)
+                    ->badge()
+                    ->color('info'),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()

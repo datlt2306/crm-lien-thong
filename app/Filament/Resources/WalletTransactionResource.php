@@ -13,8 +13,7 @@ use Filament\Actions\ViewAction;
 use Filament\Actions\BulkActionGroup;
 use Illuminate\Database\Eloquent\Builder;
 
-class WalletTransactionResource extends Resource
-{
+class WalletTransactionResource extends Resource {
     protected static ?string $model = WalletTransaction::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path';
@@ -27,28 +26,28 @@ class WalletTransactionResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Quản lý hoa hồng';
 
-    public static function shouldRegisterNavigation(): bool
-    {
+    public static function shouldRegisterNavigation(): bool {
         $user = auth()->user();
-        
+
         if ($user->role === 'super_admin') {
             // Super admin luôn thấy menu này
             return true;
         }
-        
-        // Kiểm tra xem user có phải là CTV không
-        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-        
-        if (!$collaborator) {
-            return false;
+
+        if ($user->role === 'chủ đơn vị') {
+            // Chủ đơn vị thấy menu giao dịch để quản lý giao dịch của tổ chức
+            return true;
         }
-        
-        // Tất cả CTV đều thấy menu giao dịch để xem lịch sử của mình
-        return true;
+
+        if ($user->role === 'ctv') {
+            // CTV thấy menu giao dịch để xem lịch sử của mình
+            return true;
+        }
+
+        return false;
     }
 
-    public static function form(Schema $schema): Schema
-    {
+    public static function form(Schema $schema): Schema {
         return $schema
             ->schema([
                 Forms\Components\Select::make('wallet_id')
@@ -142,8 +141,7 @@ class WalletTransactionResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
-    {
+    public static function table(Table $table): Table {
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('wallet.collaborator.full_name')
@@ -164,7 +162,7 @@ class WalletTransactionResource extends Resource
                         'warning' => 'transfer_out',
                         'info' => 'transfer_in',
                     ])
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
                         'deposit' => 'Nạp tiền',
                         'withdrawal' => 'Rút tiền',
                         'transfer_out' => 'Chuyển tiền đi',
@@ -176,7 +174,8 @@ class WalletTransactionResource extends Resource
                     ->label('Số tiền')
                     ->money('VND')
                     ->sortable()
-                    ->color(fn (string $state, WalletTransaction $record): string => 
+                    ->color(
+                        fn(string $state, WalletTransaction $record): string =>
                         in_array($record->type, ['deposit', 'transfer_in']) ? 'success' : 'danger'
                     ),
 
@@ -245,8 +244,8 @@ class WalletTransactionResource extends Resource
                     // Super admin thấy tất cả
                     return;
                 }
-                
-                if ($user->role === 'user') {
+
+                if ($user->role === 'ctv') {
                     // CTV chỉ thấy giao dịch của mình
                     $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
@@ -256,8 +255,8 @@ class WalletTransactionResource extends Resource
                     } else {
                         $query->whereNull('id'); // Không trả về gì nếu không tìm thấy collaborator
                     }
-                } else {
-                    // Org admin chỉ thấy giao dịch của tổ chức mình
+                } else if ($user->role === 'chủ đơn vị') {
+                    // Chủ đơn vị chỉ thấy giao dịch của tổ chức mình
                     $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                     if ($org) {
                         $query->whereHas('wallet.collaborator', function ($q) use ($org) {
@@ -268,32 +267,33 @@ class WalletTransactionResource extends Resource
             });
     }
 
-    public static function getRelations(): array
-    {
+    public static function getRelations(): array {
         return [
             //
         ];
     }
 
-    public static function getNavigationUrl(): string
-    {
+    public static function getNavigationUrl(): string {
         $user = auth()->user();
-        
+
         if ($user->role === 'super_admin') {
             return static::getUrl('index');
         }
-        
-        if ($user->role === 'user') {
+
+        if ($user->role === 'ctv') {
             // CTV sẽ được chuyển đến trang xem giao dịch của mình
             return static::getUrl('index');
         }
-        
-        // Org admin vẫn xem danh sách
+
+        if ($user->role === 'chủ đơn vị') {
+            // Chủ đơn vị vẫn xem danh sách
+            return static::getUrl('index');
+        }
+
         return static::getUrl('index');
     }
 
-    public static function getPages(): array
-    {
+    public static function getPages(): array {
         return [
             'index' => Pages\ListWalletTransactions::route('/'),
             'view' => Pages\ViewWalletTransaction::route('/{record}'),

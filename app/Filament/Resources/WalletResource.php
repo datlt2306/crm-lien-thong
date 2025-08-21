@@ -28,24 +28,25 @@ class WalletResource extends Resource {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Quản lý hoa hồng';
 
-    public static function shouldRegisterNavigation(): bool
-    {
+    public static function shouldRegisterNavigation(): bool {
         $user = auth()->user();
-        
+
         if ($user->role === 'super_admin') {
             // Super admin luôn thấy menu này
             return true;
         }
-        
-        // Kiểm tra xem user có phải là CTV không
-        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-        
-        if (!$collaborator) {
-            return false;
+
+        if ($user->role === 'chủ đơn vị') {
+            // Chủ đơn vị thấy menu ví tiền để quản lý ví của tổ chức
+            return true;
         }
-        
-        // Tất cả CTV đều thấy menu ví tiền để xem số dư của mình
-        return true;
+
+        if ($user->role === 'ctv') {
+            // CTV thấy menu ví tiền để xem số dư của mình
+            return true;
+        }
+
+        return false;
     }
 
     public static function form(Schema $schema): Schema {
@@ -57,7 +58,7 @@ class WalletResource extends Resource {
                         $user = auth()->user();
                         if ($user->role === 'super_admin') {
                             return \App\Models\Collaborator::pluck('full_name', 'id');
-                        } else {
+                        } else if ($user->role === 'chủ đơn vị') {
                             $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                             if ($org) {
                                 return \App\Models\Collaborator::where('organization_id', $org->id)
@@ -133,7 +134,7 @@ class WalletResource extends Resource {
                         $user = auth()->user();
                         if ($user->role === 'super_admin') {
                             return \App\Models\Organization::pluck('name', 'id');
-                        } else {
+                        } else if ($user->role === 'chủ đơn vị') {
                             $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                             if ($org) {
                                 return [$org->id => $org->name];
@@ -160,8 +161,8 @@ class WalletResource extends Resource {
                     // Super admin thấy tất cả
                     return;
                 }
-                
-                if ($user->role === 'user') {
+
+                if ($user->role === 'ctv') {
                     // CTV chỉ thấy ví của mình
                     $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
@@ -169,8 +170,8 @@ class WalletResource extends Resource {
                     } else {
                         $query->whereNull('id'); // Không trả về gì nếu không tìm thấy collaborator
                     }
-                } else {
-                    // Org admin chỉ thấy ví của tổ chức mình
+                } else if ($user->role === 'chủ đơn vị') {
+                    // Chủ đơn vị chỉ thấy ví của tổ chức mình
                     $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                     if ($org) {
                         $query->whereHas('collaborator', function ($q) use ($org) {
@@ -187,28 +188,12 @@ class WalletResource extends Resource {
         ];
     }
 
-    public static function getNavigationUrl(): string
-    {
-        $user = auth()->user();
-        
-        if ($user->role === 'super_admin') {
-            return static::getUrl('index');
-        }
-        
-        if ($user->role === 'user') {
-            // CTV sẽ được chuyển đến trang xem ví của mình
-            return static::getUrl('my-wallet');
-        }
-        
-        // Org admin vẫn xem danh sách
-        return static::getUrl('index');
-    }
+
 
     public static function getPages(): array {
         return [
             'index' => Pages\ListWallets::route('/'),
             'view' => Pages\ViewWallet::route('/{record}'),
-            'my-wallet' => Pages\ViewMyWallet::route('/my-wallet'),
         ];
     }
 }

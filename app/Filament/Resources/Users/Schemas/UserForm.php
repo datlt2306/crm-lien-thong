@@ -21,10 +21,11 @@ class UserForm {
                     ->label('Vai trò')
                     ->options([
                         'super_admin' => 'Super Admin',
-                        'user' => 'Người dùng',
+                        'chủ đơn vị' => 'Chủ đơn vị',
+                        'ctv' => 'Cộng tác viên',
                     ])
                     ->required()
-                    ->default('user'),
+                    ->default('ctv'),
                 \Filament\Forms\Components\TextInput::make('password')
                     ->password()
                     ->label('Mật khẩu')

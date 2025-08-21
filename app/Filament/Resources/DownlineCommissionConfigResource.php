@@ -28,24 +28,27 @@ class DownlineCommissionConfigResource extends Resource {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Quản lý hoa hồng';
 
-    public static function shouldRegisterNavigation(): bool
-    {
+    public static function shouldRegisterNavigation(): bool {
         $user = auth()->user();
-        
+
         if ($user->role === 'super_admin') {
             // Super admin luôn thấy menu này
             return true;
         }
-        
-        // Kiểm tra xem user có phải là CTV cấp 1 không và có tuyến dưới không
-        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-        
-        if (!$collaborator) {
-            return false;
+
+        if ($user->role === 'ctv') {
+            // Kiểm tra xem user có phải là CTV cấp 1 không và có tuyến dưới không
+            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+
+            if (!$collaborator) {
+                return false;
+            }
+
+            // Chỉ hiển thị nếu là CTV cấp 1 (không có upline) và có tuyến dưới
+            return $collaborator->isLevel1() && $collaborator->downlines()->exists();
         }
-        
-        // Chỉ hiển thị nếu là CTV cấp 1 (không có upline) và có tuyến dưới
-        return $collaborator->isLevel1() && $collaborator->downlines()->exists();
+
+        return false;
     }
 
     public static function form(Schema $schema): Schema {
@@ -188,7 +191,7 @@ class DownlineCommissionConfigResource extends Resource {
                         if ($user->role === 'super_admin') {
                             return \App\Models\Collaborator::whereNull('upline_id')
                                 ->pluck('full_name', 'id');
-                        } else {
+                        } else if ($user->role === 'chủ đơn vị') {
                             $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                             if ($org) {
                                 return \App\Models\Collaborator::where('organization_id', $org->id)
@@ -220,7 +223,10 @@ class DownlineCommissionConfigResource extends Resource {
             ])
             ->modifyQueryUsing(function (Builder $query) {
                 $user = auth()->user();
-                if ($user->role !== 'super_admin') {
+                if ($user->role === 'super_admin') {
+                    return;
+                }
+                if ($user->role === 'chủ đơn vị') {
                     $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                     if ($org) {
                         $query->whereHas('uplineCollaborator', function ($q) use ($org) {

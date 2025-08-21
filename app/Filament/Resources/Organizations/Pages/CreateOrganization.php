@@ -11,26 +11,32 @@ class CreateOrganization extends CreateRecord {
     protected static string $resource = OrganizationResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array {
-        // Tạo User account cho chủ đơn vị
-        if (!empty($data['owner_email'])) {
+        // Nếu có chọn owner_id có sẵn, sử dụng luôn
+        if (!empty($data['owner_id'])) {
+            // Không cần làm gì thêm, chỉ cần loại bỏ các field không cần thiết
+        }
+        // Nếu không có owner_id nhưng có email, tạo user mới
+        elseif (!empty($data['owner_email'])) {
             $password = !empty($data['owner_password']) ? $data['owner_password'] : '123456';
 
             $userAccount = User::create([
-                'name' => $data['contact_name'] ?: $data['name'],
+                'name' => $data['name'] . ' - Chủ đơn vị',
                 'email' => $data['owner_email'],
                 'password' => Hash::make($password),
-                'role' => 'user',
+                'role' => 'chủ đơn vị',
+                'email_verified_at' => now(),
             ]);
-
-            // Gán role 'user' cho chủ đơn vị
-            $userAccount->assignRole('user');
 
             // Gán owner_id cho organization
             $data['owner_id'] = $userAccount->id;
         }
+        // Nếu không có cả hai, báo lỗi
+        else {
+            throw new \Exception('Phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho chủ đơn vị');
+        }
 
-        // Loại bỏ password khỏi data trước khi tạo Organization
-        unset($data['owner_password'], $data['owner_password_confirmation']);
+        // Loại bỏ các field không cần thiết
+        unset($data['owner_email'], $data['owner_password'], $data['owner_password_confirmation']);
 
         return $data;
     }

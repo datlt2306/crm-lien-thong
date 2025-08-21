@@ -26,29 +26,27 @@ class CollaboratorResource extends Resource {
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    public static function shouldRegisterNavigation(): bool
-    {
+    public static function shouldRegisterNavigation(): bool {
         $user = auth()->user();
-        
+
         if ($user->role === 'super_admin') {
             // Super admin luôn thấy menu này
             return true;
         }
-        
-        if ($user->role !== 'user') {
-            // Chỉ user mới cần kiểm tra
-            return false;
+
+        if ($user->role === 'ctv') {
+            // Kiểm tra xem user có phải là CTV và có tuyến dưới không
+            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+
+            if (!$collaborator) {
+                return false;
+            }
+
+            // Chỉ hiển thị nếu có tuyến dưới (downlines)
+            return $collaborator->downlines()->exists();
         }
-        
-        // Kiểm tra xem user có phải là CTV và có tuyến dưới không
-        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-        
-        if (!$collaborator) {
-            return false;
-        }
-        
-        // Chỉ hiển thị nếu có tuyến dưới (downlines)
-        return $collaborator->downlines()->exists();
+
+        return false;
     }
 
     public static function form(Schema $schema): Schema {
