@@ -21,31 +21,89 @@ class OrganizationForm {
                     }),
                 TextInput::make('code')
                     ->label('Mã đơn vị')
-                    ->required()
-                    ->disabled(),
-
+                    ->helperText('Tự sinh theo tên nếu để trống, có thể chỉnh')
+                    ->required(),
+                Section::make('Chủ đơn vị')
+                    ->columns(1)
+                    ->visible(fn($context) => Auth::user()?->role === 'super_admin')
+                    ->schema([
+                        \Filament\Forms\Components\Select::make('owner_id')
+                            ->label('Chọn tài khoản có sẵn')
+                            ->relationship('owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'chủ đơn vị']))
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Chọn tài khoản có sẵn...'),
+                        // Ẩn các trường tạo tài khoản mới khi tạo mới đơn vị; chỉ hiển thị ở chế độ sửa
+                        \Filament\Forms\Components\TextInput::make('owner_email')
+                            ->label('Email chủ đơn vị (nếu tạo mới)')
+                            ->email()
+                            ->helperText('Chỉ điền nếu muốn tạo tài khoản mới (chỉ trong chỉnh sửa)')
+                            ->visible(fn($get, $context) => $context === 'edit' && !$get('owner_id')),
+                        \Filament\Forms\Components\TextInput::make('owner_password')
+                            ->label('Mật khẩu (nếu tạo mới)')
+                            ->password()
+                            ->default('123456')
+                            ->helperText('Mặc định: 123456')
+                            ->minLength(6)
+                            ->confirmed()
+                            ->visible(fn($get, $context) => $context === 'edit' && !$get('owner_id')),
+                        \Filament\Forms\Components\TextInput::make('owner_password_confirmation')
+                            ->label('Xác nhận mật khẩu')
+                            ->password()
+                            ->default('123456')
+                            ->same('owner_password')
+                            ->visible(fn($get, $context) => $context === 'edit' && !$get('owner_id')),
+                    ]),
                 Section::make('Đào tạo')
-                    ->description('Chọn ngành, chỉ tiêu và hệ đào tạo (cùng 1 dòng)')
+                    ->description('Chọn ngành, chỉ tiêu và hệ đào tạo')
+                    ->columns(1)
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('training_rows')
                             ->label('Ngành / Chỉ tiêu / Hệ đào tạo / Đợt tuyển')
+                            ->afterStateHydrated(function ($state, callable $set, ?\App\Models\Organization $record = null) {
+                                if ($state || !$record) {
+                                    return;
+                                }
+                                $defaultProgramIds = $record->programs()->pluck('program_id')->toArray();
+                                $rows = $record->majors->map(fn($m) => [
+                                    'major_id' => $m->id,
+                                    'quota' => $m->pivot->quota,
+                                    'program_ids' => $defaultProgramIds,
+                                    'intake_months' => $m->pivot->intake_months ? json_decode($m->pivot->intake_months, true) : [],
+                                ])->toArray();
+                                $set('training_rows', $rows);
+                            })
                             ->schema([
                                 \Filament\Forms\Components\Select::make('major_id')
                                     ->label('Ngành')
-                                    ->options(fn() => \App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray())
+                                    ->options(function ($get) {
+                                        /** @var callable $get */
+                                        $rows = (array) $get('../../training_rows');
+                                        $current = $get('major_id');
+                                        $used = collect($rows)->pluck('major_id')->filter()->unique()->values()->all();
+                                        if (!empty($current)) {
+                                            $used = array_values(array_diff($used, [$current]));
+                                        }
+                                        $query = \App\Models\Major::where('is_active', true)->orderBy('name');
+                                        if (!empty($used)) {
+                                            $query->whereNotIn('id', $used);
+                                        }
+                                        return $query->pluck('name', 'id')->toArray();
+                                    })
                                     ->required()
                                     ->searchable(),
+                                \Filament\Forms\Components\Select::make('program_ids')
+                                    ->label('Hệ đào tạo')
+                                    ->multiple()
+                                    ->options(fn() => \App\Models\Program::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray())
+                                    ->preload()
+                                    ->searchable()
+                                    ->required(),
                                 \Filament\Forms\Components\TextInput::make('quota')
                                     ->label('Chỉ tiêu')
                                     ->numeric()
                                     ->minValue(0)
                                     ->required(),
-                                \Filament\Forms\Components\Select::make('program_ids')
-                                    ->label('Hệ đào tạo')
-                                    // ->multiple()
-                                    ->options(fn() => \App\Models\Program::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray())
-                                    ->preload()
-                                    ->searchable(),
                                 \Filament\Forms\Components\Select::make('intake_months')
                                     ->label('Đợt tuyển (tháng)')
                                     ->multiple()
@@ -63,7 +121,9 @@ class OrganizationForm {
                                         11 => '11',
                                         12 => '12'
                                     ])
-                                    ->helperText('VD: trường tuyển chính tháng 6,9,12 thì chọn 6,9,12'),
+                                    ->helperText('VD: trường tuyển chính tháng 6,9,12 thì chọn 6,9,12')
+                                    ->required(),
+
                             ])
                             ->columns(4)
                             ->default(function (\App\Models\Organization $record = null) {
@@ -76,58 +136,11 @@ class OrganizationForm {
                                     'intake_months' => $m->pivot->intake_months ? json_decode($m->pivot->intake_months, true) : [],
                                 ])->toArray();
                             })
-                            ->afterStateUpdated(function ($state, \App\Models\Organization $record = null) {
-                                if (!$record) return;
-                                // Sync majors + quota
-                                $syncMajors = [];
-                                $allProgramIds = [];
-                                foreach (($state ?? []) as $row) {
-                                    if (!empty($row['major_id'])) {
-                                        $syncMajors[$row['major_id']] = [
-                                            'quota' => (int) ($row['quota'] ?? 0),
-                                            'intake_months' => isset($row['intake_months']) ? json_encode(array_values((array)$row['intake_months'])) : null,
-                                        ];
-                                    }
-                                    if (!empty($row['program_ids']) && is_array($row['program_ids'])) {
-                                        $allProgramIds = array_merge($allProgramIds, $row['program_ids']);
-                                    }
-                                }
-                                $record->majors()->sync($syncMajors);
-                                $record->programs()->sync(array_values(array_unique($allProgramIds)));
-                            }),
+                        // Đồng bộ sẽ thực hiện trong afterSave/afterCreate của Page
+                        ,
                     ]),
 
-                Section::make('Chủ đơn vị')
-                    ->description('Chọn tài khoản có sẵn hoặc tạo mới')
-                    ->visible(fn($context) => Auth::user()?->role === 'super_admin')
-                    ->schema([
-                        \Filament\Forms\Components\Select::make('owner_id')
-                            ->label('Chọn tài khoản có sẵn')
-                            ->relationship('owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'chủ đơn vị']))
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn tài khoản có sẵn...')
-                            ->helperText('Hoặc để trống để tạo tài khoản mới bên dưới'),
-                        \Filament\Forms\Components\TextInput::make('owner_email')
-                            ->label('Email chủ đơn vị (nếu tạo mới)')
-                            ->email()
-                            ->helperText('Chỉ điền nếu muốn tạo tài khoản mới')
-                            ->visible(fn($get) => !$get('owner_id')),
-                        \Filament\Forms\Components\TextInput::make('owner_password')
-                            ->label('Mật khẩu (nếu tạo mới)')
-                            ->password()
-                            ->default('123456')
-                            ->helperText('Mặc định: 123456')
-                            ->minLength(6)
-                            ->confirmed()
-                            ->visible(fn($get) => !$get('owner_id')),
-                        \Filament\Forms\Components\TextInput::make('owner_password_confirmation')
-                            ->label('Xác nhận mật khẩu')
-                            ->password()
-                            ->default('123456')
-                            ->same('owner_password')
-                            ->visible(fn($get) => !$get('owner_id')),
-                    ]),
+
                 \Filament\Forms\Components\Toggle::make('status')
                     ->label('Kích hoạt')
                     ->onColor('success')
@@ -138,6 +151,7 @@ class OrganizationForm {
                     ->helperText('Bật để kích hoạt, tắt để vô hiệu')
                     ->formatStateUsing(fn($state) => $state === 'active')
                     ->dehydrateStateUsing(fn($state) => $state ? 'active' : 'inactive'),
-            ]);
+            ])
+            ->columns(1);
     }
 }

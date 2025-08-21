@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use App\Models\Organization;
 use App\Policies\OrganizationPolicy;
 use App\Models\Collaborator;
@@ -50,6 +52,17 @@ class AppServiceProvider extends ServiceProvider {
 
         Gate::define('manage_student', function ($user) {
             return $user->hasPermissionTo('manage_student');
+        });
+
+        // SQL debug cho các bảng pivot liên quan đến đào tạo
+        DB::listen(function ($query) {
+            if (Str::contains($query->sql, ['major_organization', 'organization_program'])) {
+                logger()->info('SQL', [
+                    'sql' => $query->sql,
+                    'bindings' => $query->bindings,
+                    'time_ms' => $query->time,
+                ]);
+            }
         });
     }
 }

@@ -12,8 +12,8 @@
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
         <h1 class="text-2xl font-bold mb-4 text-center">Đăng ký xét tuyển</h1>
-        <p class="mb-2 text-center text-gray-600">Mã giới thiệu: <span class="font-semibold text-blue-600">{{ $ref_id }}</span></p>
-        <p class="mb-4 text-center text-gray-600">Trường muốn học: <span class="font-semibold text-green-600">{{ $collaborator->organization->name ?? 'N/A' }}</span></p>
+        <!-- <p class="mb-2 text-center text-gray-600">Mã giới thiệu: <span class="font-semibold text-blue-600">{{ $ref_id }}</span></p> -->
+        <p class="mb-4 text-center text-gray-600">Mã giới thiệu thuộc: <span class="font-semibold text-green-600">{{ $collaborator->organization->name ?? 'N/A' }}</span></p>
         @if($success)
         <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center">{{ $success }}</div>
         @endif
@@ -42,12 +42,7 @@
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Trường đang học</label>
-                <select name="current_college" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
-                    <option value="">-- Chọn trường --</option>
-                    @foreach(($organizations ?? []) as $orgName)
-                    <option value="{{ $orgName }}" {{ old('current_college') == $orgName ? 'selected' : '' }}>{{ $orgName }}</option>
-                    @endforeach
-                </select>
+                <input type="text" name="current_college" value="{{ old('current_college') }}" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ngày tháng năm sinh *</label>
@@ -58,12 +53,33 @@
                 <input type="text" name="address" value="{{ old('address') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
             </div>
             <div class="mb-3">
-                <label class="block font-medium mb-1">Trường muốn học</label>
-                <input type="text" value="{{ $collaborator->organization->name ?? '' }}" disabled class="w-full border rounded px-3 py-2 bg-gray-100" />
+                <label class="block font-medium mb-1">Trường muốn học *</label>
+                <select name="organization_id" id="organization_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
+                    <option value="">-- Chọn đơn vị --</option>
+                    @foreach(($organizations ?? []) as $o)
+                    @php($oid = is_array($o) ? $o['id'] : $o->id)
+                    @php($oname = is_array($o) ? $o['name'] : $o->name)
+                    <option value="{{ $oid }}" {{ (old('organization_id', $defaultOrganizationId ?? null) == $oid) ? 'selected' : '' }}>{{ $oname }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="mb-3">
-                <label class="block font-medium mb-1">Ngành học</label>
-                <input type="text" name="major" value="{{ old('major') }}" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
+                <label class="block font-medium mb-1">Ngành muốn học</label>
+                <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                    <option value="">-- Chọn ngành --</option>
+                    @foreach(($majors ?? []) as $m)
+                    <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}>{{ $m['name'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="block font-medium mb-1">Hệ đào tạo</label>
+                <select name="program_id" id="program_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                    <option value="">-- Chọn hệ đào tạo --</option>
+                    @foreach(($programs ?? []) as $p)
+                    <option value="{{ $p['id'] }}" {{ old('program_id') == $p['id'] ? 'selected' : '' }}>{{ $p['name'] }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ghi chú</label>
@@ -73,6 +89,52 @@
         </form>
         <p class="mt-4 text-center text-gray-500 text-xs">&copy; {{ date('Y') }} Liên thông Đại học</p>
     </div>
+
+    <meta id="ref-config"
+        data-majors='@json($majorsByOrg ?? [])'
+        data-programs='@json($programsByOrg ?? [])'
+        data-old-major='@json(old("major_id"))'
+        data-old-program='@json(old("program_id"))'>
+
+    <script>
+        const cfgEl = document.getElementById('ref-config');
+        const majorsByOrg = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-majors') || '{}') : '{}');
+        const programsByOrg = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-programs') || '{}') : '{}');
+        const oldMajorId = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-old-major') || 'null') : 'null');
+        const oldProgramId = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-old-program') || 'null') : 'null');
+
+        const orgSelect = document.getElementById('organization_id');
+        const majorSelect = document.getElementById('major_id');
+        const programSelect = document.getElementById('program_id');
+
+        function populate(select, items, oldVal) {
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Chọn --</option>';
+            if (!items) return;
+            items.forEach(function(item) {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                if (String(oldVal ?? '') === String(item.id)) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function initForOrg(orgId) {
+            const key = String(orgId || '');
+            populate(majorSelect, majorsByOrg[key] || [], oldMajorId);
+            populate(programSelect, programsByOrg[key] || [], oldProgramId);
+        }
+
+        if (orgSelect) {
+            orgSelect.addEventListener('change', function() {
+                initForOrg(orgSelect.value);
+            });
+            if (orgSelect.value) {
+                initForOrg(orgSelect.value);
+            }
+        }
+    </script>
 </body>
 
 </html>
