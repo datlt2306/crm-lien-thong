@@ -4,13 +4,6 @@ namespace App\Filament\Resources\WalletResource\Pages;
 
 use App\Filament\Resources\WalletResource;
 use Filament\Resources\Pages\Page;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Form;
-use Filament\Infolists\Components\Section as InfolistSection;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Illuminate\Support\Facades\Auth;
 
 class ViewMyWallet extends Page
@@ -35,70 +28,11 @@ class ViewMyWallet extends Page
         }
     }
 
-    public function form(Form $form): Form
+    protected function getViewData(): array
     {
-        return $form
-            ->schema([
-                Section::make('Thông tin ví tiền')
-                    ->description('Thông tin chi tiết về ví tiền của bạn')
-                    ->schema([
-                        TextInput::make('collaborator_name')
-                            ->label('Tên cộng tác viên')
-                            ->disabled()
-                            ->dehydrated(false),
-                        TextInput::make('organization_name')
-                            ->label('Tổ chức')
-                            ->disabled()
-                            ->dehydrated(false),
-                        TextInput::make('balance')
-                            ->label('Số dư hiện tại')
-                            ->prefix('₫')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(false),
-                        TextInput::make('total_received')
-                            ->label('Tổng đã nhận')
-                            ->prefix('₫')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(false),
-                        TextInput::make('total_paid')
-                            ->label('Tổng đã chi')
-                            ->prefix('₫')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(false),
-                    ])
-                    ->columns(2),
-            ]);
-    }
-
-    public function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist
-            ->schema([
-                InfolistSection::make('Thông tin ví tiền')
-                    ->description('Thông tin chi tiết về ví tiền của bạn')
-                    ->schema([
-                        TextEntry::make('collaborator_name')
-                            ->label('Tên cộng tác viên'),
-                        TextEntry::make('organization_name')
-                            ->label('Tổ chức'),
-                        TextEntry::make('balance')
-                            ->label('Số dư hiện tại')
-                            ->money('VND')
-                            ->color('success'),
-                        TextEntry::make('total_received')
-                            ->label('Tổng đã nhận')
-                            ->money('VND')
-                            ->color('info'),
-                        TextEntry::make('total_paid')
-                            ->label('Tổng đã chi')
-                            ->money('VND')
-                            ->color('warning'),
-                    ])
-                    ->columns(2),
-            ]);
+        return [
+            'data' => $this->data,
+        ];
     }
 
     protected function getHeaderActions(): array
