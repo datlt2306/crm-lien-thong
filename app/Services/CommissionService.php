@@ -178,9 +178,9 @@ class CommissionService {
      * Lấy số tiền commission trực tiếp theo loại chương trình
      */
     private function getDirectCommissionAmount(string $programType): float {
-        return match ($programType) {
-            'cq' => 1750000, // 1.750k
-            'vhvlv' => 750000, // 750k
+        return match (strtolower($programType)) {
+            'cq', 'regular' => 1750000, // 1.750k cho Chính quy/Regular
+            'vhvlv', 'part_time' => 750000, // 750k cho VHVLV/Part-time
             default => 0,
         };
     }

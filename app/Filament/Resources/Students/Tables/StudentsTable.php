@@ -23,12 +23,13 @@ class StudentsTable {
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
-                // TextColumn::make('organization_id')
-                //     ->numeric()
-                //     ->sortable(),
-                // TextColumn::make('collaborator_id')
-                //     ->numeric()
-                //     ->sortable(),
+                TextColumn::make('collaborator.full_name')
+                    ->label('Người giới thiệu')
+                    ->searchable()
+                    ->description(fn($record) => $record->collaborator?->email)
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('Không có'),
                 TextColumn::make('current_college')
                     ->label('Trường đang học')
                     ->searchable(),

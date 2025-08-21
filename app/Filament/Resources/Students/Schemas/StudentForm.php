@@ -25,12 +25,12 @@ class StudentForm {
                     ->label('Tổ chức')
                     ->relationship('organization', 'name')
                     ->required()
-                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+                    ->helperText('Chọn tổ chức cho sinh viên'),
                 \Filament\Forms\Components\Select::make('collaborator_id')
                     ->label('CTV giới thiệu')
                     ->relationship('collaborator', 'full_name')
-                    ->searchable()
-                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+                    // ->searchable()
+                    ->helperText('Chọn người giới thiệu cho sinh viên này'),
                 TextInput::make('current_college')
                     ->label('Trường đang học'),
                 TextInput::make('target_university')

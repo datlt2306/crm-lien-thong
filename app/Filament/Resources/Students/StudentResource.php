@@ -57,17 +57,32 @@ class StudentResource extends Resource {
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
-        if ($user && $user->role === 'user') {
-            // Tìm collaborator_id của user hiện tại
-            $collaborator = Collaborator::where('email', $user->email)->first();
-            if ($collaborator) {
-                $query->where('collaborator_id', $collaborator->id);
-            } else {
-                // Nếu không tìm thấy collaborator, không trả về gì
-                $query->whereNull('id');
+        if (!$user) {
+            return $query;
+        }
+
+        // Super admin thấy tất cả
+        if ($user->role === 'super_admin') {
+            return $query;
+        }
+
+        // Chủ đơn vị thấy student của tổ chức mình
+        if ($user->role === 'chủ đơn vị') {
+            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+            if ($org) {
+                return $query->where('organization_id', $org->id);
             }
         }
 
-        return $query;
+        // CTV chỉ thấy student của mình
+        if ($user->role === 'ctv') {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if ($collaborator) {
+                return $query->where('collaborator_id', $collaborator->id);
+            }
+        }
+
+        // Fallback: không thấy gì
+        return $query->whereNull('id');
     }
 }
