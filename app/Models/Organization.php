@@ -34,7 +34,7 @@ class Organization extends Model {
     }
 
     public function majors() {
-        return $this->belongsToMany(Major::class, 'major_organization')->withPivot(['quota'])->withTimestamps();
+        return $this->belongsToMany(Major::class, 'major_organization')->withPivot(['quota', 'intake_months'])->withTimestamps();
     }
 
     public function programs() {

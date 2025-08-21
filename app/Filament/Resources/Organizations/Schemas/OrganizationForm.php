@@ -28,7 +28,7 @@ class OrganizationForm {
                     ->description('Chọn ngành, chỉ tiêu và hệ đào tạo (cùng 1 dòng)')
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('training_rows')
-                            ->label('Ngành / Chỉ tiêu / Hệ đào tạo')
+                            ->label('Ngành / Chỉ tiêu / Hệ đào tạo / Đợt tuyển')
                             ->schema([
                                 \Filament\Forms\Components\Select::make('major_id')
                                     ->label('Ngành')
@@ -46,8 +46,26 @@ class OrganizationForm {
                                     ->options(fn() => \App\Models\Program::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray())
                                     ->preload()
                                     ->searchable(),
+                                \Filament\Forms\Components\Select::make('intake_months')
+                                    ->label('Đợt tuyển (tháng)')
+                                    ->multiple()
+                                    ->options([
+                                        1 => '1',
+                                        2 => '2',
+                                        3 => '3',
+                                        4 => '4',
+                                        5 => '5',
+                                        6 => '6',
+                                        7 => '7',
+                                        8 => '8',
+                                        9 => '9',
+                                        10 => '10',
+                                        11 => '11',
+                                        12 => '12'
+                                    ])
+                                    ->helperText('VD: trường tuyển chính tháng 6,9,12 thì chọn 6,9,12'),
                             ])
-                            ->columns(3)
+                            ->columns(4)
                             ->default(function (\App\Models\Organization $record = null) {
                                 if (!$record) return [];
                                 $defaultProgramIds = $record->programs()->pluck('program_id')->toArray();
@@ -55,6 +73,7 @@ class OrganizationForm {
                                     'major_id' => $m->id,
                                     'quota' => $m->pivot->quota,
                                     'program_ids' => $defaultProgramIds,
+                                    'intake_months' => $m->pivot->intake_months ? json_decode($m->pivot->intake_months, true) : [],
                                 ])->toArray();
                             })
                             ->afterStateUpdated(function ($state, \App\Models\Organization $record = null) {
@@ -64,7 +83,10 @@ class OrganizationForm {
                                 $allProgramIds = [];
                                 foreach (($state ?? []) as $row) {
                                     if (!empty($row['major_id'])) {
-                                        $syncMajors[$row['major_id']] = ['quota' => (int) ($row['quota'] ?? 0)];
+                                        $syncMajors[$row['major_id']] = [
+                                            'quota' => (int) ($row['quota'] ?? 0),
+                                            'intake_months' => isset($row['intake_months']) ? json_encode(array_values((array)$row['intake_months'])) : null,
+                                        ];
                                     }
                                     if (!empty($row['program_ids']) && is_array($row['program_ids'])) {
                                         $allProgramIds = array_merge($allProgramIds, $row['program_ids']);
