@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Arr;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use App\Models\Organization;
 
 class EditOrganization extends EditRecord {
     protected static string $resource = OrganizationResource::class;
@@ -92,6 +94,17 @@ class EditOrganization extends EditRecord {
 
     protected function handleRecordUpdate(Model $record, array $data): Model {
         Log::info('ORG_EDIT::handleRecordUpdate:data', $data);
+        // Validate unique name friendly (tránh vấp UNIQUE ở DB)
+        if (!empty($data['name'])) {
+            $exists = Organization::where('name', $data['name'])
+                ->where('id', '!=', $record->id)
+                ->exists();
+            if ($exists) {
+                throw ValidationException::withMessages([
+                    'name' => 'Tên đơn vị đã tồn tại, vui lòng chọn tên khác.',
+                ]);
+            }
+        }
         // Không lưu training_rows vào cột của organizations
         unset($data['training_rows']);
 

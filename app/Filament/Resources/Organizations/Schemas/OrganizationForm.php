@@ -16,13 +16,8 @@ class OrganizationForm {
                     ->label('Tên đơn vị')
                     ->required()
                     ->live(onBlur: true)
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        $set('code', Str::slug($state));
-                    }),
-                TextInput::make('code')
-                    ->label('Mã đơn vị')
-                    ->helperText('Tự sinh theo tên nếu để trống, có thể chỉnh')
-                    ->required(),
+                    ->unique('organizations', 'name', ignoreRecord: true)
+                    ->validationAttribute('Tên đơn vị'),
                 Section::make('Chủ đơn vị')
                     ->columns(1)
                     ->visible(fn($context) => Auth::user()?->role === 'super_admin')
@@ -60,6 +55,7 @@ class OrganizationForm {
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('training_rows')
                             ->label('Ngành / Chỉ tiêu / Hệ đào tạo / Đợt tuyển')
+                            ->addActionLabel('＋ Thêm')
                             ->afterStateHydrated(function ($state, callable $set, ?\App\Models\Organization $record = null) {
                                 if ($state || !$record) {
                                     return;
