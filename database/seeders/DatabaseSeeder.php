@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,5 +22,38 @@ class DatabaseSeeder extends Seeder {
             'role' => 'super_admin',
         ]);
         $this->call(OrganizationSeeder::class);
+
+        // Seed roles & permissions trước
+        $permissions = [
+            'view_finance',
+            'verify_payment',
+            'manage_commission',
+            'manage_ctv',
+            'manage_org',
+            'manage_student'
+        ];
+        foreach ($permissions as $perm) {
+            Permission::firstOrCreate(['name' => $perm]);
+        }
+        $roles = [
+            'super_admin',
+            'org_admin',
+            'senior_ctv',
+            'ctv',
+            'user'
+        ];
+        foreach ($roles as $role) {
+            Role::firstOrCreate(['name' => $role]);
+        }
+        $superAdmin = User::where('email', 'admin@gmail.com')->first();
+        if ($superAdmin) {
+            $superAdmin->assignRole('super_admin');
+            $superAdmin->syncPermissions(Permission::all());
+        }
+
+        // Sau đó mới tạo collaborators và students
+        $this->call(CollaboratorSeeder::class);
+        $this->call(StudentSeeder::class);
+        $this->call(CommissionPolicySeeder::class);
     }
 }

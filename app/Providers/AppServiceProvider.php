@@ -26,5 +26,30 @@ class AppServiceProvider extends ServiceProvider {
         Gate::policy(Organization::class, OrganizationPolicy::class);
         Gate::policy(Collaborator::class, CollaboratorPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
+
+        // Define Gates for permissions
+        Gate::define('view_finance', function ($user) {
+            return $user->hasPermissionTo('view_finance');
+        });
+
+        Gate::define('verify_payment', function ($user) {
+            return $user->hasPermissionTo('verify_payment');
+        });
+
+        Gate::define('manage_commission', function ($user) {
+            return $user->hasPermissionTo('manage_commission');
+        });
+
+        Gate::define('manage_ctv', function ($user) {
+            return $user->hasPermissionTo('manage_ctv');
+        });
+
+        Gate::define('manage_org', function ($user) {
+            return $user->hasPermissionTo('manage_org');
+        });
+
+        Gate::define('manage_student', function ($user) {
+            return $user->hasPermissionTo('manage_student');
+        });
     }
 }

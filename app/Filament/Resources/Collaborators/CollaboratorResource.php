@@ -22,7 +22,7 @@ class CollaboratorResource extends Resource {
     protected static ?string $model = Collaborator::class;
 
     protected static string|\UnitEnum|null $navigationGroup = null;
-    protected static ?string $navigationLabel = 'Cộng tác viên';
+    protected static ?string $navigationLabel = 'CTV của tôi';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -56,11 +56,14 @@ class CollaboratorResource extends Resource {
         $query = parent::getEloquentQuery();
         $user = Auth::user();
         if ($user && $user->role === 'user') {
-            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-            if ($org) {
-                $query->where('organization_id', $org->id);
+            // Tìm collaborator của user hiện tại
+            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+            if ($collaborator) {
+                // CTV chỉ thấy CTV con của mình (downlines)
+                $query->where('upline_id', $collaborator->id);
             } else {
-                $query->whereNull('id'); // Không có tổ chức nào, không trả về gì
+                // Nếu không tìm thấy collaborator, không trả về gì
+                $query->whereNull('id');
             }
         }
         return $query;

@@ -6,6 +6,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
 class CollaboratorForm {
     public static function configure(Schema $schema): Schema {
@@ -24,6 +25,22 @@ class CollaboratorForm {
                     ->email()
                     ->unique(ignoreRecord: true)
                     ->nullable(),
+                TextInput::make('password')
+                    ->label('Mật khẩu')
+                    ->password()
+                    ->default('123456')
+                    ->nullable()
+                    ->visible(fn($get) => !empty($get('email')))
+                    ->helperText('Mặc định: 123456. CTV có thể thay đổi sau khi đăng nhập.')
+                    ->minLength(6)
+                    ->confirmed(),
+                TextInput::make('password_confirmation')
+                    ->label('Xác nhận mật khẩu')
+                    ->password()
+                    ->default('123456')
+                    ->nullable()
+                    ->visible(fn($get) => !empty($get('email')))
+                    ->same('password'),
                 \Filament\Forms\Components\TextInput::make('ref_id')
                     ->label('Link giới thiệu')
                     ->readOnly()
@@ -42,7 +59,14 @@ class CollaboratorForm {
                     ->label('Tổ chức')
                     ->relationship('organization', 'name')
                     ->required()
-                    ->visible(fn() => auth()->user()?->role === 'super_admin'),
+                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+                \Filament\Forms\Components\Select::make('upline_id')
+                    ->label('CTV cấp trên')
+                    ->relationship('upline', 'full_name')
+                    ->searchable()
+                    ->preload()
+                    ->helperText('Chọn CTV cấp trên (để trống nếu là CTV cấp cao nhất)')
+                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
                 \Filament\Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')
                     ->columnSpanFull(),

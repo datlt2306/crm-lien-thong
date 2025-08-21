@@ -10,11 +10,14 @@ use App\Filament\Resources\Students\Schemas\StudentForm;
 use App\Filament\Resources\Students\Schemas\StudentInfolist;
 use App\Filament\Resources\Students\Tables\StudentsTable;
 use App\Models\Student;
+use App\Models\Collaborator;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class StudentResource extends Resource {
     protected static ?string $model = Student::class;
@@ -48,5 +51,23 @@ class StudentResource extends Resource {
             'view' => ViewStudent::route('/{record}'),
             'edit' => EditStudent::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+
+        if ($user && $user->role === 'user') {
+            // Tìm collaborator_id của user hiện tại
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if ($collaborator) {
+                $query->where('collaborator_id', $collaborator->id);
+            } else {
+                // Nếu không tìm thấy collaborator, không trả về gì
+                $query->whereNull('id');
+            }
+        }
+
+        return $query;
     }
 }

@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Organizations\Schemas;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class OrganizationForm {
     public static function configure(Schema $schema): Schema {
@@ -14,7 +16,7 @@ class OrganizationForm {
                     ->required()
                     ->live(onBlur: true)
                     ->afterStateUpdated(function ($state, callable $set) {
-                        $set('code', \Str::slug($state));
+                        $set('code', Str::slug($state));
                     }),
                 TextInput::make('code')
                     ->label('Mã đơn vị')
@@ -29,7 +31,28 @@ class OrganizationForm {
                     ->label('Chủ đơn vị')
                     ->relationship('owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'user']))
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->visible(fn($context) => $context === 'edit' && Auth::user()?->role === 'super_admin'),
+                TextInput::make('owner_email')
+                    ->label('Email chủ đơn vị')
+                    ->email()
+                    ->required()
+                    ->unique('users', 'email', ignoreRecord: true)
+                    ->helperText('Email để tạo tài khoản đăng nhập cho chủ đơn vị'),
+                TextInput::make('owner_password')
+                    ->label('Mật khẩu chủ đơn vị')
+                    ->password()
+                    ->default('123456')
+                    ->nullable()
+                    ->helperText('Mặc định: 123456. Chủ đơn vị có thể thay đổi sau khi đăng nhập.')
+                    ->minLength(6)
+                    ->confirmed(),
+                TextInput::make('owner_password_confirmation')
+                    ->label('Xác nhận mật khẩu')
+                    ->password()
+                    ->default('123456')
+                    ->nullable()
+                    ->same('owner_password'),
                 \Filament\Forms\Components\Toggle::make('status')
                     ->label('Kích hoạt')
                     ->onColor('success')

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Students\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class StudentForm {
     public static function configure(Schema $schema): Schema {
@@ -20,13 +21,16 @@ class StudentForm {
                 TextInput::make('email')
                     ->label('Email')
                     ->email(),
-                TextInput::make('organization_id')
+                \Filament\Forms\Components\Select::make('organization_id')
                     ->label('Tổ chức')
+                    ->relationship('organization', 'name')
                     ->required()
-                    ->numeric(),
-                TextInput::make('collaborator_id')
+                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+                \Filament\Forms\Components\Select::make('collaborator_id')
                     ->label('CTV giới thiệu')
-                    ->numeric(),
+                    ->relationship('collaborator', 'full_name')
+                    ->searchable()
+                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
                 TextInput::make('current_college')
                     ->label('Trường đang học'),
                 TextInput::make('target_university')

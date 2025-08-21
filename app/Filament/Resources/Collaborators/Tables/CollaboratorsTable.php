@@ -9,6 +9,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
+use Illuminate\Support\Facades\Auth;
 
 class CollaboratorsTable {
     public static function configure(Table $table): Table {
@@ -25,6 +26,18 @@ class CollaboratorsTable {
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
+                TextColumn::make('upline.full_name')
+                    ->label('CTV cấp trên')
+                    ->searchable()
+                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+                TextColumn::make('downlines_count')
+                    ->label('Số CTV con')
+                    ->counts('downlines')
+                    ->badge()
+                    ->color('info')
+                    ->formatStateUsing(function ($state, $record) {
+                        return $state > 0 ? $state : null;
+                    }),
                 // TextColumn::make('organization.name')
                 //     ->label('Tổ chức')
                 //     ->searchable(),
