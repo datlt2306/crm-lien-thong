@@ -16,6 +16,11 @@ class Collaborator extends Model {
         'status',
     ];
 
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     /**
      * Quan hệ: Thuộc tổ chức
      */
@@ -35,6 +40,55 @@ class Collaborator extends Model {
      */
     public function downlines() {
         return $this->hasMany(self::class, 'upline_id');
+    }
+
+    /**
+     * Quan hệ: Tất cả downlines (bao gồm cả cấp 2, 3...)
+     */
+    public function allDownlines() {
+        return $this->hasMany(self::class, 'upline_id')->with('allDownlines');
+    }
+
+    /**
+     * Quan hệ: Cấu hình hoa hồng tuyến dưới (khi là upline)
+     */
+    public function downlineCommissionConfigs() {
+        return $this->hasMany(DownlineCommissionConfig::class, 'upline_collaborator_id');
+    }
+
+    /**
+     * Quan hệ: Cấu hình hoa hồng tuyến dưới (khi là downline)
+     */
+    public function uplineCommissionConfigs() {
+        return $this->hasMany(DownlineCommissionConfig::class, 'downline_collaborator_id');
+    }
+
+    /**
+     * Quan hệ: Wallet
+     */
+    public function wallet() {
+        return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * Quan hệ: Commission items nhận được
+     */
+    public function commissionItems() {
+        return $this->hasMany(CommissionItem::class, 'recipient_collaborator_id');
+    }
+
+    /**
+     * Kiểm tra xem có phải CTV cấp 1 không (có upline là null)
+     */
+    public function isLevel1() {
+        return is_null($this->upline_id);
+    }
+
+    /**
+     * Kiểm tra xem có phải CTV cấp 2 không (có upline là CTV cấp 1)
+     */
+    public function isLevel2() {
+        return !is_null($this->upline_id) && $this->upline && $this->upline->isLevel1();
     }
 
     /**

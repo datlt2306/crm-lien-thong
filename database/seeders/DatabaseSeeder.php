@@ -55,5 +55,6 @@ class DatabaseSeeder extends Seeder {
         $this->call(CollaboratorSeeder::class);
         $this->call(StudentSeeder::class);
         $this->call(CommissionPolicySeeder::class);
+        $this->call(WalletSeeder::class);
     }
 }

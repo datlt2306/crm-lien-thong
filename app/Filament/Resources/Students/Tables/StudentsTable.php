@@ -6,6 +6,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -60,6 +61,29 @@ class StudentsTable {
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                Action::make('mark_enrolled')
+                    ->label('Đánh dấu nhập học')
+                    ->icon('heroicon-o-academic-cap')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Đánh dấu nhập học')
+                    ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
+                    ->modalSubmitActionLabel('Xác nhận')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(fn(\App\Models\Student $record): bool => $record->status !== 'enrolled')
+                    ->action(function (\App\Models\Student $record) {
+                        $record->update(['status' => 'enrolled']);
+
+                        // Cập nhật commission khi student nhập học
+                        $commissionService = new \App\Services\CommissionService();
+                        $commissionService->updateCommissionsOnEnrollment($record);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã đánh dấu nhập học')
+                            ->body('Commission đã được cập nhật tự động.')
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
