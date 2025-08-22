@@ -21,6 +21,12 @@ class CreateUser extends CreateRecord {
             $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
         }
 
+        // Tự động verify email cho user mới tạo
+        $data['email_verified_at'] = now();
+
+        // Loại bỏ password_confirmation khỏi data
+        unset($data['password_confirmation']);
+
         return $data;
     }
 

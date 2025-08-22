@@ -54,7 +54,9 @@ class CollaboratorForm {
                     ->dehydrateStateUsing(
                         fn($state) =>
                         $state ? Str::afterLast($state, '/') : null
-                    ),
+                    )
+                    ->copyable()
+                    ->helperText('Click vào field hoặc icon để copy link'),
                 \Filament\Forms\Components\Select::make('organization_id')
                     ->label('Tổ chức')
                     ->relationship('organization', 'name')

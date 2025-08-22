@@ -7,19 +7,25 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Table;
 
 class UsersTable {
     public static function configure(Table $table): Table {
         return $table
             ->columns([
+                ImageColumn::make('avatar')
+                    ->label('Ảnh')
+                    ->circular()
+                    ->size(40),
                 TextColumn::make('name')
+                    ->label('Họ và tên')
                     ->searchable(),
                 TextColumn::make('contact')
                     ->label('Liên hệ')
                     ->state(fn($record) => $record)
                     ->formatStateUsing(function ($record) {
-                        $phone = method_exists($record, 'phone') ? ($record->phone ?? '') : '';
+                        $phone = $record->phone ?? '';
                         $email = $record->email ?? '';
                         $lines = [];
                         if ($phone) {
@@ -33,7 +39,8 @@ class UsersTable {
                     ->html()
                     ->searchable(query: function ($query, $search) {
                         return $query->where(function ($q) use ($search) {
-                            $q->orWhere('email', 'like', "%$search%");
+                            $q->orWhere('email', 'like', "%$search%")
+                                ->orWhere('phone', 'like', "%$search%");
                         });
                     }),
                 TextColumn::make('email_verified_at')

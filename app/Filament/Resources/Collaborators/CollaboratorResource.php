@@ -92,4 +92,55 @@ class CollaboratorResource extends Resource {
         }
         return $query;
     }
+
+    public static function getNavigationBadge(): ?string {
+        try {
+            $user = Auth::user();
+            if (!$user) return null;
+
+            if ($user->role === 'super_admin') {
+                // Super admin thấy tổng số CTV
+                return (string) Collaborator::count();
+            }
+
+            if ($user->role === 'chủ đơn vị') {
+                // Chủ đơn vị thấy số CTV của tổ chức mình
+                $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+                if ($org) {
+                    return (string) Collaborator::where('organization_id', $org->id)->count();
+                }
+            }
+
+            if ($user->role === 'ctv') {
+                // CTV thấy số tuyến dưới của mình
+                $collaborator = Collaborator::where('email', $user->email)->first();
+                if ($collaborator) {
+                    return (string) $collaborator->downlines()->count();
+                }
+            }
+
+            return null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string {
+        $user = Auth::user();
+        if (!$user) return null;
+
+        if ($user->role === 'super_admin') {
+            return 'Tổng số cộng tác viên';
+        }
+
+        if ($user->role === 'chủ đơn vị') {
+            return 'Số cộng tác viên trong tổ chức';
+        }
+
+        if ($user->role === 'ctv') {
+            return 'Số tuyến dưới';
+        }
+
+        return null;
+    }
 }
