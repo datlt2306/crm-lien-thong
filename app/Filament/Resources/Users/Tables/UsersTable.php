@@ -38,8 +38,27 @@ class UsersTable {
                     }),
                 TextColumn::make('email_verified_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('role')
+                    ->label('Vai trò')
+                    ->formatStateUsing(function ($state) {
+                        return match ($state) {
+                            'super_admin' => 'Super Admin',
+                            'chủ đơn vị' => 'Chủ đơn vị',
+                            'ctv' => 'Cộng tác viên',
+                            default => $state
+                        };
+                    })
+                    ->badge()
+                    ->color(function ($state) {
+                        return match ($state) {
+                            'super_admin' => 'danger',
+                            'chủ đơn vị' => 'warning',
+                            'ctv' => 'info',
+                            default => 'gray'
+                        };
+                    })
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -54,7 +73,6 @@ class UsersTable {
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
