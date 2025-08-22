@@ -175,7 +175,7 @@ class CommissionService {
     }
 
     /**
-     * Lấy số tiền commission trực tiếp theo loại chương trình
+     * Lấy số tiền commission trực tiếp theo hệ đào tạo
      */
     private function getDirectCommissionAmount(string $programType): float {
         // Đọc theo cấu hình bảng programs nếu có

@@ -29,7 +29,7 @@ class CommissionPolicyForm {
                     ->helperText('Để trống để áp dụng cho tất cả CTV')
                     ->nullable(),
                 Select::make('program_type')
-                    ->label('Loại chương trình')
+                    ->label('Hệ đào tạo')
                     ->options([
                         'REGULAR' => 'Chính quy',
                         'PART_TIME' => 'Bán thời gian',

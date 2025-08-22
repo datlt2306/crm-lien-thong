@@ -79,7 +79,7 @@ class PaymentResource extends Resource {
                     ->visible(fn() => Auth::user()->role === 'ctv' && self::isPrimaryCollaborator()),
 
                 \Filament\Tables\Columns\TextColumn::make('program_type')
-                    ->label('Loại chương trình')
+                    ->label('Hệ đào tạo')
                     ->badge()
                     ->color(fn(string $state): string => match (strtoupper($state)) {
                         'REGULAR' => 'success',
@@ -287,31 +287,16 @@ class PaymentResource extends Resource {
                     ->color('success')
                     ->requiresConfirmation()
                     ->modalHeading('Xác nhận thanh toán')
-                    ->modalDescription('Xác nhận đã nhận tiền và chọn hệ đào tạo cho sinh viên. Hệ thống sẽ tự động tạo commission cho CTV.')
-                    ->modalSubmitActionLabel('Xác nhận')
+                    ->modalDescription('Xác nhận đã nhận tiền sinh viên nộp đúng hệ đã đăng ký. Hệ thống sẽ tự động tạo commission cho CTV.')
+                    ->modalSubmitActionLabel('Xác nhận đã nhận tiền')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(
                         fn(Payment $record): bool =>
                         $record->status === Payment::STATUS_SUBMITTED &&
                             in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
                     )
-                    ->form([
-                        \Filament\Forms\Components\Select::make('program_type')
-                            ->label('Hệ đào tạo')
-                            ->options([
-                                'REGULAR' => 'Chính quy',
-                                'PART_TIME' => 'VHVLV',
-                            ])
-                            ->required(),
-                    ])
-                    ->fillForm(fn(Payment $record): array => [
-                        'program_type' => strtoupper($record->program_type),
-                    ])
-                    ->action(function (Payment $record, array $data) {
+                    ->action(function (Payment $record) {
                         $record->markAsVerified(\Illuminate\Support\Facades\Auth::id());
-                        $record->update([
-                            'program_type' => $data['program_type'],
-                        ]);
 
                         // Tạo commission
                         $commissionService = new \App\Services\CommissionService();
@@ -319,7 +304,7 @@ class PaymentResource extends Resource {
 
                         \Filament\Notifications\Notification::make()
                             ->title('Đã xác nhận thanh toán')
-                            ->body('Commission đã được tạo tự động theo hệ đào tạo đã chọn.')
+                            ->body('Commission đã được tạo tự động.')
                             ->success()
                             ->send();
                     }),
