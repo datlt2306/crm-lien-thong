@@ -31,7 +31,17 @@ class AppServiceProvider extends ServiceProvider {
 
         // Define Gates for permissions
         Gate::define('view_finance', function ($user) {
-            return $user->hasPermissionTo('view_finance');
+            // Super admin và chủ đơn vị có thể xem finance
+            if (in_array($user->role, ['super_admin', 'chủ đơn vị'])) {
+                return true;
+            }
+
+            // CTV có thể xem finance của mình
+            if ($user->role === 'ctv') {
+                return true;
+            }
+
+            return false;
         });
 
         Gate::define('verify_payment', function ($user) {

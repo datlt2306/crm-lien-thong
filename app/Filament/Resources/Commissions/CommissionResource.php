@@ -12,6 +12,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use App\Models\Commission;
 use App\Models\CommissionItem;
+use App\Models\Organization;
+use App\Models\Collaborator;
 use App\Filament\Resources\Commissions\Pages\ListCommissions;
 
 class CommissionResource extends Resource {
@@ -208,7 +210,7 @@ class CommissionResource extends Resource {
 
                 if ($user->role === 'ctv') {
                     // CTV chỉ thấy commission của mình
-                    $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                    $collaborator = Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
                         $query->where('recipient_id', $collaborator->id);
                     } else {
@@ -218,7 +220,7 @@ class CommissionResource extends Resource {
 
                 if ($user->role === 'chủ đơn vị') {
                     // Chủ đơn vị chỉ thấy commission của tổ chức mình
-                    $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+                    $org = Organization::where('owner_id', $user->id)->first();
                     if ($org) {
                         $query->whereHas('recipient', function ($q) use ($org) {
                             $q->where('organization_id', $org->id);

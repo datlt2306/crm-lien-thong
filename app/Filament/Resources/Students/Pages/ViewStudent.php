@@ -19,15 +19,7 @@ class ViewStudent extends ViewRecord {
             $actions[] = EditAction::make();
         }
 
-        // Thêm action xem bill nếu có payment
-        if ($this->record->payment && $this->record->payment->bill_path) {
-            $actions[] = \Filament\Actions\Action::make('view_bill')
-                ->label('Xem Bill')
-                ->icon('heroicon-o-document-text')
-                ->color('info')
-                ->url(route('files.bill.view', $this->record->payment->id))
-                ->openUrlInNewTab();
-        }
+
 
         return $actions;
     }
