@@ -18,11 +18,15 @@ class Payment extends Model {
         'status',
         'verified_by',
         'verified_at',
+        'edit_reason',
+        'edited_at',
+        'edited_by',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'verified_at' => 'datetime',
+        'edited_at' => 'datetime',
     ];
 
     // Enum PaymentStatus - Quản lý tiền SV đã chuyển cho Org
@@ -96,6 +100,10 @@ class Payment extends Model {
 
     public function subCollaborator(): BelongsTo {
         return $this->belongsTo(Collaborator::class, 'sub_collaborator_id');
+    }
+
+    public function editedBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'edited_by');
     }
 
     public function verifier(): BelongsTo {

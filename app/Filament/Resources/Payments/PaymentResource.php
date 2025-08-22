@@ -98,6 +98,14 @@ class PaymentResource extends Resource {
                     ->label('Xác nhận lúc')
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
+                \Filament\Tables\Columns\TextColumn::make('edited_at')
+                    ->label('Chỉnh sửa lúc')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                \Filament\Tables\Columns\TextColumn::make('editedBy.name')
+                    ->label('Người chỉnh sửa')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
@@ -113,85 +121,6 @@ class PaymentResource extends Resource {
                     ]),
             ])
             ->actions([
-                Action::make('create_payment')
-                    ->label('Tạo Payment')
-                    ->icon('heroicon-o-plus-circle')
-                    ->color('success')
-                    ->form([
-                        \Filament\Forms\Components\Select::make('student_id')
-                            ->label('Học viên')
-                            ->options(function () {
-                                $user = Auth::user();
-                                if ($user->role !== 'ctv') return [];
-
-                                $collaborator = Collaborator::where('email', $user->email)->first();
-                                if (!$collaborator) return [];
-
-                                // Lấy học viên chưa có payment
-                                $studentsWithPayment = Payment::pluck('student_id');
-                                return \App\Models\Student::where('collaborator_id', $collaborator->id)
-                                    ->whereNotIn('id', $studentsWithPayment)
-                                    ->pluck('full_name', 'id')
-                                    ->toArray();
-                            })
-                            ->required()
-                            ->searchable()
-                            ->helperText('Chọn học viên chưa có payment'),
-                        \Filament\Forms\Components\TextInput::make('amount')
-                            ->label('Số tiền')
-                            ->numeric()
-                            ->required()
-                            ->helperText('Nhập số tiền dự kiến'),
-                        \Filament\Forms\Components\Select::make('program_type')
-                            ->label('Hệ liên thông')
-                            ->options([
-                                'REGULAR' => 'Chính quy',
-                                'PART_TIME' => 'Vừa học vừa làm',
-                            ])
-                            ->required()
-                            ->helperText('Chọn hệ liên thông của sinh viên'),
-                    ])
-                    ->visible(fn(): bool => Auth::user()->role === 'ctv')
-                    ->action(function (array $data) {
-                        $user = Auth::user();
-                        $collaborator = Collaborator::where('email', $user->email)->first();
-
-                        if (!$collaborator) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Lỗi')
-                                ->body('Không tìm thấy thông tin cộng tác viên.')
-                                ->danger()
-                                ->send();
-                            return;
-                        }
-
-                        $student = \App\Models\Student::find($data['student_id']);
-                        if (!$student) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Lỗi')
-                                ->body('Không tìm thấy thông tin học viên.')
-                                ->danger()
-                                ->send();
-                            return;
-                        }
-
-                        // Tạo payment record
-                        Payment::create([
-                            'organization_id' => $student->organization_id,
-                            'student_id' => $student->id,
-                            'primary_collaborator_id' => $collaborator->id,
-                            'sub_collaborator_id' => $collaborator->upline_id,
-                            'program_type' => $data['program_type'],
-                            'amount' => $data['amount'],
-                            'status' => Payment::STATUS_NOT_PAID,
-                        ]);
-
-                        \Filament\Notifications\Notification::make()
-                            ->title('Đã tạo payment thành công')
-                            ->body('Bạn có thể upload bill cho payment này.')
-                            ->success()
-                            ->send();
-                    }),
                 Action::make('upload_bill')
                     ->label('Upload Bill')
                     ->icon('heroicon-o-document-arrow-up')
@@ -252,6 +181,91 @@ class PaymentResource extends Resource {
                             ->success()
                             ->send();
                     }),
+                Action::make('edit_bill')
+                    ->label('Chỉnh sửa Bill')
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('warning')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('bill')
+                            ->label('Bill thanh toán mới')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120) // 5MB
+                            ->disk('local')
+                            ->directory('bills')
+                            ->required()
+                            ->helperText('Upload bill thanh toán mới (JPG, PNG, PDF, tối đa 5MB)'),
+                        \Filament\Forms\Components\TextInput::make('amount')
+                            ->label('Số tiền')
+                            ->numeric()
+                            ->required()
+                            ->helperText('Nhập số tiền đã thanh toán'),
+                        \Filament\Forms\Components\Select::make('program_type')
+                            ->label('Hệ liên thông')
+                            ->options([
+                                'REGULAR' => 'Chính quy',
+                                'PART_TIME' => 'Vừa học vừa làm',
+                            ])
+                            ->required()
+                            ->helperText('Chọn hệ liên thông của sinh viên'),
+                        \Filament\Forms\Components\Textarea::make('edit_reason')
+                            ->label('Lý do chỉnh sửa')
+                            ->required()
+                            ->rows(3)
+                            ->helperText('Giải thích lý do cần chỉnh sửa bill'),
+                    ])
+                    ->fillForm(function (Payment $record): array {
+                        return [
+                            'amount' => $record->amount,
+                            'program_type' => $record->program_type,
+                        ];
+                    })
+                    ->visible(
+                        fn(Payment $record): bool =>
+                        Auth::user()->role === 'ctv' &&
+                            $record->status === Payment::STATUS_SUBMITTED &&
+                            $record->bill_path &&
+                            self::canUploadBillForPayment($record)
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Chỉnh sửa Bill')
+                    ->modalDescription('Bạn có chắc chắn muốn chỉnh sửa bill này? Bill cũ sẽ được thay thế bằng bill mới.')
+                    ->modalSubmitActionLabel('Cập nhật')
+                    ->modalCancelActionLabel('Hủy')
+                    ->action(function (array $data, Payment $record) {
+                        // Tìm collaborator của user hiện tại
+                        $collaborator = Collaborator::where('email', Auth::user()->email)->first();
+
+                        if (!$collaborator) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Lỗi')
+                                ->body('Không tìm thấy thông tin cộng tác viên.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // Xóa bill cũ nếu có
+                        if ($record->bill_path && Storage::disk('local')->exists($record->bill_path)) {
+                            Storage::disk('local')->delete($record->bill_path);
+                        }
+
+                        // Cập nhật payment record với bill mới
+                        $record->update([
+                            'bill_path' => $data['bill'],
+                            'amount' => $data['amount'],
+                            'program_type' => $data['program_type'],
+                            'status' => Payment::STATUS_SUBMITTED,
+                            'edit_reason' => $data['edit_reason'] ?? null,
+                            'edited_at' => now(),
+                            'edited_by' => Auth::id(),
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã cập nhật bill thành công')
+                            ->body('Bill đã được chỉnh sửa và gửi lại để xác minh.')
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('verify')
                     ->label('Xác nhận')
                     ->icon('heroicon-o-check-circle')
@@ -301,6 +315,7 @@ class PaymentResource extends Resource {
                     ->url(fn(Payment $record) => $record->bill_path ? route('files.bill.view', $record->id) : '#')
                     ->openUrlInNewTab()
                     ->visible(fn(Payment $record): bool => $record->bill_path),
+
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -336,18 +351,11 @@ class PaymentResource extends Resource {
             }
         }
 
-        // CTV thấy payments của mình và có thể tạo payment mới cho học viên chưa có payment
+        // CTV chỉ thấy payments của mình
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
-                // Lấy danh sách student IDs mà CTV này giới thiệu
-                $studentIds = \App\Models\Student::where('collaborator_id', $collaborator->id)->pluck('id');
-
-                // Thấy payments của mình và students chưa có payment
-                return $query->where(function ($q) use ($collaborator, $studentIds) {
-                    $q->where('primary_collaborator_id', $collaborator->id)
-                        ->orWhereIn('student_id', $studentIds);
-                });
+                return $query->where('primary_collaborator_id', $collaborator->id);
             }
         }
 
