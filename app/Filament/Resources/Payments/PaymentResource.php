@@ -312,8 +312,22 @@ class PaymentResource extends Resource {
                     ->label('Xem Bill')
                     ->icon('heroicon-o-document-text')
                     ->color('info')
-                    ->url(fn(Payment $record) => $record->bill_path ? route('files.bill.view', $record->id) : '#')
-                    ->openUrlInNewTab()
+                    ->modalHeading('Bill thanh toán')
+                    ->modalContent(function (Payment $record) {
+                        if (!$record->bill_path) {
+                            return 'Không có bill để hiển thị.';
+                        }
+
+                        $fileUrl = route('files.bill.view', $record->id);
+                        $fileName = basename($record->bill_path);
+
+                        return view('components.bill-viewer', [
+                            'fileUrl' => $fileUrl,
+                            'fileName' => $fileName,
+                            'payment' => $record
+                        ]);
+                    })
+                    ->modalWidth('4xl')
                     ->visible(fn(Payment $record): bool => $record->bill_path),
 
             ])
