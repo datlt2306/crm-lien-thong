@@ -17,13 +17,20 @@ class CommissionItem extends Model {
         'paid_at',
         'visibility',
         'meta',
+        'payment_bill_path',
+        'payment_confirmed_at',
+        'payment_confirmed_by',
+        'received_confirmed_at',
+        'received_confirmed_by',
     ];
 
     // Các trạng thái commission - Quản lý việc trả hoa hồng cho CTV
-    public const STATUS_PENDING = 'pending';       // Pending → đã sinh commission nhưng chưa đến hạn chi
-    public const STATUS_PAYABLE = 'payable';       // Payable → đến hạn chi, CTV có thể nhận
-    public const STATUS_PAID = 'paid';             // Paid → đã chi trả (ghi nhận bằng tay, đính bill)
-    public const STATUS_CANCELLED = 'cancelled';   // Cancelled → huỷ (VD: SV không nhập học)
+    public const STATUS_PENDING = 'pending';                    // Pending → đã sinh commission nhưng chưa đến hạn chi
+    public const STATUS_PAYABLE = 'payable';                    // Payable → đến hạn chi, CTV có thể nhận
+    public const STATUS_PAID = 'paid';                          // Paid → đã chi trả (ghi nhận bằng tay, đính bill)
+    public const STATUS_CANCELLED = 'cancelled';                // Cancelled → huỷ (VD: SV không nhập học)
+    public const STATUS_PAYMENT_CONFIRMED = 'payment_confirmed'; // Payment confirmed → chủ đơn vị đã xác nhận thanh toán + upload bill
+    public const STATUS_RECEIVED_CONFIRMED = 'received_confirmed'; // Received confirmed → CTV đã xác nhận nhận tiền
 
     public static function getStatusOptions(): array {
         return [
@@ -31,6 +38,8 @@ class CommissionItem extends Model {
             self::STATUS_PAYABLE => 'Có thể thanh toán',
             self::STATUS_PAID => 'Đã thanh toán',
             self::STATUS_CANCELLED => 'Đã huỷ',
+            self::STATUS_PAYMENT_CONFIRMED => 'Đã xác nhận thanh toán',
+            self::STATUS_RECEIVED_CONFIRMED => 'Đã xác nhận nhận tiền',
         ];
     }
 
@@ -38,6 +47,8 @@ class CommissionItem extends Model {
         'amount' => 'decimal:2',
         'payable_at' => 'datetime',
         'paid_at' => 'datetime',
+        'payment_confirmed_at' => 'datetime',
+        'received_confirmed_at' => 'datetime',
         'meta' => 'array',
     ];
 
@@ -96,7 +107,44 @@ class CommissionItem extends Model {
      * Kiểm tra xem commission đã hoàn thành chưa
      */
     public function isCompleted(): bool {
-        return in_array($this->status, [self::STATUS_PAID, self::STATUS_CANCELLED]);
+        return in_array($this->status, [self::STATUS_PAID, self::STATUS_CANCELLED, self::STATUS_RECEIVED_CONFIRMED]);
+    }
+
+    /**
+     * Đánh dấu chủ đơn vị đã xác nhận thanh toán
+     */
+    public function markAsPaymentConfirmed(string $billPath, int $userId): void {
+        $this->update([
+            'status' => self::STATUS_PAYMENT_CONFIRMED,
+            'payment_bill_path' => $billPath,
+            'payment_confirmed_at' => now(),
+            'payment_confirmed_by' => $userId,
+        ]);
+    }
+
+    /**
+     * Đánh dấu CTV đã xác nhận nhận tiền
+     */
+    public function markAsReceivedConfirmed(int $userId): void {
+        $this->update([
+            'status' => self::STATUS_RECEIVED_CONFIRMED,
+            'received_confirmed_at' => now(),
+            'received_confirmed_by' => $userId,
+        ]);
+    }
+
+    /**
+     * Quan hệ với user xác nhận thanh toán
+     */
+    public function paymentConfirmedBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'payment_confirmed_by');
+    }
+
+    /**
+     * Quan hệ với user xác nhận nhận tiền
+     */
+    public function receivedConfirmedBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'received_confirmed_by');
     }
 
     /**

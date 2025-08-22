@@ -112,6 +112,10 @@ class CommissionResource extends Resource {
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
                             return 'Chưa nhận được hoa hồng';
                         }
+                        // Nếu là CTV và trạng thái là PAYMENT_CONFIRMED, hiển thị "Chờ xác nhận nhận tiền"
+                        if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
+                            return 'Chờ xác nhận nhận tiền';
+                        }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
                     }),
 
@@ -183,24 +187,54 @@ class CommissionResource extends Resource {
                             ->send();
                     }),
 
-                Action::make('mark_paid')
-                    ->label('Đánh dấu đã thanh toán')
+                Action::make('confirm_payment')
+                    ->label('Xác nhận đã thanh toán')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Đánh dấu đã thanh toán')
-                    ->modalDescription('Đánh dấu đã chi trả hoa hồng cho CTV (ghi nhận bằng tay, đính bill).')
-                    ->modalSubmitActionLabel('Xác nhận')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('bill')
+                            ->label('Bill thanh toán')
+                            ->required()
+                            ->disk('local')
+                            ->directory('commission-bills')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120), // 5MB
+                    ])
+                    ->modalHeading('Xác nhận đã thanh toán')
+                    ->modalDescription('Xác nhận đã thanh toán hoa hồng cho CTV và upload bill.')
+                    ->modalSubmitActionLabel('Xác nhận thanh toán')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
                         return in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]) && $user->role === 'chủ đơn vị';
                     })
-                    ->action(function (CommissionItem $record) {
-                        $record->markAsPaid();
+                    ->action(function (CommissionItem $record, array $data) {
+                        $record->markAsPaymentConfirmed($data['bill'], \Illuminate\Support\Facades\Auth::user()->id);
 
                         \Filament\Notifications\Notification::make()
-                            ->title('Đã đánh dấu thanh toán')
-                            ->body('Hoa hồng đã được chi trả.')
+                            ->title('Đã xác nhận thanh toán')
+                            ->body('Bill đã được upload và CTV sẽ được thông báo.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('confirm_received')
+                    ->label('Xác nhận đã nhận tiền')
+                    ->icon('heroicon-o-hand-thumb-up')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading('Xác nhận đã nhận tiền')
+                    ->modalDescription('Xác nhận đã nhận được tiền hoa hồng từ chủ đơn vị.')
+                    ->modalSubmitActionLabel('Xác nhận đã nhận')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        return $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED && $user->role === 'ctv';
+                    })
+                    ->action(function (CommissionItem $record) {
+                        $record->markAsReceivedConfirmed(\Illuminate\Support\Facades\Auth::user()->id);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã xác nhận nhận tiền')
+                            ->body('Quy trình thanh toán hoa hồng đã hoàn tất.')
                             ->success()
                             ->send();
                     }),
