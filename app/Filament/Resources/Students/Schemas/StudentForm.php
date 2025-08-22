@@ -6,6 +6,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Student;
 
 class StudentForm {
     public static function configure(Schema $schema): Schema {
@@ -78,21 +79,10 @@ class StudentForm {
                     ->default('form'),
                 \Filament\Forms\Components\Select::make('status')
                     ->label('Tình trạng')
-                    ->options([
-                        'new' => 'Mới',
-                        'contacted' => 'Đã liên hệ',
-                        'submitted' => 'Đã nộp hồ sơ',
-                        'approved' => 'Đã duyệt',
-                        'enrolled' => 'Đã nhập học',
-                        'rejected' => 'Từ chối',
-                        'pending' => 'Chờ xử lý',
-                        'interviewed' => 'Đã phỏng vấn',
-                        'deposit_paid' => 'Đã đặt cọc',
-                        'offer_sent' => 'Đã gửi thư mời',
-                        'offer_accepted' => 'Đã nhận thư mời',
-                    ])
+                    ->options(Student::getStatusOptions())
                     ->required()
-                    ->default('new'),
+                    ->default(Student::STATUS_NEW)
+                    ->helperText('Quản lý hành trình nhập học của sinh viên'),
                 Textarea::make('notes')
                     ->label('Ghi chú')
                     ->columnSpanFull(),

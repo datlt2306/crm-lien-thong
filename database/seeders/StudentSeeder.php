@@ -28,7 +28,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'anh.nguyen@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Bách Khoa Hà Nội',
+
                 'target_university' => 'University of Melbourne',
                 'major' => 'Computer Science',
                 'source' => 'ref',
@@ -43,7 +43,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'binh.tran@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Kinh tế Quốc dân',
+
                 'target_university' => 'University of Sydney',
                 'major' => 'Business Administration',
                 'source' => 'ref',
@@ -58,7 +58,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'cam.le@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Ngoại thương',
+
                 'target_university' => 'Monash University',
                 'major' => 'International Business',
                 'source' => 'form',
@@ -73,7 +73,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'dung.pham@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH FPT',
+
                 'target_university' => 'RMIT University',
                 'major' => 'Information Technology',
                 'source' => 'ref',
@@ -88,7 +88,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'em.hoang@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Sư phạm Hà Nội',
+
                 'target_university' => 'University of Queensland',
                 'major' => 'Education',
                 'source' => 'facebook',
@@ -103,7 +103,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'phuc.vu@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Công nghệ',
+
                 'target_university' => 'University of New South Wales',
                 'major' => 'Engineering',
                 'source' => 'ref',
@@ -118,7 +118,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'giang.do@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Y Hà Nội',
+
                 'target_university' => 'University of Western Australia',
                 'major' => 'Medicine',
                 'source' => 'form',
@@ -133,7 +133,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'hung.nguyen@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Luật Hà Nội',
+
                 'target_university' => 'Australian National University',
                 'major' => 'Law',
                 'source' => 'ref',
@@ -148,7 +148,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'huong.tran@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Kiến trúc',
+
                 'target_university' => 'University of Adelaide',
                 'major' => 'Architecture',
                 'source' => 'facebook',
@@ -163,7 +163,7 @@ class StudentSeeder extends Seeder {
                 'email' => 'khoa.le@example.com',
                 'organization_id' => $organization->id,
                 'collaborator_id' => $collaborators->random()->id,
-                'current_college' => 'ĐH Thương mại',
+
                 'target_university' => 'Griffith University',
                 'major' => 'Marketing',
                 'source' => 'form',

@@ -9,6 +9,7 @@ use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use App\Models\Student;
 
 class StudentsTable {
     public static function configure(Table $table): Table {
@@ -57,6 +58,19 @@ class StudentsTable {
                     ->searchable(),
                 TextColumn::make('status')
                     ->label('Tình trạng')
+                    ->badge()
+                    ->color(function (string $state): string {
+                        return match ($state) {
+                            Student::STATUS_NEW => 'gray',
+                            Student::STATUS_CONTACTED => 'blue',
+                            Student::STATUS_SUBMITTED => 'yellow',
+                            Student::STATUS_APPROVED => 'orange',
+                            Student::STATUS_ENROLLED => 'success',
+                            Student::STATUS_REJECTED => 'danger',
+                            default => 'gray',
+                        };
+                    })
+                    ->formatStateUsing(fn (string $state): string => Student::getStatusOptions()[$state] ?? $state)
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
@@ -84,9 +98,9 @@ class StudentsTable {
                     ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn(\App\Models\Student $record): bool => $record->status !== 'enrolled')
-                    ->action(function (\App\Models\Student $record) {
-                        $record->update(['status' => 'enrolled']);
+                    ->visible(fn(Student $record): bool => $record->status !== Student::STATUS_ENROLLED)
+                    ->action(function (Student $record) {
+                        $record->update(['status' => Student::STATUS_ENROLLED]);
 
                         // Cập nhật commission khi student nhập học
                         $commissionService = new \App\Services\CommissionService();
