@@ -69,6 +69,15 @@
                 </select>
             </div>
             <div class="mb-3">
+                <label class="block font-medium mb-1">Đợt tuyển</label>
+                <select name="intake_month" id="intake_month" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                    <option value="">-- Chọn đợt tuyển --</option>
+                    @foreach(($intakeMonths ?? []) as $month)
+                    <option value="{{ $month }}" {{ old('intake_month') == $month ? 'selected' : '' }}>Tháng {{ $month }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3">
                 <label class="block font-medium mb-1">Ghi chú</label>
                 <textarea name="notes" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">{{ old('notes') }}</textarea>
             </div>

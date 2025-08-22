@@ -10,6 +10,7 @@ use App\Models\Program;
 use App\Models\Student;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class PublicStudentController extends Controller {
     public function showForm($ref_id) {
@@ -34,11 +35,28 @@ class PublicStudentController extends Controller {
             $programsByOrg[$org->id] = $org->programs->map(fn($p) => ['id' => $p->id, 'name' => $p->name])->values();
         }
 
+        // Lấy đợt tuyển từ major_organization pivot table
+        $intakeMonths = [];
+        $majorOrgs = DB::table('major_organization')
+            ->where('organization_id', $organization->id)
+            ->whereNotNull('intake_months')
+            ->get();
+
+        foreach ($majorOrgs as $majorOrg) {
+            $months = json_decode($majorOrg->intake_months, true);
+            if (is_array($months)) {
+                $intakeMonths = array_merge($intakeMonths, $months);
+            }
+        }
+        $intakeMonths = array_unique($intakeMonths);
+        sort($intakeMonths);
+
         return view('ref-form', [
             'ref_id' => $ref_id,
             'collaborator' => $collaborator,
             'majorsByOrg' => $majorsByOrg,
             'programsByOrg' => $programsByOrg,
+            'intakeMonths' => $intakeMonths,
         ]);
     }
 
@@ -57,6 +75,7 @@ class PublicStudentController extends Controller {
             'organization_id' => 'required|exists:organizations,id',
             'major_id' => 'nullable|exists:majors,id',
             'program_id' => 'nullable|exists:programs,id',
+            'intake_month' => 'nullable|integer|between:1,12',
             'notes' => 'nullable|string',
         ]);
 
@@ -82,6 +101,17 @@ class PublicStudentController extends Controller {
             $selectedProgramName = Program::where('id', $validated['program_id'])->value('name');
         }
 
+        $notes = [];
+        if (!empty($validated['notes'])) {
+            $notes[] = $validated['notes'];
+        }
+        if (!empty($selectedProgramName)) {
+            $notes[] = "Chọn hệ đào tạo: " . $selectedProgramName;
+        }
+        if (!empty($validated['intake_month'])) {
+            $notes[] = "Đợt tuyển: Tháng " . $validated['intake_month'];
+        }
+
         $student = Student::create([
             'full_name' => $validated['full_name'],
             'dob' => $validated['dob'],
@@ -95,7 +125,7 @@ class PublicStudentController extends Controller {
             'major' => $selectedMajorName,
             'source' => 'ref',
             'status' => 'new',
-            'notes' => trim(($validated['notes'] ?? '') . ($selectedProgramName ? ("\nChọn hệ đào tạo: " . $selectedProgramName) : '')) ?: null,
+            'notes' => !empty($notes) ? implode("\n", $notes) : null,
         ]);
         return redirect()->back()->with('success', 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
     }
