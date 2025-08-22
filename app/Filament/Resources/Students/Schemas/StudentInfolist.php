@@ -20,7 +20,6 @@ class StudentInfolist {
                 TextEntry::make('collaborator.email')
                     ->label('Email người giới thiệu')
                     ->visible(fn($record) => $record->collaborator !== null),
-                TextEntry::make('current_college'),
                 TextEntry::make('target_university'),
                 TextEntry::make('major'),
                 TextEntry::make('program_type')
