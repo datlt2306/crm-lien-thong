@@ -61,7 +61,22 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('primaryCollaborator.full_name')
                     ->label('Cộng tác viên')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị']))
+                    ->formatStateUsing(function ($record) {
+                        // Chủ đơn vị thấy CTV cấp 1 (không có upline)
+                        $studentCtv = $record->student->collaborator;
+                        if ($studentCtv && $studentCtv->upline_id) {
+                            // Nếu student CTV có upline, lấy upline (CTV cấp 1)
+                            return $studentCtv->upline->full_name;
+                        }
+                        return $studentCtv ? $studentCtv->full_name : '—';
+                    }),
+                \Filament\Tables\Columns\TextColumn::make('student.collaborator.full_name')
+                    ->label('Cộng tác viên')
+                    ->searchable()
+                    ->sortable()
+                    ->visible(fn() => Auth::user()->role === 'ctv' && self::isPrimaryCollaborator()),
 
                 \Filament\Tables\Columns\TextColumn::make('program_type')
                     ->label('Loại chương trình')
@@ -429,5 +444,23 @@ class PaymentResource extends Resource {
         }
 
         return $downlineIds;
+    }
+
+    /**
+     * Kiểm tra xem CTV hiện tại có phải là CTV cấp 1 (không có upline) không
+     */
+    private static function isPrimaryCollaborator(): bool {
+        $user = Auth::user();
+        if ($user->role !== 'ctv') {
+            return false;
+        }
+
+        $collaborator = Collaborator::where('email', $user->email)->first();
+        if (!$collaborator) {
+            return false;
+        }
+
+        // CTV cấp 1 là CTV không có upline_id
+        return $collaborator->upline_id === null;
     }
 }
