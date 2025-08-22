@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Students\Pages;
 use App\Filament\Resources\Students\StudentResource;
 use App\Models\Collaborator;
 use App\Models\Organization;
+use App\Models\Student;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,6 +25,10 @@ class CreateStudent extends CreateRecord {
         }
 
         return $data;
+    }
+
+    protected function getValidationRules(): array {
+        return Student::getValidationRules();
     }
 
     public function getTitle(): string {

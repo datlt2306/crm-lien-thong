@@ -23,8 +23,28 @@ class StudentInfolist {
                 TextEntry::make('current_college'),
                 TextEntry::make('target_university'),
                 TextEntry::make('major'),
+                TextEntry::make('program_type')
+                    ->label('Hệ liên thông')
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'Vừa học vừa làm',
+                        default => 'Chưa chọn'
+                    }),
+                TextEntry::make('dob')
+                    ->label('Ngày sinh')
+                    ->date('d/m/Y'),
+                TextEntry::make('intake_month')
+                    ->label('Đợt tuyển')
+                    ->formatStateUsing(fn ($state) => $state ? "Tháng {$state}" : 'Chưa chọn'),
+                TextEntry::make('address')
+                    ->label('Địa chỉ')
+                    ->columnSpanFull(),
                 TextEntry::make('source'),
                 TextEntry::make('status'),
+                TextEntry::make('notes')
+                    ->label('Ghi chú')
+                    ->markdown()
+                    ->columnSpanFull(),
                 TextEntry::make('created_at')
                     ->dateTime(),
                 TextEntry::make('updated_at')

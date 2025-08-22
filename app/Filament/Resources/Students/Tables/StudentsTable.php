@@ -53,6 +53,34 @@ class StudentsTable {
                 TextColumn::make('major')
                     ->label('Ngành học')
                     ->searchable(),
+                TextColumn::make('dob')
+                    ->label('Ngày sinh')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('intake_month')
+                    ->label('Đợt tuyển')
+                    ->formatStateUsing(fn ($state) => $state ? "Tháng {$state}" : '—')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('program_type')
+                    ->label('Hệ liên thông')
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'Vừa học vừa làm',
+                        default => '—'
+                    })
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'REGULAR' => 'success',
+                        'PART_TIME' => 'warning',
+                        default => 'gray'
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('address')
+                    ->label('Địa chỉ')
+                    ->limit(50)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('source')
                     ->label('Nguồn')
                     ->searchable(),

@@ -43,13 +43,6 @@ class StudentForm {
                         return $org?->name;
                     })
                     ->helperText('Tự động theo tên đơn vị'),
-                \Filament\Forms\Components\Select::make('program_type')
-                    ->label('Hệ liên thông')
-                    ->options(function () {
-                        return \App\Models\Program::where('is_active', true)->orderBy('name')->pluck('name', 'code')->toArray();
-                    })
-                    ->searchable()
-                    ->helperText('Chọn hệ dự kiến cho sinh viên'),
                 \Filament\Forms\Components\Select::make('major')
                     ->label('Ngành học')
                     ->options(function (callable $get) {
@@ -61,6 +54,38 @@ class StudentForm {
                         return $org?->majors()->where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray() ?? [];
                     })
                     ->searchable(),
+                \Filament\Forms\Components\Select::make('program_type')
+                    ->label('Hệ liên thông')
+                    ->options([
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'Vừa học vừa làm',
+                    ])
+                    ->helperText('Chọn hệ dự kiến cho sinh viên'),
+                \Filament\Forms\Components\DatePicker::make('dob')
+                    ->label('Ngày sinh')
+                    ->displayFormat('d/m/Y')
+                    ->helperText('Chọn ngày tháng năm sinh của sinh viên'),
+                \Filament\Forms\Components\Select::make('intake_month')
+                    ->label('Đợt tuyển')
+                    ->options([
+                        1 => 'Tháng 1',
+                        2 => 'Tháng 2',
+                        3 => 'Tháng 3',
+                        4 => 'Tháng 4',
+                        5 => 'Tháng 5',
+                        6 => 'Tháng 6',
+                        7 => 'Tháng 7',
+                        8 => 'Tháng 8',
+                        9 => 'Tháng 9',
+                        10 => 'Tháng 10',
+                        11 => 'Tháng 11',
+                        12 => 'Tháng 12',
+                    ])
+                    ->helperText('Chọn tháng tuyển sinh dự kiến'),
+                \Filament\Forms\Components\Textarea::make('address')
+                    ->label('Địa chỉ')
+                    ->rows(3)
+                    ->helperText('Nhập địa chỉ của sinh viên'),
                 \Filament\Forms\Components\Select::make('source')
                     ->label('Nguồn')
                     ->options([

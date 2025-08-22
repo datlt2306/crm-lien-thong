@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rule;
 
 class Student extends Model {
     protected $fillable = [
@@ -13,6 +14,8 @@ class Student extends Model {
         'collaborator_id',
         'target_university',
         'major',
+        'intake_month',
+        'program_type',
         'source',
         'status',
         'notes',
@@ -84,5 +87,27 @@ class Student extends Model {
 
     public function collaborator() {
         return $this->belongsTo(Collaborator::class, 'collaborator_id');
+    }
+
+    /**
+     * Validation rules cho model
+     */
+    public static function getValidationRules(): array {
+        return [
+            'full_name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20|unique:students,phone,' . (request()->route('record') ?? ''),
+            'email' => 'nullable|email|max:255',
+            'organization_id' => 'required|exists:organizations,id',
+            'collaborator_id' => 'nullable|exists:collaborators,id',
+            'target_university' => 'nullable|string|max:255',
+            'major' => 'nullable|string|max:255',
+            'intake_month' => 'nullable|integer|between:1,12',
+            'program_type' => ['nullable', Rule::in(['REGULAR', 'PART_TIME'])],
+            'source' => ['required', Rule::in(['form', 'ref', 'facebook', 'zalo', 'tiktok', 'hotline', 'event', 'school', 'walkin', 'other'])],
+            'status' => ['required', Rule::in(['new', 'contacted', 'submitted', 'approved', 'enrolled', 'rejected', 'pending', 'interviewed', 'deposit_paid', 'offer_sent', 'offer_accepted'])],
+            'notes' => 'nullable|string',
+            'dob' => 'nullable|date|before:today',
+            'address' => 'nullable|string|max:500',
+        ];
     }
 }
