@@ -7,15 +7,48 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditUser extends EditRecord
-{
+class EditUser extends EditRecord {
     protected static string $resource = UserResource::class;
 
-    protected function getHeaderActions(): array
-    {
+    protected function getHeaderActions(): array {
         return [
             ViewAction::make(),
             DeleteAction::make(),
         ];
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array {
+        // Nếu password trống, không cập nhật password
+        if (empty($data['password'])) {
+            unset($data['password']);
+        } else {
+            // Hash password nếu có nhập
+            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
+        }
+
+        // Xử lý role - cập nhật role trong database
+        if (isset($data['role'])) {
+            $user = $this->record;
+            $user->role = $data['role'];
+            $user->save();
+
+            // Cập nhật role trong Spatie Permission
+            try {
+                $user->syncRoles([$data['role']]);
+            } catch (\Exception $e) {
+                // Nếu role chưa tồn tại, tạo mới
+                if (str_contains($e->getMessage(), 'There is no role named')) {
+                    \Spatie\Permission\Models\Role::create([
+                        'name' => $data['role'],
+                        'guard_name' => 'web'
+                    ]);
+                    $user->syncRoles([$data['role']]);
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        return $data;
     }
 }

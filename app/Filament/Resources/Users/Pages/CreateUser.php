@@ -14,4 +14,34 @@ class CreateUser extends CreateRecord {
     public function getBreadcrumb(): string {
         return 'Thêm người dùng mới';
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array {
+        // Hash password trước khi tạo user
+        if (!empty($data['password'])) {
+            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
+        }
+
+        return $data;
+    }
+
+    protected function afterCreate(): void {
+        // Gán role cho user mới tạo
+        $user = $this->record;
+        if (isset($user->role)) {
+            try {
+                $user->assignRole($user->role);
+            } catch (\Exception $e) {
+                // Nếu role chưa tồn tại, tạo mới
+                if (str_contains($e->getMessage(), 'There is no role named')) {
+                    \Spatie\Permission\Models\Role::create([
+                        'name' => $user->role,
+                        'guard_name' => 'web'
+                    ]);
+                    $user->assignRole($user->role);
+                } else {
+                    throw $e;
+                }
+            }
+        }
+    }
 }

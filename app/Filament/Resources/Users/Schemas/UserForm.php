@@ -29,7 +29,9 @@ class UserForm {
                 \Filament\Forms\Components\TextInput::make('password')
                     ->password()
                     ->label('Mật khẩu')
-                    ->required(fn($context) => $context === 'create'),
+                    ->required(fn($context) => $context === 'create')
+                    ->dehydrated(fn($context, $state) => $context === 'create' || !empty($state))
+                    ->helperText(fn($context) => $context === 'edit' ? 'Để trống nếu không muốn thay đổi mật khẩu' : 'Nhập mật khẩu cho tài khoản mới'),
             ]);
     }
 }

@@ -48,9 +48,10 @@ class CreateOrganization extends CreateRecord {
             // Gán owner_id cho organization
             $data['owner_id'] = $userAccount->id;
         }
-        // Nếu không có cả hai, báo lỗi
+        // Nếu không có cả hai, hiển thị validation error
         else {
-            throw new \Exception('Phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho chủ đơn vị');
+            $this->addError('owner_id', '❌ Bắt buộc phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho chủ đơn vị');
+            $this->halt();
         }
 
         // Loại bỏ các field không cần thiết
