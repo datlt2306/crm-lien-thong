@@ -79,7 +79,7 @@ class CollaboratorResource extends Resource {
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery();
         $user = Auth::user();
-        if ($user && $user->role === 'user') {
+        if ($user && $user->role === 'chủ đơn vị') {
             // Tìm collaborator của user hiện tại
             $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
             if ($collaborator) {

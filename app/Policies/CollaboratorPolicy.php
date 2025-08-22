@@ -11,7 +11,7 @@ class CollaboratorPolicy {
      * Determine whether the user can view any models.
      */
     public function viewAny($user): bool {
-        return in_array($user->role, ['super_admin', 'user']);
+        return in_array($user->role, ['super_admin', 'chủ đơn vị']);
     }
 
     /**
@@ -20,14 +20,14 @@ class CollaboratorPolicy {
     public function view($user, $model): bool {
         if ($user->role === 'super_admin') return true;
         $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-        return $user->role === 'user' && $org && $model->organization_id === $org->id;
+        return $user->role === 'chủ đơn vị' && $org && $model->organization_id === $org->id;
     }
 
     /**
      * Determine whether the user can create models.
      */
     public function create($user): bool {
-        return in_array($user->role, ['super_admin', 'user']);
+        return in_array($user->role, ['super_admin', 'chủ đơn vị']);
     }
 
     /**
@@ -36,7 +36,7 @@ class CollaboratorPolicy {
     public function update($user, $model): bool {
         if ($user->role === 'super_admin') return true;
         $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-        return $user->role === 'user' && $org && $model->organization_id === $org->id;
+        return $user->role === 'chủ đơn vị' && $org && $model->organization_id === $org->id;
     }
 
     /**
@@ -45,7 +45,7 @@ class CollaboratorPolicy {
     public function delete($user, $model): bool {
         if ($user->role === 'super_admin') return true;
         $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-        return $user->role === 'user' && $org && $model->organization_id === $org->id;
+        return $user->role === 'chủ đơn vị' && $org && $model->organization_id === $org->id;
     }
 
     /**
@@ -54,7 +54,7 @@ class CollaboratorPolicy {
     public function restore($user, $model): bool {
         if ($user->role === 'super_admin') return true;
         $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-        return $user->role === 'user' && $org && $model->organization_id === $org->id;
+        return $user->role === 'chủ đơn vị' && $org && $model->organization_id === $org->id;
     }
 
     /**
@@ -63,6 +63,6 @@ class CollaboratorPolicy {
     public function forceDelete($user, $model): bool {
         if ($user->role === 'super_admin') return true;
         $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-        return $user->role === 'user' && $org && $model->organization_id === $org->id;
+        return $user->role === 'chủ đơn vị' && $org && $model->organization_id === $org->id;
     }
 }

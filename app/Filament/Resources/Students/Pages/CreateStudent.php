@@ -14,7 +14,7 @@ class CreateStudent extends CreateRecord {
     protected function mutateFormDataBeforeCreate(array $data): array {
         $user = Auth::user();
 
-        if ($user && $user->role === 'user') {
+        if ($user && $user->role === 'chủ đơn vị') {
             // Tìm collaborator của user hiện tại
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {

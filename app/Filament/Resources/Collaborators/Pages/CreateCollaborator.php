@@ -40,11 +40,11 @@ class CreateCollaborator extends CreateRecord {
                 'name' => $data['full_name'],
                 'email' => $data['email'],
                 'password' => Hash::make($password),
-                'role' => 'user',
+                'role' => 'ctv',
             ]);
 
-            // Gán role 'user' cho collaborator
-            $userAccount->assignRole('user');
+            // Gán role 'ctv' cho collaborator
+            $userAccount->assignRole('ctv');
 
             // Cập nhật organization owner_id nếu chưa có
             if (isset($data['organization_id'])) {
