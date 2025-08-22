@@ -25,7 +25,7 @@ class ViewStudent extends ViewRecord {
                 ->label('Xem Bill')
                 ->icon('heroicon-o-document-text')
                 ->color('info')
-                ->url(Storage::url($this->record->payment->bill_path))
+                ->url(route('files.bill.view', $this->record->payment->id))
                 ->openUrlInNewTab();
         }
 

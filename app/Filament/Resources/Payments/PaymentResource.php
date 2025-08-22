@@ -134,7 +134,7 @@ class PaymentResource extends Resource {
                     ->label('Xem Bill')
                     ->icon('heroicon-o-document-text')
                     ->color('info')
-                    ->url(fn(Payment $record) => $record->bill_path ? Storage::url($record->bill_path) : '#')
+                    ->url(fn(Payment $record) => $record->bill_path ? route('files.bill.view', $record->id) : '#')
                     ->openUrlInNewTab()
                     ->visible(fn(Payment $record): bool => $record->bill_path),
             ])

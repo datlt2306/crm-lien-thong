@@ -177,6 +177,8 @@ class StudentsTable {
                             ->label('Bill thanh toán')
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120) // 5MB
+                            ->disk('local')
+                            ->directory('bills')
                             ->required()
                             ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
                         \Filament\Forms\Components\TextInput::make('amount')
@@ -196,7 +198,8 @@ class StudentsTable {
                     ->visible(
                         fn(Student $record): bool =>
                         Auth::user()->role === 'ctv' &&
-                            !$record->payment // Chưa có payment
+                            !$record->payment && // Chưa có payment
+                            self::canUploadBillForStudent($record) // Có quyền upload bill cho student này
                     )
                     ->action(function (array $data, Student $record) {
                         // Tìm collaborator của user hiện tại
@@ -211,12 +214,16 @@ class StudentsTable {
                             return;
                         }
 
+                        // CTV upload bill cho học viên của mình
+                        $primaryCollaboratorId = $collaborator->id; // CTV trực tiếp giới thiệu học viên
+                        $subCollaboratorId = $collaborator->upline_id; // CTV cấp trên
+
                         // Tạo payment record
                         \App\Models\Payment::create([
                             'organization_id' => $record->organization_id,
                             'student_id' => $record->id,
-                            'primary_collaborator_id' => $collaborator->id,
-                            'sub_collaborator_id' => $collaborator->upline_id,
+                            'primary_collaborator_id' => $primaryCollaboratorId,
+                            'sub_collaborator_id' => $subCollaboratorId,
                             'program_type' => $data['program_type'],
                             'amount' => $data['amount'],
                             'bill_path' => $data['bill'],
@@ -233,7 +240,7 @@ class StudentsTable {
                     ->label('Xem Bill')
                     ->icon('heroicon-o-document-text')
                     ->color('info')
-                    ->url(fn(Student $record) => $record->payment?->bill_path ? Storage::url($record->payment->bill_path) : '#')
+                    ->url(fn(Student $record) => $record->payment?->id ? route('files.bill.view', $record->payment->id) : '#')
                     ->openUrlInNewTab()
                     ->visible(
                         fn(Student $record): bool =>
@@ -270,5 +277,44 @@ class StudentsTable {
                         ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
                 ]),
             ]);
+    }
+
+    /**
+     * Kiểm tra xem CTV hiện tại có thể upload bill cho student này không
+     */
+    private static function canUploadBillForStudent(Student $student): bool {
+        $user = Auth::user();
+
+        if ($user->role !== 'ctv') {
+            return false;
+        }
+
+        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+        if (!$collaborator) {
+            return false;
+        }
+
+        // Chỉ CTV trực tiếp giới thiệu học viên mới được upload bill
+        return $student->collaborator_id === $collaborator->id;
+    }
+
+    /**
+     * Lấy danh sách ID của tất cả downline trong nhánh
+     */
+    private static function getDownlineIds(int $collaboratorId): array {
+        $downlineIds = [];
+
+        // Lấy tất cả downline trực tiếp
+        $directDownlines = \App\Models\Collaborator::where('upline_id', $collaboratorId)->get();
+
+        foreach ($directDownlines as $downline) {
+            $downlineIds[] = $downline->id;
+
+            // Đệ quy lấy downline của downline
+            $subDownlineIds = self::getDownlineIds($downline->id);
+            $downlineIds = array_merge($downlineIds, $subDownlineIds);
+        }
+
+        return $downlineIds;
     }
 }

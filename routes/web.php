@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublicStudentController;
 use App\Http\Controllers\PublicCollaboratorController;
+use App\Http\Controllers\FileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,3 +38,8 @@ Route::post('/ctv/register', [PublicCollaboratorController::class, 'submitRegist
 // Link ref dành cho tuyển CTV tuyến dưới
 Route::get('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'showRefRegister'])->name('public.ref.ctv.form');
 Route::post('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'submitRefRegister'])->name('public.ref.ctv.submit');
+
+// Route để xem bill (cần authentication)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/files/bill/{paymentId}', [FileController::class, 'viewBill'])->name('files.bill.view');
+});
