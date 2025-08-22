@@ -104,6 +104,8 @@ class CommissionResource extends Resource {
                             CommissionItem::STATUS_PAYABLE => 'warning',
                             CommissionItem::STATUS_PAID => 'success',
                             CommissionItem::STATUS_CANCELLED => 'danger',
+                            CommissionItem::STATUS_PAYMENT_CONFIRMED => 'info',
+                            CommissionItem::STATUS_RECEIVED_CONFIRMED => 'success',
                             default => 'gray',
                         };
                     })
@@ -140,10 +142,11 @@ class CommissionResource extends Resource {
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
 
-                \Filament\Tables\Columns\TextColumn::make('paid_at')
+                \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
                     ->label('Đã thanh toán lúc')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho chủ đơn vị và super admin
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
@@ -237,6 +240,20 @@ class CommissionResource extends Resource {
                             ->body('Quy trình thanh toán hoa hồng đã hoàn tất.')
                             ->success()
                             ->send();
+                    }),
+
+                Action::make('view_bill')
+                    ->label('Xem Bill')
+                    ->icon('heroicon-o-document-text')
+                    ->color('gray')
+                    ->modalContent(function (CommissionItem $record) {
+                        return view('components.commission-bill-viewer', [
+                            'commissionItem' => $record,
+                        ]);
+                    })
+                    ->modalWidth('4xl')
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        return $record->payment_bill_path && in_array($user->role, ['chủ đơn vị', 'ctv']);
                     }),
 
                 Action::make('mark_cancelled')

@@ -42,4 +42,5 @@ Route::post('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'submitRe
 // Route để xem bill (cần authentication)
 Route::middleware(['auth'])->group(function () {
     Route::get('/files/bill/{paymentId}', [FileController::class, 'viewBill'])->name('files.bill.view');
+    Route::get('/files/commission-bill/{commissionItemId}', [FileController::class, 'viewCommissionBill'])->name('files.commission-bill.view');
 });

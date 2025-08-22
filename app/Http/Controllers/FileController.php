@@ -55,6 +55,41 @@ class FileController extends Controller {
         abort(403, 'Không có quyền truy cập file này');
     }
 
+    public function viewCommissionBill($commissionItemId) {
+        // Tìm commission item
+        $commissionItem = \App\Models\CommissionItem::findOrFail($commissionItemId);
+
+        // Kiểm tra quyền truy cập
+        $user = Auth::user();
+
+        if (!$user) {
+            abort(403, 'Không có quyền truy cập');
+        }
+
+        // Super admin có thể xem tất cả
+        if ($user->role === 'super_admin') {
+            return $this->serveFile($commissionItem->payment_bill_path);
+        }
+
+        // Chủ đơn vị có thể xem commission bill của tổ chức mình
+        if ($user->role === 'chủ đơn vị') {
+            $org = Organization::where('owner_id', $user->id)->first();
+            if ($org && $commissionItem->recipient->organization_id === $org->id) {
+                return $this->serveFile($commissionItem->payment_bill_path);
+            }
+        }
+
+        // CTV có thể xem commission bill của mình
+        if ($user->role === 'ctv') {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if ($collaborator && $commissionItem->recipient_collaborator_id === $collaborator->id) {
+                return $this->serveFile($commissionItem->payment_bill_path);
+            }
+        }
+
+        abort(403, 'Không có quyền truy cập file này');
+    }
+
     private function serveFile($filePath) {
         if (!$filePath || !Storage::disk('local')->exists($filePath)) {
             abort(404, 'File không tồn tại');
