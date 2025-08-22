@@ -21,13 +21,14 @@ use Illuminate\Support\Facades\Auth;
 class CollaboratorResource extends Resource {
     protected static ?string $model = Collaborator::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = null;
-    protected static ?string $navigationLabel = 'CTV của tôi';
+    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý dữ liệu';
+    protected static ?string $navigationLabel = 'Cộng tác viên';
+    protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = auth()->user();
+        $user = \Illuminate\Support\Facades\Auth::user();
 
         if ($user->role === 'super_admin') {
             // Super admin luôn thấy menu này

@@ -16,12 +16,28 @@ use App\Filament\Resources\Commissions\Pages\ListCommissions;
 
 class CommissionResource extends Resource {
     protected static ?string $model = Commission::class;
-    protected static string|\UnitEnum|null $navigationGroup = 'Finance';
+    protected static string|\UnitEnum|null $navigationGroup = 'Thanh toán & Hoa hồng';
     protected static ?string $navigationLabel = 'Hoa hồng';
+    protected static ?int $navigationSort = 2;
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
 
     public static function shouldRegisterNavigation(): bool {
-        return Gate::allows('view_finance');
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        if ($user->role === 'super_admin') {
+            return true;
+        }
+
+        if ($user->role === 'ctv') {
+            // CTV chỉ thấy commission của mình
+            return true;
+        }
+
+        if ($user->role === 'chủ đơn vị') {
+            return true;
+        }
+
+        return false;
     }
 
     public static function form(Schema $schema): Schema {
@@ -72,7 +88,7 @@ class CommissionResource extends Resource {
                             default => 'gray',
                         };
                     })
-                    ->formatStateUsing(fn (string $state): string => CommissionItem::getStatusOptions()[$state] ?? $state),
+                    ->formatStateUsing(fn(string $state): string => CommissionItem::getStatusOptions()[$state] ?? $state),
 
                 \Filament\Tables\Columns\TextColumn::make('trigger')
                     ->label('Điều kiện kích hoạt')
@@ -182,7 +198,34 @@ class CommissionResource extends Resource {
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->modifyQueryUsing(function ($query) {
+                $user = \Illuminate\Support\Facades\Auth::user();
+
+                if ($user->role === 'super_admin') {
+                    return;
+                }
+
+                if ($user->role === 'ctv') {
+                    // CTV chỉ thấy commission của mình
+                    $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                    if ($collaborator) {
+                        $query->where('recipient_id', $collaborator->id);
+                    } else {
+                        $query->whereNull('id');
+                    }
+                }
+
+                if ($user->role === 'chủ đơn vị') {
+                    // Chủ đơn vị chỉ thấy commission của tổ chức mình
+                    $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+                    if ($org) {
+                        $query->whereHas('recipient', function ($q) use ($org) {
+                            $q->where('organization_id', $org->id);
+                        });
+                    }
+                }
+            });
     }
 
     public static function getPages(): array {

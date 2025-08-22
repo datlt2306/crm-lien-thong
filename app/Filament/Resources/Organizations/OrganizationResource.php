@@ -21,9 +21,10 @@ class OrganizationResource extends Resource {
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Setup';
+    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý dữ liệu';
 
     protected static ?string $navigationLabel = 'Đơn vị';
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $recordTitleAttribute = 'name';
 

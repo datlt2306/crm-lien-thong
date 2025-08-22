@@ -19,8 +19,9 @@ use Illuminate\Support\Facades\Gate;
 class CommissionPolicyResource extends Resource {
     protected static ?string $model = CommissionPolicy::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Finance';
-    protected static ?string $navigationLabel = 'Cấu hình hoa hồng';
+    protected static string|\UnitEnum|null $navigationGroup = 'Cấu hình';
+    protected static ?string $navigationLabel = 'Chính sách hoa hồng';
+    protected static ?int $navigationSort = 2;
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
     public static function shouldRegisterNavigation(): bool {

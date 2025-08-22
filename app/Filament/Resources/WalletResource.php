@@ -26,10 +26,11 @@ class WalletResource extends Resource {
 
     protected static ?string $pluralModelLabel = 'Ví tiền';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý hoa hồng';
+    protected static string|\UnitEnum|null $navigationGroup = 'Thanh toán & Hoa hồng';
+    protected static ?int $navigationSort = 3;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = auth()->user();
+        $user = \Illuminate\Support\Facades\Auth::user();
 
         if ($user->role === 'super_admin') {
             // Super admin luôn thấy menu này
@@ -55,7 +56,7 @@ class WalletResource extends Resource {
                 Forms\Components\Select::make('collaborator_id')
                     ->label('CTV')
                     ->options(function () {
-                        $user = auth()->user();
+                        $user = \Illuminate\Support\Facades\Auth::user();
                         if ($user->role === 'super_admin') {
                             return \App\Models\Collaborator::pluck('full_name', 'id');
                         } else if ($user->role === 'chủ đơn vị') {
@@ -131,7 +132,7 @@ class WalletResource extends Resource {
                 Tables\Filters\SelectFilter::make('collaborator.organization_id')
                     ->label('Tổ chức')
                     ->options(function () {
-                        $user = auth()->user();
+                        $user = \Illuminate\Support\Facades\Auth::user();
                         if ($user->role === 'super_admin') {
                             return \App\Models\Organization::pluck('name', 'id');
                         } else if ($user->role === 'chủ đơn vị') {
@@ -145,10 +146,7 @@ class WalletResource extends Resource {
             ])
             ->actions([
                 ViewAction::make(),
-                \Filament\Actions\Action::make('transactions')
-                    ->label('Giao dịch')
-                    ->icon('heroicon-o-arrow-path')
-                    ->url(fn(Wallet $record): string => route('filament.admin.resources.wallet-transactions.index')),
+                // Đã loại bỏ chức năng giao dịch
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -156,7 +154,7 @@ class WalletResource extends Resource {
                 ]),
             ])
             ->modifyQueryUsing(function (Builder $query) {
-                $user = auth()->user();
+                $user = \Illuminate\Support\Facades\Auth::user();
                 if ($user->role === 'super_admin') {
                     // Super admin thấy tất cả
                     return;
