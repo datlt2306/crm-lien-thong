@@ -7,6 +7,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request;
 
 class CollaboratorForm {
     public static function configure(Schema $schema): Schema {
@@ -49,7 +50,7 @@ class CollaboratorForm {
                     ->default(fn() => strtoupper(Str::random(8)))
                     ->formatStateUsing(
                         fn($state) =>
-                        $state ? 'https://lienthongdaihoc.com/ref/' . $state : ''
+                        $state ? (request()->getSchemeAndHttpHost() . '/ref/' . $state) : ''
                     )
                     ->dehydrateStateUsing(
                         fn($state) =>
