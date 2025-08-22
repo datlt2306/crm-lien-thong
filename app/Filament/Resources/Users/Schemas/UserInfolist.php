@@ -11,16 +11,19 @@ class UserInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('name'),
+                TextEntry::make('name')
+                    ->label('Họ và tên'),
                 TextEntry::make('email')
-                    ->label('Email address'),
+                    ->label('Địa chỉ email'),
                 TextEntry::make('email_verified_at')
                     ->dateTime(),
                 TextEntry::make('role'),
                 TextEntry::make('created_at')
-                    ->dateTime(),
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i:s'),
                 TextEntry::make('updated_at')
-                    ->dateTime(),
+                    ->label('Ngày cập nhật')
+                    ->dateTime('d/m/Y H:i:s'),
             ]);
     }
 }

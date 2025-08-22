@@ -68,11 +68,13 @@ class UsersTable {
                     })
                     ->searchable(),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i:s')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('Ngày cập nhật')
+                    ->dateTime('d/m/Y H:i:s')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

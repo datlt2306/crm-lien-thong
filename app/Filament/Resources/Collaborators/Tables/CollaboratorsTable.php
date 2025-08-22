@@ -71,12 +71,12 @@ class CollaboratorsTable {
                     ->formatStateUsing(fn($state) => $state === 'active' ? 'Kích hoạt' : 'Vô hiệu'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:i:s')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
                     ->label('Ngày cập nhật')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:i:s')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

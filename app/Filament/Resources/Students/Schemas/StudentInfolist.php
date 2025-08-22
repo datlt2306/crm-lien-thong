@@ -9,10 +9,12 @@ class StudentInfolist {
     public static function configure(Schema $schema): Schema {
         return $schema
             ->components([
-                TextEntry::make('full_name'),
-                TextEntry::make('phone'),
+                TextEntry::make('full_name')
+                    ->label('Họ và tên'),
+                TextEntry::make('phone')
+                    ->label('Số điện thoại'),
                 TextEntry::make('email')
-                    ->label('Email address'),
+                    ->label('Địa chỉ email'),
                 TextEntry::make('organization.name')
                     ->label('Tổ chức'),
                 TextEntry::make('collaborator.full_name')
@@ -20,8 +22,10 @@ class StudentInfolist {
                 TextEntry::make('collaborator.email')
                     ->label('Email người giới thiệu')
                     ->visible(fn($record) => $record->collaborator !== null),
-                TextEntry::make('target_university'),
-                TextEntry::make('major'),
+                TextEntry::make('target_university')
+                    ->label('Trường muốn học'),
+                TextEntry::make('major')
+                    ->label('Ngành học'),
                 TextEntry::make('program_type')
                     ->label('Hệ liên thông')
                     ->formatStateUsing(fn ($state) => match($state) {
@@ -45,9 +49,11 @@ class StudentInfolist {
                     ->markdown()
                     ->columnSpanFull(),
                 TextEntry::make('created_at')
-                    ->dateTime(),
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i:s'),
                 TextEntry::make('updated_at')
-                    ->dateTime(),
+                    ->label('Ngày cập nhật')
+                    ->dateTime('d/m/Y H:i:s'),
             ]);
     }
 }

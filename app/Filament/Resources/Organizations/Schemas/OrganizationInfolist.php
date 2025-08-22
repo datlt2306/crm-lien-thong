@@ -17,9 +17,11 @@ class OrganizationInfolist
                 TextEntry::make('contact_phone'),
                 TextEntry::make('status'),
                 TextEntry::make('created_at')
-                    ->dateTime(),
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i:s'),
                 TextEntry::make('updated_at')
-                    ->dateTime(),
+                    ->label('Ngày cập nhật')
+                    ->dateTime('d/m/Y H:i:s'),
             ]);
     }
 }

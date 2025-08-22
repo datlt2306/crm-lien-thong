@@ -11,10 +11,12 @@ class CollaboratorInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('full_name'),
-                TextEntry::make('phone'),
+                TextEntry::make('full_name')
+                    ->label('Họ và tên'),
+                TextEntry::make('phone')
+                    ->label('Số điện thoại'),
                 TextEntry::make('email')
-                    ->label('Email address'),
+                    ->label('Địa chỉ email'),
                 TextEntry::make('organization_id')
                     ->numeric(),
                 TextEntry::make('ref_id'),
@@ -22,9 +24,11 @@ class CollaboratorInfolist
                     ->numeric(),
                 TextEntry::make('status'),
                 TextEntry::make('created_at')
-                    ->dateTime(),
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i:s'),
                 TextEntry::make('updated_at')
-                    ->dateTime(),
+                    ->label('Ngày cập nhật')
+                    ->dateTime('d/m/Y H:i:s'),
             ]);
     }
 }
