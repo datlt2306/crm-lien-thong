@@ -31,12 +31,6 @@ class StudentForm {
                     ->relationship('collaborator', 'full_name')
                     // ->searchable()
                     ->helperText('Chọn người giới thiệu cho sinh viên này'),
-                \Filament\Forms\Components\Select::make('current_college')
-                    ->label('Trường đang học')
-                    ->options(function () {
-                        return \App\Models\Organization::orderBy('name')->pluck('name', 'name')->toArray();
-                    })
-                    ->searchable(),
                 \Filament\Forms\Components\TextInput::make('target_university')
                     ->label('Trường muốn học')
                     ->disabled()

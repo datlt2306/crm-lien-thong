@@ -46,9 +46,6 @@ class StudentsTable {
                     ->badge()
                     ->color('info')
                     ->placeholder('Không có'),
-                TextColumn::make('current_college')
-                    ->label('Trường đang học')
-                    ->searchable(),
                 TextColumn::make('target_university')
                     ->label('Trường muốn học')
                     ->searchable(),

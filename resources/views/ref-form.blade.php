@@ -40,10 +40,7 @@
                 <label class="block font-medium mb-1">Email</label>
                 <input type="email" name="email" value="{{ old('email') }}" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
             </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Trường đang học</label>
-                <input type="text" name="current_college" value="{{ old('current_college') }}" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
-            </div>
+
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ngày tháng năm sinh *</label>
                 <input type="date" name="dob" value="{{ old('dob') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />

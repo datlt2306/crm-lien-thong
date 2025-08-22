@@ -11,7 +11,6 @@ class Student extends Model {
         'email',
         'organization_id',
         'collaborator_id',
-        'current_college',
         'target_university',
         'major',
         'source',

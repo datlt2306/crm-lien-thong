@@ -65,7 +65,7 @@ class PublicStudentController extends Controller {
             'address' => 'required|string|max:255',
             'phone' => 'required|string|max:20|unique:students,phone',
             'email' => 'nullable|email|max:255',
-            'current_college' => 'nullable|string|max:255',
+
             'organization_id' => 'required|exists:organizations,id',
             'major_id' => 'nullable|exists:majors,id',
             'program_id' => 'nullable|exists:programs,id',
@@ -109,7 +109,7 @@ class PublicStudentController extends Controller {
             'email' => $validated['email'] ?? null,
             'organization_id' => $selectedOrg?->id,
             'collaborator_id' => $collaborator->id,
-            'current_college' => $validated['current_college'] ?? null,
+
             'target_university' => $selectedOrg?->name,
             'major' => $selectedMajorName,
             'source' => 'ref',
