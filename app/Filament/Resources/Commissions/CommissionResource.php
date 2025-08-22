@@ -24,22 +24,7 @@ class CommissionResource extends Resource {
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        if ($user->role === 'super_admin') {
-            return true;
-        }
-
-        if ($user->role === 'ctv') {
-            // CTV chỉ thấy commission của mình
-            return true;
-        }
-
-        if ($user->role === 'chủ đơn vị') {
-            return true;
-        }
-
-        return false;
+        return true; // Cho phép tất cả user đã đăng nhập thấy menu, quyền truy cập sẽ được kiểm tra ở page level
     }
 
     public static function form(Schema $schema): Schema {
@@ -47,6 +32,24 @@ class CommissionResource extends Resource {
     }
 
     public static function table(Table $table): Table {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isCtv = $user->role === 'ctv';
+
+        // Kiểm tra xem CTV có phải là người trực tiếp giới thiệu sinh viên không
+        $isDirectRef = false;
+        // Kiểm tra xem CTV có phải là CTV cấp 1 không (không có upline)
+        $isPrimaryCtv = false;
+        if ($isCtv) {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            // CTV trực tiếp giới thiệu sinh viên sẽ có commission với role = 'direct'
+            // và recipient_collaborator_id = collaborator.id
+            $isDirectRef = $collaborator && CommissionItem::where('recipient_collaborator_id', $collaborator->id)
+                ->where('role', 'direct')
+                ->exists();
+            // CTV cấp 1 là CTV không có upline
+            $isPrimaryCtv = $collaborator && $collaborator->upline_id === null;
+        }
+
         return $table
             ->query(CommissionItem::query())
             ->columns([
@@ -58,21 +61,33 @@ class CommissionResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('recipient.full_name')
                     ->label('CTV nhận hoa hồng')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn(): bool => !$isCtv || !$isDirectRef) // Ẩn cho CTV trực tiếp giới thiệu, hiển thị cho CTV khác
+                    ->formatStateUsing(function ($state, CommissionItem $record) use ($user) {
+                        // Cho chủ đơn vị, hiển thị CTV cấp 1 thay vì CTV thực tế nhận
+                        if ($user->role === 'chủ đơn vị') {
+                            $student = $record->commission->student;
+                            if ($student && $student->collaborator && $student->collaborator->upline) {
+                                return $student->collaborator->upline->full_name; // CTV cấp 1
+                            }
+                        }
+                        return $state; // CTV thực tế nhận
+                    }),
 
                 \Filament\Tables\Columns\TextColumn::make('role')
                     ->label('Vai trò')
                     ->badge()
                     ->color(fn(string $state): string => match (strtoupper($state)) {
-                        'PRIMARY' => 'success',
-                        'SUB' => 'warning',
+                        'DIRECT' => 'success',
+                        'DOWNLINE' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
-                        'PRIMARY' => 'CTV cấp 1',
-                        'SUB' => 'CTV cấp 2',
+                        'DIRECT' => 'CTV cấp 1',
+                        'DOWNLINE' => 'CTV cấp 2',
                         default => $state,
-                    }),
+                    })
+                    ->visible(fn(): bool => !$isCtv || (!$isDirectRef && !$isPrimaryCtv)), // Ẩn cho CTV trực tiếp giới thiệu và CTV cấp 1
 
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
@@ -96,20 +111,22 @@ class CommissionResource extends Resource {
                     ->label('Điều kiện kích hoạt')
                     ->badge()
                     ->color(fn(string $state): string => match (strtoupper($state)) {
-                        'ON_VERIFICATION' => 'blue',
-                        'ON_ENROLLMENT' => 'green',
+                        'PAYMENT_VERIFIED' => 'blue',
+                        'STUDENT_ENROLLED' => 'green',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
-                        'ON_VERIFICATION' => 'Khi xác nhận thanh toán',
-                        'ON_ENROLLMENT' => 'Khi nhập học',
+                        'PAYMENT_VERIFIED' => 'Khi xác nhận thanh toán',
+                        'STUDENT_ENROLLED' => 'Khi nhập học',
                         default => $state,
-                    }),
+                    })
+                    ->visible(fn(): bool => !$isCtv || (!$isDirectRef && !$isPrimaryCtv)), // Ẩn cho CTV trực tiếp giới thiệu và CTV cấp 1
 
                 \Filament\Tables\Columns\TextColumn::make('payable_at')
                     ->label('Có thể thanh toán từ')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn(): bool => !$isCtv || (!$isDirectRef && !$isPrimaryCtv)), // Ẩn cho CTV trực tiếp giới thiệu và CTV cấp 1
 
                 \Filament\Tables\Columns\TextColumn::make('paid_at')
                     ->label('Đã thanh toán lúc')
@@ -124,15 +141,15 @@ class CommissionResource extends Resource {
                 \Filament\Tables\Filters\SelectFilter::make('role')
                     ->label('Vai trò')
                     ->options([
-                        'PRIMARY' => 'CTV cấp 1',
-                        'SUB' => 'CTV cấp 2',
+                        'DIRECT' => 'CTV cấp 1',
+                        'DOWNLINE' => 'CTV cấp 2',
                     ]),
 
                 \Filament\Tables\Filters\SelectFilter::make('trigger')
                     ->label('Điều kiện kích hoạt')
                     ->options([
-                        'ON_VERIFICATION' => 'Khi xác nhận thanh toán',
-                        'ON_ENROLLMENT' => 'Khi nhập học',
+                        'PAYMENT_VERIFIED' => 'Khi xác nhận thanh toán',
+                        'STUDENT_ENROLLED' => 'Khi nhập học',
                     ]),
             ])
             ->actions([
@@ -209,10 +226,14 @@ class CommissionResource extends Resource {
                 }
 
                 if ($user->role === 'ctv') {
-                    // CTV chỉ thấy commission của mình
+                    // CTV thấy commission của mình và downline
                     $collaborator = Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
-                        $query->where('recipient_id', $collaborator->id);
+                        // Lấy tất cả downline IDs
+                        $downlineIds = self::getDownlineIds($collaborator->id);
+                        // Thêm chính mình vào danh sách
+                        $allIds = array_merge([$collaborator->id], $downlineIds);
+                        $query->whereIn('recipient_collaborator_id', $allIds);
                     } else {
                         $query->whereNull('id');
                     }
@@ -234,5 +255,23 @@ class CommissionResource extends Resource {
         return [
             'index' => ListCommissions::route('/'),
         ];
+    }
+
+    /**
+     * Lấy tất cả ID của downline collaborators
+     */
+    private static function getDownlineIds(int $collaboratorId): array {
+        $downlineIds = [];
+
+        $downlines = Collaborator::where('upline_id', $collaboratorId)->get();
+
+        foreach ($downlines as $downline) {
+            $downlineIds[] = $downline->id;
+            // Đệ quy lấy downline của downline
+            $subDownlineIds = self::getDownlineIds($downline->id);
+            $downlineIds = array_merge($downlineIds, $subDownlineIds);
+        }
+
+        return $downlineIds;
     }
 }
