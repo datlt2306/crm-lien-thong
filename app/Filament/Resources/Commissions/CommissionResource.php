@@ -39,6 +39,8 @@ class CommissionResource extends Resource {
         $isDirectRef = false;
         // Kiểm tra xem CTV có phải là CTV cấp 1 không (không có upline)
         $isPrimaryCtv = false;
+        // Kiểm tra xem có phải là chủ đơn vị không
+        $isOwner = $user->role === 'chủ đơn vị';
         if ($isCtv) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             // CTV trực tiếp giới thiệu sinh viên sẽ có commission với role = 'direct'
@@ -87,7 +89,7 @@ class CommissionResource extends Resource {
                         'DOWNLINE' => 'CTV cấp 2',
                         default => $state,
                     })
-                    ->visible(fn(): bool => !$isCtv || (!$isDirectRef && !$isPrimaryCtv)), // Ẩn cho CTV trực tiếp giới thiệu và CTV cấp 1
+                    ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
 
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
@@ -105,7 +107,13 @@ class CommissionResource extends Resource {
                             default => 'gray',
                         };
                     })
-                    ->formatStateUsing(fn(string $state): string => CommissionItem::getStatusOptions()[$state] ?? $state),
+                    ->formatStateUsing(function (string $state, CommissionItem $record) use ($user) {
+                        // Nếu là CTV và trạng thái là PAYABLE, hiển thị "Chưa nhận được hoa hồng"
+                        if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
+                            return 'Chưa nhận được hoa hồng';
+                        }
+                        return CommissionItem::getStatusOptions()[$state] ?? $state;
+                    }),
 
                 \Filament\Tables\Columns\TextColumn::make('trigger')
                     ->label('Điều kiện kích hoạt')
@@ -120,13 +128,13 @@ class CommissionResource extends Resource {
                         'STUDENT_ENROLLED' => 'Khi nhập học',
                         default => $state,
                     })
-                    ->visible(fn(): bool => !$isCtv || (!$isDirectRef && !$isPrimaryCtv)), // Ẩn cho CTV trực tiếp giới thiệu và CTV cấp 1
+                    ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
 
                 \Filament\Tables\Columns\TextColumn::make('payable_at')
                     ->label('Có thể thanh toán từ')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->visible(fn(): bool => !$isCtv || (!$isDirectRef && !$isPrimaryCtv)), // Ẩn cho CTV trực tiếp giới thiệu và CTV cấp 1
+                    ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
 
                 \Filament\Tables\Columns\TextColumn::make('paid_at')
                     ->label('Đã thanh toán lúc')
@@ -162,7 +170,9 @@ class CommissionResource extends Resource {
                     ->modalDescription('Đánh dấu commission này đã đến hạn chi, CTV có thể nhận.')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn(CommissionItem $record): bool => $record->status === CommissionItem::STATUS_PENDING)
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        return $record->status === CommissionItem::STATUS_PENDING && $user->role === 'chủ đơn vị';
+                    })
                     ->action(function (CommissionItem $record) {
                         $record->markAsPayable();
 
@@ -182,7 +192,9 @@ class CommissionResource extends Resource {
                     ->modalDescription('Đánh dấu đã chi trả hoa hồng cho CTV (ghi nhận bằng tay, đính bill).')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn(CommissionItem $record): bool => in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]))
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        return in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]) && $user->role === 'chủ đơn vị';
+                    })
                     ->action(function (CommissionItem $record) {
                         $record->markAsPaid();
 
@@ -202,7 +214,9 @@ class CommissionResource extends Resource {
                     ->modalDescription('Đánh dấu huỷ hoa hồng này (VD: SV không nhập học).')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn(CommissionItem $record): bool => in_array($record->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE]))
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        return in_array($record->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE]) && $user->role === 'chủ đơn vị';
+                    })
                     ->action(function (CommissionItem $record) {
                         $record->markAsCancelled();
 
