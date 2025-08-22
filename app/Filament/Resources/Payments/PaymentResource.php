@@ -59,7 +59,7 @@ class PaymentResource extends Resource {
                     ->sortable(),
 
                 \Filament\Tables\Columns\TextColumn::make('primaryCollaborator.full_name')
-                    ->label('CTV cấp 1')
+                    ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable(),
 
@@ -224,7 +224,7 @@ class PaymentResource extends Resource {
                         Auth::user()->role === 'ctv' &&
                             $record->status === Payment::STATUS_SUBMITTED &&
                             $record->bill_path &&
-                            self::canUploadBillForPayment($record)
+                            self::canEditBillForPayment($record)
                     )
                     ->requiresConfirmation()
                     ->modalHeading('Chỉnh sửa Bill')
@@ -351,11 +351,21 @@ class PaymentResource extends Resource {
             }
         }
 
-        // CTV chỉ thấy payments của mình
+        // CTV thấy payments của mình và downline
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
-                return $query->where('primary_collaborator_id', $collaborator->id);
+                // Lấy danh sách student IDs mà CTV này giới thiệu
+                $studentIds = \App\Models\Student::where('collaborator_id', $collaborator->id)->pluck('id');
+
+                // Lấy danh sách downline IDs
+                $downlineIds = self::getDownlineIds($collaborator->id);
+                $downlineStudentIds = \App\Models\Student::whereIn('collaborator_id', $downlineIds)->pluck('id');
+
+                // Gộp tất cả student IDs
+                $allStudentIds = $studentIds->merge($downlineStudentIds);
+
+                return $query->whereIn('student_id', $allStudentIds);
             }
         }
 
@@ -378,7 +388,46 @@ class PaymentResource extends Resource {
             return false;
         }
 
-        // Chỉ CTV trực tiếp giới thiệu học viên mới được upload bill
-        return $payment->primary_collaborator_id === $collaborator->id;
+        // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được upload bill
+        return $payment->student->collaborator_id === $collaborator->id;
+    }
+
+    /**
+     * Kiểm tra xem CTV hiện tại có thể chỉnh sửa bill cho payment này không
+     */
+    private static function canEditBillForPayment(Payment $payment): bool {
+        $user = Auth::user();
+
+        if ($user->role !== 'ctv') {
+            return false;
+        }
+
+        $collaborator = Collaborator::where('email', $user->email)->first();
+        if (!$collaborator) {
+            return false;
+        }
+
+        // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được chỉnh sửa bill
+        return $payment->student->collaborator_id === $collaborator->id;
+    }
+
+    /**
+     * Lấy danh sách ID của tất cả downline trong nhánh
+     */
+    private static function getDownlineIds(int $collaboratorId): array {
+        $downlineIds = [];
+
+        // Lấy tất cả downline trực tiếp
+        $directDownlines = Collaborator::where('upline_id', $collaboratorId)->get();
+
+        foreach ($directDownlines as $downline) {
+            $downlineIds[] = $downline->id;
+
+            // Đệ quy lấy downline của downline
+            $subDownlineIds = self::getDownlineIds($downline->id);
+            $downlineIds = array_merge($downlineIds, $subDownlineIds);
+        }
+
+        return $downlineIds;
     }
 }
