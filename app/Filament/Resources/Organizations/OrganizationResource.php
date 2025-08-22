@@ -40,6 +40,10 @@ class OrganizationResource extends Resource {
         return OrganizationsTable::configure($table);
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
+        return parent::getEloquentQuery()->with('owner');
+    }
+
     public static function getRelations(): array {
         return [
             //
