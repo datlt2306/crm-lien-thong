@@ -47,12 +47,18 @@ class StudentResource extends Resource {
     }
 
     public static function getPages(): array {
-        return [
+        $pages = [
             'index' => ListStudents::route('/'),
-            'create' => CreateStudent::route('/create'),
             'view' => ViewStudent::route('/{record}'),
-            'edit' => EditStudent::route('/{record}/edit'),
         ];
+
+        // Chỉ super_admin và chủ đơn vị mới có thể tạo và chỉnh sửa
+        if (in_array(Auth::user()?->role, ['super_admin', 'chủ đơn vị'])) {
+            $pages['create'] = CreateStudent::route('/create');
+            $pages['edit'] = EditStudent::route('/{record}/edit');
+        }
+
+        return $pages;
     }
 
     public static function getNavigationBadge(): ?string {

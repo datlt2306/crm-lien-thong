@@ -10,6 +10,8 @@ use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Models\Student;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class StudentsTable {
     public static function configure(Table $table): Table {
@@ -60,18 +62,18 @@ class StudentsTable {
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('intake_month')
                     ->label('Đợt tuyển')
-                    ->formatStateUsing(fn ($state) => $state ? "Tháng {$state}" : '—')
+                    ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('program_type')
                     ->label('Hệ liên thông')
-                    ->formatStateUsing(fn ($state) => match($state) {
+                    ->formatStateUsing(fn($state) => match ($state) {
                         'REGULAR' => 'Chính quy',
                         'PART_TIME' => 'Vừa học vừa làm',
                         default => '—'
                     })
                     ->badge()
-                    ->color(fn ($state) => match($state) {
+                    ->color(fn($state) => match ($state) {
                         'REGULAR' => 'success',
                         'PART_TIME' => 'warning',
                         default => 'gray'
@@ -98,8 +100,29 @@ class StudentsTable {
                             default => 'gray',
                         };
                     })
-                    ->formatStateUsing(fn (string $state): string => Student::getStatusOptions()[$state] ?? $state)
+                    ->formatStateUsing(fn(string $state): string => Student::getStatusOptions()[$state] ?? $state)
                     ->searchable(),
+                TextColumn::make('payment.status')
+                    ->label('Trạng thái thanh toán')
+                    ->badge()
+                    ->color(function ($state) {
+                        return match ($state) {
+                            \App\Models\Payment::STATUS_NOT_PAID => 'gray',
+                            \App\Models\Payment::STATUS_SUBMITTED => 'warning',
+                            \App\Models\Payment::STATUS_VERIFIED => 'success',
+                            default => 'gray',
+                        };
+                    })
+                    ->formatStateUsing(function ($state) {
+                        return match ($state) {
+                            \App\Models\Payment::STATUS_NOT_PAID => 'Chưa thanh toán',
+                            \App\Models\Payment::STATUS_SUBMITTED => 'Đã nộp (chờ xác minh)',
+                            \App\Models\Payment::STATUS_VERIFIED => 'Đã xác nhận',
+                            default => 'Chưa thanh toán',
+                        };
+                    })
+                    ->placeholder('Chưa thanh toán')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')
@@ -116,7 +139,8 @@ class StudentsTable {
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
                 Action::make('mark_enrolled')
                     ->label('Đánh dấu nhập học')
                     ->icon('heroicon-o-academic-cap')
@@ -126,7 +150,11 @@ class StudentsTable {
                     ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn(Student $record): bool => $record->status !== Student::STATUS_ENROLLED)
+                    ->visible(
+                        fn(Student $record): bool =>
+                        $record->status !== Student::STATUS_ENROLLED &&
+                            in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
+                    )
                     ->action(function (Student $record) {
                         $record->update(['status' => Student::STATUS_ENROLLED]);
 
@@ -140,10 +168,106 @@ class StudentsTable {
                             ->success()
                             ->send();
                     }),
+                Action::make('upload_bill')
+                    ->label('Upload Bill')
+                    ->icon('heroicon-o-document-arrow-up')
+                    ->color('info')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('bill')
+                            ->label('Bill thanh toán')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120) // 5MB
+                            ->required()
+                            ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
+                        \Filament\Forms\Components\TextInput::make('amount')
+                            ->label('Số tiền')
+                            ->numeric()
+                            ->required()
+                            ->helperText('Nhập số tiền đã thanh toán'),
+                        \Filament\Forms\Components\Select::make('program_type')
+                            ->label('Hệ liên thông')
+                            ->options([
+                                'REGULAR' => 'Chính quy',
+                                'PART_TIME' => 'Vừa học vừa làm',
+                            ])
+                            ->required()
+                            ->helperText('Chọn hệ liên thông của sinh viên'),
+                    ])
+                    ->visible(
+                        fn(Student $record): bool =>
+                        Auth::user()->role === 'ctv' &&
+                            !$record->payment // Chưa có payment
+                    )
+                    ->action(function (array $data, Student $record) {
+                        // Tìm collaborator của user hiện tại
+                        $collaborator = \App\Models\Collaborator::where('email', Auth::user()->email)->first();
+
+                        if (!$collaborator) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Lỗi')
+                                ->body('Không tìm thấy thông tin cộng tác viên.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // Tạo payment record
+                        \App\Models\Payment::create([
+                            'organization_id' => $record->organization_id,
+                            'student_id' => $record->id,
+                            'primary_collaborator_id' => $collaborator->id,
+                            'sub_collaborator_id' => $collaborator->upline_id,
+                            'program_type' => $data['program_type'],
+                            'amount' => $data['amount'],
+                            'bill_path' => $data['bill'],
+                            'status' => \App\Models\Payment::STATUS_SUBMITTED,
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã upload bill thành công')
+                            ->body('Bill đã được gửi để xác minh.')
+                            ->success()
+                            ->send();
+                    }),
+                Action::make('view_bill')
+                    ->label('Xem Bill')
+                    ->icon('heroicon-o-document-text')
+                    ->color('info')
+                    ->url(fn(Student $record) => $record->payment?->bill_path ? Storage::url($record->payment->bill_path) : '#')
+                    ->openUrlInNewTab()
+                    ->visible(
+                        fn(Student $record): bool =>
+                        $record->payment && $record->payment->bill_path
+                    ),
+                Action::make('verify_payment')
+                    ->label('Xác nhận thanh toán')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Xác nhận thanh toán')
+                    ->modalDescription('Bạn có chắc chắn muốn xác nhận thanh toán này?')
+                    ->modalSubmitActionLabel('Xác nhận')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(
+                        fn(Student $record): bool =>
+                        in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị']) &&
+                            $record->payment &&
+                            $record->payment->status === \App\Models\Payment::STATUS_SUBMITTED
+                    )
+                    ->action(function (Student $record) {
+                        $record->payment->markAsVerified(Auth::id());
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã xác nhận thanh toán')
+                            ->body('Thanh toán đã được xác nhận thành công.')
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
                 ]),
             ]);
     }

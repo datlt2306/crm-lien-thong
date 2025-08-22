@@ -12,6 +12,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use App\Models\Payment;
 use App\Filament\Resources\Payments\Pages\ListPayments;
+use Illuminate\Support\Facades\Storage;
 
 class PaymentResource extends Resource {
     protected static ?string $model = Payment::class;
@@ -114,7 +115,7 @@ class PaymentResource extends Resource {
                         'program_type' => strtoupper($record->program_type),
                     ])
                     ->action(function (Payment $record, array $data) {
-                        $record->markAsVerified(auth()->id());
+                        $record->markAsVerified(\Illuminate\Support\Facades\Auth::id());
                         $record->update([
                             'program_type' => $data['program_type'],
                         ]);
@@ -129,6 +130,13 @@ class PaymentResource extends Resource {
                             ->success()
                             ->send();
                     }),
+                Action::make('view_bill')
+                    ->label('Xem Bill')
+                    ->icon('heroicon-o-document-text')
+                    ->color('info')
+                    ->url(fn(Payment $record) => $record->bill_path ? Storage::url($record->bill_path) : '#')
+                    ->openUrlInNewTab()
+                    ->visible(fn(Payment $record): bool => $record->bill_path),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

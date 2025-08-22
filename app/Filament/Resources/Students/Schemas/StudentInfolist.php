@@ -28,7 +28,7 @@ class StudentInfolist {
                     ->label('Ngành học'),
                 TextEntry::make('program_type')
                     ->label('Hệ liên thông')
-                    ->formatStateUsing(fn ($state) => match($state) {
+                    ->formatStateUsing(fn($state) => match ($state) {
                         'REGULAR' => 'Chính quy',
                         'PART_TIME' => 'Vừa học vừa làm',
                         default => 'Chưa chọn'
@@ -38,7 +38,7 @@ class StudentInfolist {
                     ->date('d/m/Y'),
                 TextEntry::make('intake_month')
                     ->label('Đợt tuyển')
-                    ->formatStateUsing(fn ($state) => $state ? "Tháng {$state}" : 'Chưa chọn'),
+                    ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : 'Chưa chọn'),
                 TextEntry::make('address')
                     ->label('Địa chỉ')
                     ->columnSpanFull(),
@@ -48,6 +48,37 @@ class StudentInfolist {
                     ->label('Ghi chú')
                     ->markdown()
                     ->columnSpanFull(),
+                TextEntry::make('payment.status')
+                    ->label('Trạng thái thanh toán')
+                    ->formatStateUsing(function ($state) {
+                        return match ($state) {
+                            \App\Models\Payment::STATUS_NOT_PAID => 'Chưa thanh toán',
+                            \App\Models\Payment::STATUS_SUBMITTED => 'Đã nộp (chờ xác minh)',
+                            \App\Models\Payment::STATUS_VERIFIED => 'Đã xác nhận',
+                            default => 'Chưa thanh toán',
+                        };
+                    })
+                    ->badge()
+                    ->color(function ($state) {
+                        return match ($state) {
+                            \App\Models\Payment::STATUS_NOT_PAID => 'gray',
+                            \App\Models\Payment::STATUS_SUBMITTED => 'warning',
+                            \App\Models\Payment::STATUS_VERIFIED => 'success',
+                            default => 'gray',
+                        };
+                    }),
+                TextEntry::make('payment.amount')
+                    ->label('Số tiền thanh toán')
+                    ->formatStateUsing(fn($state) => $state ? number_format($state, 0, ',', '.') . ' VNĐ' : '—')
+                    ->visible(fn($record) => $record->payment),
+                TextEntry::make('payment.program_type')
+                    ->label('Hệ liên thông thanh toán')
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'Vừa học vừa làm',
+                        default => '—'
+                    })
+                    ->visible(fn($record) => $record->payment),
                 TextEntry::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s'),

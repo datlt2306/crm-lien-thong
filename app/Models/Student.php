@@ -89,6 +89,10 @@ class Student extends Model {
         return $this->belongsTo(Collaborator::class, 'collaborator_id');
     }
 
+    public function payment() {
+        return $this->hasOne(Payment::class);
+    }
+
     /**
      * Validation rules cho model
      */
