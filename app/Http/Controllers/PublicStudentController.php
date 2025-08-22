@@ -18,39 +18,27 @@ class PublicStudentController extends Controller {
             abort(404, 'Liên kết không hợp lệ!');
         }
 
-        // Tập tổ chức được phép: many-to-many nếu có, fallback 1 tổ chức
-        $allowedOrgs = collect();
-        if (method_exists($collaborator, 'organizations')) {
-            try {
-                $allowedOrgs = $collaborator->organizations()->select('id', 'name')->get();
-            } catch (\Throwable $e) {
-                $allowedOrgs = collect();
-            }
-        }
-        if ($allowedOrgs->isEmpty() && $collaborator->organization) {
-            $allowedOrgs = collect([['id' => $collaborator->organization->id, 'name' => $collaborator->organization->name]]);
+        // Lấy organization của collaborator
+        $organization = $collaborator->organization;
+        if (!$organization) {
+            abort(404, 'Cộng tác viên chưa được gán vào tổ chức!');
         }
 
-        // Majors/Programs cho từng tổ chức được phép
+        // Majors/Programs cho organization của collaborator
         $majorsByOrg = [];
         $programsByOrg = [];
-        foreach ($allowedOrgs as $o) {
-            $org = Organization::with(['majors:id,name', 'programs:id,name'])->find($o['id'] ?? $o->id);
-            if ($org) {
-                $majorsByOrg[$org->id] = $org->majors->map(fn($m) => ['id' => $m->id, 'name' => $m->name])->values();
-                $programsByOrg[$org->id] = $org->programs->map(fn($p) => ['id' => $p->id, 'name' => $p->name])->values();
-            }
-        }
 
-        $defaultOrganizationId = ($allowedOrgs->first()['id'] ?? $allowedOrgs->first()->id ?? null);
+        $org = Organization::with(['majors:id,name', 'programs:id,name'])->find($organization->id);
+        if ($org) {
+            $majorsByOrg[$org->id] = $org->majors->map(fn($m) => ['id' => $m->id, 'name' => $m->name])->values();
+            $programsByOrg[$org->id] = $org->programs->map(fn($p) => ['id' => $p->id, 'name' => $p->name])->values();
+        }
 
         return view('ref-form', [
             'ref_id' => $ref_id,
             'collaborator' => $collaborator,
-            'organizations' => $allowedOrgs,
             'majorsByOrg' => $majorsByOrg,
             'programsByOrg' => $programsByOrg,
-            'defaultOrganizationId' => $defaultOrganizationId,
         ]);
     }
 
@@ -72,15 +60,8 @@ class PublicStudentController extends Controller {
             'notes' => 'nullable|string',
         ]);
 
-        // Xác thực organization thuộc quyền của CTV
-        $allowedOrgIds = [];
-        if (method_exists($collaborator, 'organizations')) {
-            $allowedOrgIds = $collaborator->organizations()->pluck('organizations.id')->toArray();
-        }
-        if (empty($allowedOrgIds) && $collaborator->organization_id) {
-            $allowedOrgIds = [$collaborator->organization_id];
-        }
-        if (!in_array($validated['organization_id'], $allowedOrgIds, true)) {
+        // Xác thực organization phải là của collaborator
+        if ($validated['organization_id'] != $collaborator->organization_id) {
             return back()->withErrors(['organization_id' => 'Bạn không được chọn đơn vị này.'])->withInput();
         }
 

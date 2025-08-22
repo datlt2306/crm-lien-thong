@@ -49,17 +49,7 @@
                 <label class="block font-medium mb-1">Địa chỉ *</label>
                 <input type="text" name="address" value="{{ old('address') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
             </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Trường muốn học *</label>
-                <select name="organization_id" id="organization_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
-                    <option value="">-- Chọn đơn vị --</option>
-                    @foreach(($organizations ?? []) as $o)
-                    @php($oid = is_array($o) ? $o['id'] : $o->id)
-                    @php($oname = is_array($o) ? $o['name'] : $o->name)
-                    <option value="{{ $oid }}" {{ (old('organization_id', $defaultOrganizationId ?? null) == $oid) ? 'selected' : '' }}>{{ $oname }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ngành muốn học</label>
                 <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
@@ -100,7 +90,6 @@
         const oldMajorId = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-old-major') || 'null') : 'null');
         const oldProgramId = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-old-program') || 'null') : 'null');
 
-        const orgSelect = document.getElementById('organization_id');
         const majorSelect = document.getElementById('major_id');
         const programSelect = document.getElementById('program_id');
 
@@ -117,19 +106,11 @@
             });
         }
 
-        function initForOrg(orgId) {
-            const key = String(orgId || '');
-            populate(majorSelect, majorsByOrg[key] || [], oldMajorId);
-            populate(programSelect, programsByOrg[key] || [], oldProgramId);
-        }
-
-        if (orgSelect) {
-            orgSelect.addEventListener('change', function() {
-                initForOrg(orgSelect.value);
-            });
-            if (orgSelect.value) {
-                initForOrg(orgSelect.value);
-            }
+        // Tự động load majors và programs cho organization của collaborator
+        const collaboratorOrgId = '{{ $collaborator->organization_id }}';
+        if (collaboratorOrgId) {
+            populate(majorSelect, majorsByOrg[collaboratorOrgId] || [], oldMajorId);
+            populate(programSelect, programsByOrg[collaboratorOrgId] || [], oldProgramId);
         }
     </script>
 </body>
