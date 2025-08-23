@@ -51,8 +51,8 @@
             </div>
             <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
             <div class="mb-3">
-                <label class="block font-medium mb-1">Ngành muốn học</label>
-                <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                <label class="block font-medium mb-1">Ngành muốn học <span class="text-red-500">*</span></label>
+                <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn ngành --</option>
                     @foreach(($majors ?? []) as $m)
                     <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}>
@@ -63,24 +63,27 @@
                     </option>
                     @endforeach
                 </select>
+                <div id="major_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn ngành muốn học</div>
             </div>
             <div class="mb-3">
-                <label class="block font-medium mb-1">Hệ đào tạo</label>
-                <select name="program_id" id="program_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                <label class="block font-medium mb-1">Hệ đào tạo <span class="text-red-500">*</span></label>
+                <select name="program_id" id="program_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn hệ đào tạo --</option>
                     @foreach(($programs ?? []) as $p)
                     <option value="{{ $p['id'] }}" {{ old('program_id') == $p['id'] ? 'selected' : '' }}>{{ $p['name'] }}</option>
                     @endforeach
                 </select>
+                <div id="program_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn hệ đào tạo</div>
             </div>
             <div class="mb-3">
-                <label class="block font-medium mb-1">Đợt tuyển</label>
-                <select name="intake_month" id="intake_month" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
+                <label class="block font-medium mb-1">Đợt tuyển <span class="text-red-500">*</span></label>
+                <select name="intake_month" id="intake_month" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn đợt tuyển --</option>
                     @foreach(($intakeMonths ?? []) as $month)
                     <option value="{{ $month }}" {{ old('intake_month') == $month ? 'selected' : '' }}>Tháng {{ $month }}</option>
                     @endforeach
                 </select>
+                <div id="intake_month_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ghi chú</label>
@@ -96,12 +99,87 @@
         const majorSelect = document.getElementById('major_id');
         const programSelect = document.getElementById('program_id');
         const intakeSelect = document.getElementById('intake_month');
+        const form = document.getElementById('student-form');
 
         // Lấy dữ liệu majors từ server
         const majorsData = JSON.parse('{!! json_encode($majors ?? []) !!}');
         const programsData = JSON.parse('{!! json_encode($programs ?? []) !!}');
 
+        // Hàm hiển thị lỗi
+        function showError(fieldId, message) {
+            const errorDiv = document.getElementById(fieldId + '_error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.classList.add('border-red-500');
+            }
+        }
+
+        // Hàm ẩn lỗi
+        function hideError(fieldId) {
+            const errorDiv = document.getElementById(fieldId + '_error');
+            if (errorDiv) {
+                errorDiv.classList.add('hidden');
+            }
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.classList.remove('border-red-500');
+            }
+        }
+
+        // Hàm validate form
+        function validateForm() {
+            let isValid = true;
+
+            // Validate ngành
+            if (!majorSelect.value) {
+                showError('major_id', 'Vui lòng chọn ngành muốn học');
+                isValid = false;
+            } else {
+                hideError('major_id');
+            }
+
+            // Validate hệ đào tạo
+            if (!programSelect.value) {
+                showError('program_id', 'Vui lòng chọn hệ đào tạo');
+                isValid = false;
+            } else {
+                hideError('program_id');
+            }
+
+            // Validate đợt tuyển
+            if (!intakeSelect.value) {
+                showError('intake_month', 'Vui lòng chọn đợt tuyển');
+                isValid = false;
+            } else {
+                hideError('intake_month');
+            }
+
+            return isValid;
+        }
+
+        // Event listener cho form submit
+        form.addEventListener('submit', function(e) {
+            if (!validateForm()) {
+                e.preventDefault();
+                // Scroll đến field lỗi đầu tiên
+                const firstError = document.querySelector('.border-red-500');
+                if (firstError) {
+                    firstError.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            }
+        });
+
+        // Event listeners cho các field để ẩn lỗi khi user bắt đầu nhập
         majorSelect.addEventListener('change', function() {
+            hideError('major_id');
+
             const selectedMajorId = this.value;
             const selectedMajor = majorsData.find(function(m) {
                 return m.id == selectedMajorId;
@@ -111,7 +189,9 @@
                 // Cập nhật đợt tuyển theo ngành đã chọn
                 intakeSelect.innerHTML = '<option value="">-- Chọn đợt tuyển --</option>';
                 if (selectedMajor.intake_months && selectedMajor.intake_months.length > 0) {
-                    selectedMajor.intake_months.forEach(function(month) {
+                    // Sắp xếp tháng theo thứ tự tăng dần
+                    const sortedMonths = [...selectedMajor.intake_months].sort((a, b) => parseInt(a) - parseInt(b));
+                    sortedMonths.forEach(function(month) {
                         const option = document.createElement('option');
                         option.value = month;
                         option.textContent = 'Tháng ' + month;
@@ -144,8 +224,34 @@
                 if (programInfo) {
                     programInfo.remove();
                 }
+
+                const infoDiv = document.createElement('div');
+                infoDiv.id = 'program-info';
+                infoDiv.className = 'mb-3 p-2 bg-blue-100 text-blue-800 rounded text-sm';
+
+                let programNames = 'Tất cả hệ đào tạo';
+                if (selectedMajor.programs && selectedMajor.programs.length > 0) {
+                    programNames = selectedMajor.programs.map(p => p.name).join(', ');
+                } else {
+                    programNames = programsData.map(p => p.name).join(', ');
+                }
+
+                infoDiv.innerHTML = '<strong>Thông tin ngành ' + selectedMajor.name + ':</strong><br>' +
+                    'Chỉ tiêu: ' + selectedMajor.quota + ' sinh viên<br>' +
+                    'Đợt tuyển: Tháng ' + selectedMajor.intake_months.join(', ') + '<br>' +
+                    'Hệ đào tạo: ' + programNames;
+
                 majorSelect.parentNode.insertBefore(infoDiv, majorSelect.nextSibling);
             }
+        });
+
+        // Event listeners cho các field khác
+        programSelect.addEventListener('change', function() {
+            hideError('program_id');
+        });
+
+        intakeSelect.addEventListener('change', function() {
+            hideError('intake_month');
         });
     </script>
 </body>

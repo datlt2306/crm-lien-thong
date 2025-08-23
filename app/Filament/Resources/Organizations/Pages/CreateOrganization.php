@@ -169,7 +169,13 @@ class CreateOrganization extends CreateRecord {
             $majorId = $row['major_id'] ?? null;
             if (!$majorId) continue;
             $quota = (int) (($row['quota'] ?? 0));
-            $intakes = isset($row['intake_months']) ? json_encode(array_values((array) $row['intake_months'])) : null;
+            $intakes = null;
+            if (isset($row['intake_months']) && is_array($row['intake_months'])) {
+                // Sắp xếp tháng theo thứ tự tăng dần
+                $months = array_values((array) $row['intake_months']);
+                sort($months, SORT_NUMERIC);
+                $intakes = json_encode($months);
+            }
             $syncMajors[$majorId] = [
                 'quota' => $quota,
                 'intake_months' => $intakes,

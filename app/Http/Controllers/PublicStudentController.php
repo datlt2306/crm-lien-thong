@@ -75,11 +75,13 @@ class PublicStudentController extends Controller {
 
         // Lấy thông tin chi tiết về majors để hiển thị trong debug
         $majorDetails = $majorConfigs->map(function ($major) {
+            $months = json_decode($major->intake_months, true) ?? [];
+            sort($months, SORT_NUMERIC);
             return [
                 'id' => $major->id,
                 'name' => $major->name,
                 'quota' => $major->quota,
-                'intake_months' => json_decode($major->intake_months, true) ?? []
+                'intake_months' => $months
             ];
         });
 
@@ -92,7 +94,7 @@ class PublicStudentController extends Controller {
             }
         }
         $intakeMonths = array_unique($intakeMonths);
-        sort($intakeMonths);
+        sort($intakeMonths, SORT_NUMERIC);
 
         return view('ref-form', [
             'ref_id' => $ref_id,
@@ -123,10 +125,18 @@ class PublicStudentController extends Controller {
             'email' => 'nullable|email|max:255',
 
             'organization_id' => 'required|exists:organizations,id',
-            'major_id' => 'nullable|exists:majors,id',
-            'program_id' => 'nullable|exists:programs,id',
-            'intake_month' => 'nullable|integer|between:1,12',
+            'major_id' => 'required|exists:majors,id',
+            'program_id' => 'required|exists:programs,id',
+            'intake_month' => 'required|integer|between:1,12',
             'notes' => 'nullable|string',
+        ], [
+            'major_id.required' => 'Vui lòng chọn ngành muốn học',
+            'major_id.exists' => 'Ngành đã chọn không hợp lệ',
+            'program_id.required' => 'Vui lòng chọn hệ đào tạo',
+            'program_id.exists' => 'Hệ đào tạo đã chọn không hợp lệ',
+            'intake_month.required' => 'Vui lòng chọn đợt tuyển',
+            'intake_month.integer' => 'Đợt tuyển phải là số tháng hợp lệ',
+            'intake_month.between' => 'Đợt tuyển phải từ tháng 1 đến tháng 12',
         ]);
 
         // Xác thực organization phải là của collaborator
