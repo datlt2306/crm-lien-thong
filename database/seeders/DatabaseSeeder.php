@@ -15,41 +15,24 @@ class DatabaseSeeder extends Seeder {
     public function run(): void {
         // User::factory(10)->create();
 
+        // Tạo admin user
         \App\Models\User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@gmail.com',
             'password' => bcrypt('admin@gmail.com'),
             'role' => 'super_admin',
         ]);
-        $this->call(OrganizationSeeder::class);
 
-        // Seed roles & permissions trước
-        $permissions = [
-            'view_finance',
-            'verify_payment',
-            'manage_commission',
-            'manage_ctv',
-            'manage_org',
-            'manage_student'
-        ];
-        foreach ($permissions as $perm) {
-            Permission::firstOrCreate(['name' => $perm]);
-        }
-        $roles = [
-            'super_admin',
-            'org_admin',
-            'senior_ctv',
-            'ctv',
-            'user'
-        ];
-        foreach ($roles as $role) {
-            Role::firstOrCreate(['name' => $role]);
-        }
+        // Seed permissions và roles trước
+        $this->call(PermissionSeeder::class);
+
+        // Gán role cho admin
         $superAdmin = User::where('email', 'admin@gmail.com')->first();
         if ($superAdmin) {
             $superAdmin->assignRole('super_admin');
-            $superAdmin->syncPermissions(Permission::all());
         }
+
+        $this->call(OrganizationSeeder::class);
 
         // Seed chương trình đào tạo
         $this->call(ProgramSeeder::class);

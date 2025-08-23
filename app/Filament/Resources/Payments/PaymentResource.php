@@ -62,7 +62,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị']))
+                    ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị']))
                     ->formatStateUsing(function ($record) {
                         // Chủ đơn vị thấy CTV cấp 1 (không có upline)
                         $studentCtv = $record->student->collaborator;
@@ -76,7 +76,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn() => Auth::user()->role === 'ctv' && self::isPrimaryCollaborator()),
+                    ->visible(fn(): bool => Auth::user()->role === 'ctv' && self::isPrimaryCollaborator()),
 
                 \Filament\Tables\Columns\TextColumn::make('program_type')
                     ->label('Hệ đào tạo')
@@ -238,7 +238,7 @@ class PaymentResource extends Resource {
                         fn(Payment $record): bool =>
                         Auth::user()->role === 'ctv' &&
                             $record->status === Payment::STATUS_SUBMITTED &&
-                            $record->bill_path &&
+                            !empty($record->bill_path) &&
                             self::canEditBillForPayment($record)
                     )
                     ->requiresConfirmation()
@@ -328,7 +328,7 @@ class PaymentResource extends Resource {
                         ]);
                     })
                     ->modalWidth('4xl')
-                    ->visible(fn(Payment $record): bool => $record->bill_path),
+                    ->visible(fn(Payment $record): bool => !empty($record->bill_path)),
 
             ])
             ->bulkActions([
