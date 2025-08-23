@@ -55,7 +55,12 @@
                 <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
                     <option value="">-- Chọn ngành --</option>
                     @foreach(($majors ?? []) as $m)
-                    <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}>{{ $m['name'] }}</option>
+                    <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}>
+                        {{ $m['name'] }}
+                        @if(isset($m['quota']) && $m['quota'])
+                        (Chỉ tiêu: {{ $m['quota'] }})
+                        @endif
+                    </option>
                     @endforeach
                 </select>
             </div>
@@ -86,41 +91,62 @@
         <p class="mt-4 text-center text-gray-500 text-xs">&copy; {{ date('Y') }} Liên thông Đại học</p>
     </div>
 
-    <meta id="ref-config"
-        data-majors='@json($majorsByOrg ?? [])'
-        data-programs='@json($programsByOrg ?? [])'
-        data-old-major='@json(old("major_id"))'
-        data-old-program='@json(old("program_id"))'>
-
     <script>
-        const cfgEl = document.getElementById('ref-config');
-        const majorsByOrg = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-majors') || '{}') : '{}');
-        const programsByOrg = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-programs') || '{}') : '{}');
-        const oldMajorId = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-old-major') || 'null') : 'null');
-        const oldProgramId = JSON.parse(cfgEl ? (cfgEl.getAttribute('data-old-program') || 'null') : 'null');
-
+        // Hiển thị thông tin chi tiết khi chọn ngành
         const majorSelect = document.getElementById('major_id');
         const programSelect = document.getElementById('program_id');
+        const intakeSelect = document.getElementById('intake_month');
 
-        function populate(select, items, oldVal) {
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Chọn --</option>';
-            if (!items) return;
-            items.forEach(function(item) {
-                const opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.name;
-                if (String(oldVal ?? '') === String(item.id)) opt.selected = true;
-                select.appendChild(opt);
+        // Lấy dữ liệu majors từ server
+        const majorsData = JSON.parse('{!! json_encode($majors ?? []) !!}');
+        const programsData = JSON.parse('{!! json_encode($programs ?? []) !!}');
+
+        majorSelect.addEventListener('change', function() {
+            const selectedMajorId = this.value;
+            const selectedMajor = majorsData.find(function(m) {
+                return m.id == selectedMajorId;
             });
-        }
 
-        // Tự động load majors và programs cho organization của collaborator
-        const collaboratorOrgId = '{{ $collaborator->organization_id }}';
-        if (collaboratorOrgId) {
-            populate(majorSelect, majorsByOrg[collaboratorOrgId] || [], oldMajorId);
-            populate(programSelect, programsByOrg[collaboratorOrgId] || [], oldProgramId);
-        }
+            if (selectedMajor) {
+                // Cập nhật đợt tuyển theo ngành đã chọn
+                intakeSelect.innerHTML = '<option value="">-- Chọn đợt tuyển --</option>';
+                if (selectedMajor.intake_months && selectedMajor.intake_months.length > 0) {
+                    selectedMajor.intake_months.forEach(function(month) {
+                        const option = document.createElement('option');
+                        option.value = month;
+                        option.textContent = 'Tháng ' + month;
+                        intakeSelect.appendChild(option);
+                    });
+                }
+
+                // Cập nhật hệ đào tạo theo ngành đã chọn
+                if (selectedMajor.programs && selectedMajor.programs.length > 0) {
+                    programSelect.innerHTML = '<option value="">-- Chọn hệ đào tạo --</option>';
+                    selectedMajor.programs.forEach(function(program) {
+                        const option = document.createElement('option');
+                        option.value = program.id;
+                        option.textContent = program.name;
+                        programSelect.appendChild(option);
+                    });
+                } else {
+                    // Fallback: hiển thị tất cả hệ đào tạo
+                    programSelect.innerHTML = '<option value="">-- Chọn hệ đào tạo --</option>';
+                    programsData.forEach(function(program) {
+                        const option = document.createElement('option');
+                        option.value = program.id;
+                        option.textContent = program.name;
+                        programSelect.appendChild(option);
+                    });
+                }
+
+                // Hiển thị thông báo về hệ đào tạo
+                const programInfo = document.getElementById('program-info');
+                if (programInfo) {
+                    programInfo.remove();
+                }
+                majorSelect.parentNode.insertBefore(infoDiv, majorSelect.nextSibling);
+            }
+        });
     </script>
 </body>
 

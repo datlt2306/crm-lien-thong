@@ -57,17 +57,31 @@ class OrganizationForm {
                             ->label('Ngành / Chỉ tiêu / Hệ đào tạo / Đợt tuyển')
                             ->addActionLabel('＋ Thêm')
                             ->afterStateHydrated(function ($state, callable $set, ?\App\Models\Organization $record = null) {
-                                if ($state || !$record) {
+                                // Chỉ load dữ liệu nếu chưa có state và có record (edit mode)
+                                if (!empty($state) || !$record) {
                                     return;
                                 }
-                                $defaultProgramIds = $record->programs()->pluck('program_id')->toArray();
-                                $rows = $record->majors->map(fn($m) => [
-                                    'major_id' => $m->id,
-                                    'quota' => $m->pivot->quota,
-                                    'program_ids' => $defaultProgramIds,
-                                    'intake_months' => $m->pivot->intake_months ? json_decode($m->pivot->intake_months, true) : [],
-                                ])->toArray();
-                                $set('training_rows', $rows);
+
+                                $rows = $record->majors->map(function ($m) {
+                                    // Lấy programs cho major này từ bảng pivot mới
+                                    $programIds = \Illuminate\Support\Facades\DB::table('major_organization_program')
+                                        ->join('major_organization', 'major_organization_program.major_organization_id', '=', 'major_organization.id')
+                                        ->where('major_organization.organization_id', $m->pivot->organization_id)
+                                        ->where('major_organization.major_id', $m->id)
+                                        ->pluck('major_organization_program.program_id')
+                                        ->toArray();
+
+                                    return [
+                                        'major_id' => $m->id,
+                                        'quota' => $m->pivot->quota,
+                                        'program_ids' => $programIds,
+                                        'intake_months' => $m->pivot->intake_months ? json_decode($m->pivot->intake_months, true) : [],
+                                    ];
+                                })->toArray();
+
+                                if (!empty($rows)) {
+                                    $set('training_rows', $rows);
+                                }
                             })
                             ->schema([
                                 \Filament\Forms\Components\Select::make('major_id')
@@ -122,16 +136,7 @@ class OrganizationForm {
 
                             ])
                             ->columns(4)
-                            ->default(function (\App\Models\Organization $record = null) {
-                                if (!$record) return [];
-                                $defaultProgramIds = $record->programs()->pluck('program_id')->toArray();
-                                return $record->majors->map(fn($m) => [
-                                    'major_id' => $m->id,
-                                    'quota' => $m->pivot->quota,
-                                    'program_ids' => $defaultProgramIds,
-                                    'intake_months' => $m->pivot->intake_months ? json_decode($m->pivot->intake_months, true) : [],
-                                ])->toArray();
-                            })
+                            ->default([])
                         // Đồng bộ sẽ thực hiện trong afterSave/afterCreate của Page
                         ,
                     ]),

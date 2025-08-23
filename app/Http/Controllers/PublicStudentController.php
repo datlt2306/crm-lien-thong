@@ -25,25 +25,68 @@ class PublicStudentController extends Controller {
             abort(404, 'Cộng tác viên chưa được gán vào tổ chức!');
         }
 
-        // Majors/Programs cho organization của collaborator
-        $majorsByOrg = [];
-        $programsByOrg = [];
-
-        $org = Organization::with(['majors:id,name', 'programs:id,name'])->find($organization->id);
-        if ($org) {
-            $majorsByOrg[$org->id] = $org->majors->map(fn($m) => ['id' => $m->id, 'name' => $m->name])->values();
-            $programsByOrg[$org->id] = $org->programs->map(fn($p) => ['id' => $p->id, 'name' => $p->name])->values();
-        }
-
-        // Lấy đợt tuyển từ major_organization pivot table
-        $intakeMonths = [];
-        $majorOrgs = DB::table('major_organization')
-            ->where('organization_id', $organization->id)
-            ->whereNotNull('intake_months')
+        // Lấy majors và programs theo cấu hình major_organization
+        $majorConfigs = DB::table('major_organization')
+            ->join('majors', 'major_organization.major_id', '=', 'majors.id')
+            ->where('major_organization.organization_id', $organization->id)
+            ->select('majors.id', 'majors.name', 'major_organization.quota', 'major_organization.intake_months')
             ->get();
 
-        foreach ($majorOrgs as $majorOrg) {
-            $months = json_decode($majorOrg->intake_months, true);
+        // Lấy programs theo cấu hình organization_program (fallback cho backward compatibility)
+        $programConfigs = DB::table('organization_program')
+            ->join('programs', 'organization_program.program_id', '=', 'programs.id')
+            ->where('organization_program.organization_id', $organization->id)
+            ->select('programs.id', 'programs.name')
+            ->get();
+
+        // Chuẩn bị dữ liệu cho view
+        $majors = $majorConfigs->map(function ($major) use ($organization) {
+            // Lấy programs cho major này từ bảng pivot mới
+            $programs = DB::table('major_organization_program')
+                ->join('major_organization', 'major_organization_program.major_organization_id', '=', 'major_organization.id')
+                ->join('programs', 'major_organization_program.program_id', '=', 'programs.id')
+                ->where('major_organization.organization_id', $organization->id)
+                ->where('major_organization.major_id', $major->id)
+                ->select('programs.id', 'programs.name')
+                ->get()
+                ->map(function ($program) {
+                    return [
+                        'id' => $program->id,
+                        'name' => $program->name
+                    ];
+                })
+                ->toArray();
+
+            return [
+                'id' => $major->id,
+                'name' => $major->name,
+                'quota' => $major->quota,
+                'intake_months' => json_decode($major->intake_months, true) ?? [],
+                'programs' => $programs
+            ];
+        });
+
+        $programs = $programConfigs->map(function ($program) {
+            return [
+                'id' => $program->id,
+                'name' => $program->name
+            ];
+        });
+
+        // Lấy thông tin chi tiết về majors để hiển thị trong debug
+        $majorDetails = $majorConfigs->map(function ($major) {
+            return [
+                'id' => $major->id,
+                'name' => $major->name,
+                'quota' => $major->quota,
+                'intake_months' => json_decode($major->intake_months, true) ?? []
+            ];
+        });
+
+        // Lấy tất cả đợt tuyển từ cấu hình majors
+        $intakeMonths = [];
+        foreach ($majorConfigs as $major) {
+            $months = json_decode($major->intake_months, true);
             if (is_array($months)) {
                 $intakeMonths = array_merge($intakeMonths, $months);
             }
@@ -54,9 +97,16 @@ class PublicStudentController extends Controller {
         return view('ref-form', [
             'ref_id' => $ref_id,
             'collaborator' => $collaborator,
-            'majorsByOrg' => $majorsByOrg,
-            'programsByOrg' => $programsByOrg,
+            'majors' => $majors,
+            'programs' => $programs,
             'intakeMonths' => $intakeMonths,
+            // Debug info - có thể bỏ sau
+            'debug' => [
+                'organization_id' => $organization->id,
+                'major_count' => $majorConfigs->count(),
+                'program_count' => $programConfigs->count(),
+                'major_details' => $majorDetails,
+            ]
         ]);
     }
 

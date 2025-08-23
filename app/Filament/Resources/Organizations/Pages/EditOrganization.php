@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Arr;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Models\Organization;
 
@@ -23,6 +24,7 @@ class EditOrganization extends EditRecord {
     protected function mutateFormDataBeforeSave(array $data): array {
         // Lưu tạm training_rows nhưng KHÔNG loại bỏ khỏi $data
         $this->pendingTrainingRows = $data['training_rows'] ?? [];
+
         // Cập nhật mật khẩu nếu có
         if (!empty($data['owner_email']) && !empty($data['owner_password'])) {
             $user = User::where('email', $data['owner_email'])->first();
@@ -68,27 +70,65 @@ class EditOrganization extends EditRecord {
             'org_id' => $this->record?->id,
             'rows' => $rows,
         ]);
+
         $syncMajors = [];
-        $selectedProgramIds = null;
+        $majorProgramMappings = [];
+
         foreach ($rows as $row) {
             $majorId = $row['major_id'] ?? null;
             if (!$majorId) continue;
+
             $quota = (int) (($row['quota'] ?? 0));
             $intakes = isset($row['intake_months']) ? json_encode(array_values((array) $row['intake_months'])) : null;
+
             $syncMajors[$majorId] = [
                 'quota' => $quota,
                 'intake_months' => $intakes,
             ];
+
+            // Lưu mapping program_ids cho từng major
             if (!empty($row['program_ids']) && is_array($row['program_ids'])) {
-                // Dùng lựa chọn của dòng cuối cùng làm chuẩn cho toàn đơn vị
-                $selectedProgramIds = $row['program_ids'];
+                $majorProgramMappings[$majorId] = $row['program_ids'];
             }
         }
+
+        // Sync majors trước
         $this->record->majors()->sync($syncMajors);
-        $this->record->programs()->sync(array_values(array_unique($selectedProgramIds ?? [])));
+
+        // Sau đó sync programs cho từng major
+        foreach ($majorProgramMappings as $majorId => $programIds) {
+            // Tìm major_organization record
+            $majorOrgRecord = DB::table('major_organization')
+                ->where('organization_id', $this->record->id)
+                ->where('major_id', $majorId)
+                ->first();
+
+            if ($majorOrgRecord) {
+                // Sync programs cho major này
+                $syncData = [];
+                foreach ($programIds as $programId) {
+                    $syncData[] = [
+                        'major_organization_id' => $majorOrgRecord->id,
+                        'program_id' => $programId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+
+                // Xóa programs cũ và thêm mới
+                DB::table('major_organization_program')
+                    ->where('major_organization_id', $majorOrgRecord->id)
+                    ->delete();
+
+                if (!empty($syncData)) {
+                    DB::table('major_organization_program')->insert($syncData);
+                }
+            }
+        }
+
         Log::info('ORG_EDIT::syncTrainingRows:done', [
             'majors_synced' => array_keys($syncMajors),
-            'programs_synced' => array_values(array_unique($selectedProgramIds ?? [])),
+            'major_program_mappings' => $majorProgramMappings,
         ]);
     }
 
@@ -105,6 +145,10 @@ class EditOrganization extends EditRecord {
                 ]);
             }
         }
+
+        // Lưu training_rows trước khi unset
+        $trainingRows = $data['training_rows'] ?? [];
+
         // Không lưu training_rows vào cột của organizations
         unset($data['training_rows']);
 
@@ -112,19 +156,8 @@ class EditOrganization extends EditRecord {
         $record->update($data);
         $this->record = $record;
 
-        // Lấy state hiện tại từ form (đảm bảo có dữ liệu của repeater)
-        try {
-            $state = method_exists($this, 'getForm') ? $this->getForm()->getState() : [];
-        } catch (\Throwable) {
-            $state = [];
-        }
-        Log::info('ORG_EDIT::handleRecordUpdate:state', [
-            'training_rows' => $state['training_rows'] ?? null,
-        ]);
-        $rows = $state['training_rows'] ?? $this->pendingTrainingRows ?? [];
-
-        // Đồng bộ pivot
-        $this->syncTrainingRows(is_array($rows) ? $rows : []);
+        // Đồng bộ pivot với dữ liệu đã lưu
+        $this->syncTrainingRows(is_array($trainingRows) ? $trainingRows : []);
         return $record;
     }
 
@@ -144,7 +177,11 @@ class EditOrganization extends EditRecord {
     protected function getFormActions(): array {
         return [
             $this->getSaveFormAction()
-                ->label('Lưu thay đổi'),
+                ->label('Lưu thay đổi')
+                ->after(function () {
+                    // Refresh form sau khi lưu để hiển thị dữ liệu mới
+                    $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
+                }),
             $this->getCancelFormAction()
                 ->label('Hủy'),
         ];
