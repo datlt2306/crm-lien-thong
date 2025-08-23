@@ -32,9 +32,12 @@ class PublicCollaboratorController extends Controller {
             'note' => 'nullable|string',
         ]);
 
+        // Lấy collaborator từ cookie hoặc upline_ref
         $uplineId = null;
-        if (!empty($data['upline_ref'])) {
-            $uplineId = Collaborator::where('ref_id', $data['upline_ref'])->value('id');
+        $uplineRef = $data['upline_ref'] ?: $this->refTrackingService->getRefFromCookie($request);
+
+        if (!empty($uplineRef)) {
+            $uplineId = Collaborator::where('ref_id', $uplineRef)->value('id');
         }
 
         Collaborator::create([
@@ -46,6 +49,9 @@ class PublicCollaboratorController extends Controller {
             'note' => $data['note'] ?? null,
             'status' => 'active',
         ]);
+
+        // Xóa cookie sau khi đăng ký thành công
+        $this->refTrackingService->clearRefCookie();
 
         return redirect()->back()->with('success', 'Đăng ký CTV thành công! Hệ thống sẽ liên hệ xác minh.');
     }
