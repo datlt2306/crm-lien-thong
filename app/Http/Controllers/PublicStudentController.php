@@ -10,14 +10,17 @@ use App\Models\Program;
 use App\Models\Student;
 use App\Models\Payment;
 use App\Services\RefTrackingService;
+use App\Services\QuotaService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
 class PublicStudentController extends Controller {
     protected $refTrackingService;
+    protected $quotaService;
 
-    public function __construct(RefTrackingService $refTrackingService) {
+    public function __construct(RefTrackingService $refTrackingService, QuotaService $quotaService) {
         $this->refTrackingService = $refTrackingService;
+        $this->quotaService = $quotaService;
     }
 
     public function showForm($ref_id) {
@@ -66,10 +69,13 @@ class PublicStudentController extends Controller {
                 })
                 ->toArray();
 
+            // Lấy quota hiện tại (còn lại)
+            $currentQuota = $this->quotaService->getCurrentQuota($organization->id, $major->id);
+
             return [
                 'id' => $major->id,
                 'name' => $major->name,
-                'quota' => $major->quota,
+                'quota' => $currentQuota,
                 'intake_months' => json_decode($major->intake_months, true) ?? [],
                 'programs' => $programs
             ];
@@ -163,6 +169,14 @@ class PublicStudentController extends Controller {
             return back()->withErrors(['program_id' => 'Hệ đào tạo không thuộc đơn vị này'])->withInput();
         }
 
+        // Kiểm tra quota của ngành
+        if (!empty($validated['major_id'])) {
+            $major = Major::find($validated['major_id']);
+            if ($major && !$this->quotaService->hasQuota($selectedOrg->id, $major->id)) {
+                return back()->withErrors(['major_id' => 'Ngành này đã hết chỉ tiêu!'])->withInput();
+            }
+        }
+
         $selectedMajorName = null;
         if (!empty($validated['major_id'])) {
             $selectedMajorName = Major::where('id', $validated['major_id'])->value('name');
@@ -198,6 +212,9 @@ class PublicStudentController extends Controller {
             'status' => 'new',
             'notes' => !empty($notes) ? implode("\n", $notes) : null,
         ]);
+
+        // Giảm quota của ngành khi đăng ký thành công
+        $this->quotaService->decreaseQuotaOnStudentRegistration($student);
 
         // Xóa cookie sau khi đăng ký thành công
         $this->refTrackingService->clearRefCookie();
@@ -253,7 +270,7 @@ class PublicStudentController extends Controller {
         $path = $request->file('bill')->store('bills', 'public');
 
         // Tạo payment SUBMITTED
-        Payment::create([
+        $payment = Payment::create([
             'organization_id' => $student->organization_id,
             'student_id' => $student->id,
             'primary_collaborator_id' => $collaborator->id,
@@ -263,6 +280,9 @@ class PublicStudentController extends Controller {
             'bill_path' => $path,
             'status' => 'SUBMITTED',
         ]);
+
+        // Giảm quota của ngành khi nộp tiền thành công
+        $this->quotaService->decreaseQuotaOnPaymentSubmission($payment);
 
         return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ chủ đơn vị xác nhận.');
     }

@@ -53,10 +53,15 @@
                 <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn ngành --</option>
                     @foreach(($majors ?? []) as $m)
-                    <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}>
+                    <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}
+                        @if(isset($m['quota']) && $m['quota'] <=0) disabled @endif>
                         {{ $m['name'] }}
-                        @if(isset($m['quota']) && $m['quota'])
-                        (Chỉ tiêu: {{ $m['quota'] }})
+                        @if(isset($m['quota']))
+                        @if($m['quota'] > 0)
+                        (Chỉ tiêu còn lại: {{ $m['quota'] }})
+                        @else
+                        (Hết chỉ tiêu)
+                        @endif
                         @endif
                     </option>
                     @endforeach
