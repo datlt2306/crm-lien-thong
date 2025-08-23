@@ -15,4 +15,13 @@ class CreateCommissionPolicy extends CreateRecord {
     public function getBreadcrumb(): string {
         return 'Tạo cấu hình hoa hồng mới';
     }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getCreateFormAction()
+                ->label('Tạo chính sách'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
+        ];
+    }
 }

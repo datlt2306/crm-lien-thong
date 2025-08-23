@@ -280,7 +280,12 @@ class CommissionResource extends Resource {
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa hoa hồng đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các hoa hồng đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy'),
                 ]),
             ])
             ->modifyQueryUsing(function ($query) {

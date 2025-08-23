@@ -102,11 +102,17 @@ class CommissionPoliciesTable {
                     ->falseLabel('Vô hiệu'),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->label('Chỉnh sửa'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa chính sách hoa hồng đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các chính sách hoa hồng đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy'),
                 ]),
             ]);
     }

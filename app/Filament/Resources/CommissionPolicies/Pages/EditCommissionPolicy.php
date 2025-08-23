@@ -11,7 +11,21 @@ class EditCommissionPolicy extends EditRecord {
 
     protected function getHeaderActions(): array {
         return [
-            DeleteAction::make(),
+            DeleteAction::make()
+                ->label('Xóa chính sách')
+                ->modalHeading('Xóa chính sách hoa hồng')
+                ->modalDescription('Bạn có chắc chắn muốn xóa chính sách hoa hồng này? Hành động này không thể hoàn tác.')
+                ->modalSubmitActionLabel('Xóa')
+                ->modalCancelActionLabel('Hủy'),
+        ];
+    }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getSaveFormAction()
+                ->label('Lưu thay đổi'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
         ];
     }
 

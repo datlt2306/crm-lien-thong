@@ -16,11 +16,18 @@ class ViewStudent extends ViewRecord {
 
         // Chỉ super_admin và chủ đơn vị mới có thể chỉnh sửa
         if (in_array(Auth::user()?->role, ['super_admin', 'chủ đơn vị'])) {
-            $actions[] = EditAction::make();
+            $actions[] = EditAction::make()
+                ->label('Chỉnh sửa học viên');
         }
 
-
-
         return $actions;
+    }
+
+    public function getTitle(): string {
+        return 'Chi tiết học viên';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Chi tiết học viên';
     }
 }

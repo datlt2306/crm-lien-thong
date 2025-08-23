@@ -28,4 +28,12 @@ class ListPayments extends ListRecords {
 
         return false;
     }
+
+    public function getTitle(): string {
+        return 'Danh sách thanh toán';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Danh sách thanh toán';
+    }
 }

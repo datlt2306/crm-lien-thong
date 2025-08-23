@@ -12,7 +12,31 @@ class EditUser extends EditRecord {
 
     protected function getHeaderActions(): array {
         return [
-            DeleteAction::make(),
+            ViewAction::make()
+                ->label('Xem chi tiết'),
+            DeleteAction::make()
+                ->label('Xóa người dùng')
+                ->modalHeading('Xóa người dùng')
+                ->modalDescription('Bạn có chắc chắn muốn xóa người dùng này? Hành động này không thể hoàn tác.')
+                ->modalSubmitActionLabel('Xóa')
+                ->modalCancelActionLabel('Hủy'),
+        ];
+    }
+
+    public function getTitle(): string {
+        return 'Chỉnh sửa người dùng';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Chỉnh sửa người dùng';
+    }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getSaveFormAction()
+                ->label('Lưu thay đổi'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
         ];
     }
 

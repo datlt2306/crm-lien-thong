@@ -28,4 +28,12 @@ class ListCommissions extends ListRecords {
 
         return false;
     }
+
+    public function getTitle(): string {
+        return 'Danh sách hoa hồng';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Danh sách hoa hồng';
+    }
 }

@@ -92,11 +92,19 @@ class CollaboratorsTable {
                     ]),
             ])
             ->recordActions([
-                EditAction::make(),
+                ViewAction::make()
+                    ->label('Xem chi tiết'),
+                EditAction::make()
+                    ->label('Chỉnh sửa'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa cộng tác viên đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các cộng tác viên đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy'),
                 ]),
             ]);
     }

@@ -11,11 +11,16 @@ class ListCommissionPolicies extends ListRecords {
 
     protected function getHeaderActions(): array {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+                ->label('Thêm chính sách mới'),
         ];
     }
 
     public function getTitle(): string {
+        return 'Cấu hình hoa hồng';
+    }
+
+    public function getBreadcrumb(): string {
         return 'Cấu hình hoa hồng';
     }
 }

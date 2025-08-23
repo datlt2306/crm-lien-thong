@@ -15,9 +15,18 @@ class ListStudents extends ListRecords {
 
         // Chỉ super_admin và chủ đơn vị mới có thể tạo mới
         if (in_array(Auth::user()?->role, ['super_admin', 'chủ đơn vị'])) {
-            $actions[] = CreateAction::make();
+            $actions[] = CreateAction::make()
+                ->label('Thêm học viên mới');
         }
 
         return $actions;
+    }
+
+    public function getTitle(): string {
+        return 'Danh sách học viên';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Danh sách học viên';
     }
 }

@@ -118,8 +118,10 @@ class StudentsTable {
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->label('Xem chi tiết'),
                 EditAction::make()
+                    ->label('Chỉnh sửa')
                     ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
                 Action::make('mark_enrolled')
                     ->label('Đánh dấu nhập học')
@@ -154,6 +156,11 @@ class StudentsTable {
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa học viên đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
                 ]),
             ]);

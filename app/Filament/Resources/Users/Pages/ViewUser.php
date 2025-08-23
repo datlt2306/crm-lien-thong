@@ -13,7 +13,16 @@ class ViewUser extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            EditAction::make()
+                ->label('Chỉnh sửa người dùng'),
         ];
+    }
+
+    public function getTitle(): string {
+        return 'Chi tiết người dùng';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Chi tiết người dùng';
     }
 }

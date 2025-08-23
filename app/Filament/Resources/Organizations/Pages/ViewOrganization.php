@@ -13,7 +13,16 @@ class ViewOrganization extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            EditAction::make()
+                ->label('Chỉnh sửa đơn vị'),
         ];
+    }
+
+    public function getTitle(): string {
+        return 'Chi tiết đơn vị';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Chi tiết đơn vị';
     }
 }

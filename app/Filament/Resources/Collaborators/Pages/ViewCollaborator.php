@@ -13,7 +13,16 @@ class ViewCollaborator extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            EditAction::make()
+                ->label('Chỉnh sửa cộng tác viên'),
         ];
+    }
+
+    public function getTitle(): string {
+        return 'Chi tiết cộng tác viên';
+    }
+
+    public function getBreadcrumb(): string {
+        return 'Chi tiết cộng tác viên';
     }
 }

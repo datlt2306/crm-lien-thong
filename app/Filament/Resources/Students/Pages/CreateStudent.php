@@ -39,6 +39,15 @@ class CreateStudent extends CreateRecord {
         return 'Thêm học viên mới';
     }
 
+    protected function getFormActions(): array {
+        return [
+            $this->getCreateFormAction()
+                ->label('Tạo học viên'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
+        ];
+    }
+
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
         return $user && in_array($user->role, ['super_admin', 'chủ đơn vị']);

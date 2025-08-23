@@ -48,12 +48,19 @@ class OrganizationsTable {
                     ]),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ViewAction::make()
+                    ->label('Xem chi tiết'),
+                EditAction::make()
+                    ->label('Chỉnh sửa'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa đơn vị đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các đơn vị đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy'),
                 ]),
             ]);
     }

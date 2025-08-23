@@ -333,7 +333,12 @@ class PaymentResource extends Resource {
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa thanh toán đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các thanh toán đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy'),
                 ]),
             ]);
     }

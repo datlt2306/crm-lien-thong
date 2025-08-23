@@ -130,8 +130,23 @@ class EditOrganization extends EditRecord {
 
     protected function getHeaderActions(): array {
         return [
-            ViewAction::make(),
-            DeleteAction::make(),
+            ViewAction::make()
+                ->label('Xem chi tiết'),
+            DeleteAction::make()
+                ->label('Xóa đơn vị')
+                ->modalHeading('Xóa đơn vị')
+                ->modalDescription('Bạn có chắc chắn muốn xóa đơn vị này? Hành động này không thể hoàn tác.')
+                ->modalSubmitActionLabel('Xóa')
+                ->modalCancelActionLabel('Hủy'),
+        ];
+    }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getSaveFormAction()
+                ->label('Lưu thay đổi'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
         ];
     }
 

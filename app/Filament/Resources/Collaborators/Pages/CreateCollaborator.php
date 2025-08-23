@@ -68,4 +68,13 @@ class CreateCollaborator extends CreateRecord {
     public function getBreadcrumb(): string {
         return 'Thêm CTV con mới';
     }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getCreateFormAction()
+                ->label('Tạo cộng tác viên'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
+        ];
+    }
 }

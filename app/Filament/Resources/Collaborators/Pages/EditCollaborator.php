@@ -32,8 +32,23 @@ class EditCollaborator extends EditRecord {
 
     protected function getHeaderActions(): array {
         return [
-            ViewAction::make(),
-            DeleteAction::make(),
+            ViewAction::make()
+                ->label('Xem chi tiết'),
+            DeleteAction::make()
+                ->label('Xóa cộng tác viên')
+                ->modalHeading('Xóa cộng tác viên')
+                ->modalDescription('Bạn có chắc chắn muốn xóa cộng tác viên này? Hành động này không thể hoàn tác.')
+                ->modalSubmitActionLabel('Xóa')
+                ->modalCancelActionLabel('Hủy'),
+        ];
+    }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getSaveFormAction()
+                ->label('Lưu thay đổi'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
         ];
     }
 

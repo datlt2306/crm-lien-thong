@@ -193,4 +193,13 @@ class CreateOrganization extends CreateRecord {
     public function getBreadcrumb(): string {
         return 'Tạo đơn vị';
     }
+
+    protected function getFormActions(): array {
+        return [
+            $this->getCreateFormAction()
+                ->label('Tạo đơn vị'),
+            $this->getCancelFormAction()
+                ->label('Hủy'),
+        ];
+    }
 }
