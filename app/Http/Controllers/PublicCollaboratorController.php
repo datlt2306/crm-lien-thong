@@ -5,8 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Collaborator;
 use App\Models\Organization;
+use App\Services\RefTrackingService;
 
 class PublicCollaboratorController extends Controller {
+    protected $refTrackingService;
+
+    public function __construct(RefTrackingService $refTrackingService) {
+        $this->refTrackingService = $refTrackingService;
+    }
+
     public function showRegisterForm() {
         $organizations = Organization::orderBy('name')->pluck('name', 'id');
         return view('ctv-register', [
@@ -44,6 +51,9 @@ class PublicCollaboratorController extends Controller {
     }
 
     public function showRefRegister(string $ref_id) {
+        // Lưu ref_id vào cookie
+        $this->refTrackingService->setRefCookie(request(), $ref_id);
+
         $upline = Collaborator::where('ref_id', $ref_id)->firstOrFail();
         $org = $upline->organization;
         return view('ctv-register-ref', [
@@ -53,7 +63,13 @@ class PublicCollaboratorController extends Controller {
     }
 
     public function submitRefRegister(string $ref_id, Request $request) {
-        $upline = Collaborator::where('ref_id', $ref_id)->firstOrFail();
+        // Lấy collaborator từ ref_id hoặc cookie
+        $upline = $this->refTrackingService->getCollaborator($request, $ref_id);
+
+        if (!$upline) {
+            return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
+        }
+
         $org = $upline->organization;
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -72,6 +88,9 @@ class PublicCollaboratorController extends Controller {
             'note' => $data['note'] ?? null,
             'status' => 'active',
         ]);
+
+        // Xóa cookie sau khi đăng ký thành công
+        $this->refTrackingService->clearRefCookie();
 
         return redirect()->back()->with('success', 'Đăng ký CTV thành công! Hệ thống sẽ liên hệ xác minh.');
     }

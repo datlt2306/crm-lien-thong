@@ -9,11 +9,20 @@ use App\Models\Major;
 use App\Models\Program;
 use App\Models\Student;
 use App\Models\Payment;
+use App\Services\RefTrackingService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
 class PublicStudentController extends Controller {
+    protected $refTrackingService;
+
+    public function __construct(RefTrackingService $refTrackingService) {
+        $this->refTrackingService = $refTrackingService;
+    }
+
     public function showForm($ref_id) {
+        // Lưu ref_id vào cookie
+        $this->refTrackingService->setRefCookie(request(), $ref_id);
         $collaborator = Collaborator::where('ref_id', $ref_id)->first();
         if (!$collaborator) {
             abort(404, 'Liên kết không hợp lệ!');
@@ -113,7 +122,9 @@ class PublicStudentController extends Controller {
     }
 
     public function submitForm($ref_id, Request $request) {
-        $collaborator = Collaborator::where('ref_id', $ref_id)->first();
+        // Lấy collaborator từ ref_id hoặc cookie
+        $collaborator = $this->refTrackingService->getCollaborator($request, $ref_id);
+
         if (!$collaborator) {
             return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
         }
@@ -187,6 +198,10 @@ class PublicStudentController extends Controller {
             'status' => 'new',
             'notes' => !empty($notes) ? implode("\n", $notes) : null,
         ]);
+
+        // Xóa cookie sau khi đăng ký thành công
+        $this->refTrackingService->clearRefCookie();
+
         return redirect()->back()->with('success', 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
     }
 
@@ -194,7 +209,9 @@ class PublicStudentController extends Controller {
      * Hiển thị form upload bill thanh toán cho sinh viên đã đăng ký.
      */
     public function showPaymentForm(string $ref_id) {
-        $collaborator = Collaborator::where('ref_id', $ref_id)->first();
+        // Lấy collaborator từ ref_id hoặc cookie
+        $collaborator = $this->refTrackingService->getCollaborator(request(), $ref_id);
+
         if (!$collaborator) {
             abort(404, 'Liên kết không hợp lệ!');
         }
@@ -209,7 +226,9 @@ class PublicStudentController extends Controller {
      * Nhận bill thanh toán từ sinh viên, tạo Payment ở trạng thái SUBMITTED.
      */
     public function submitPayment(string $ref_id, Request $request) {
-        $collaborator = Collaborator::where('ref_id', $ref_id)->first();
+        // Lấy collaborator từ ref_id hoặc cookie
+        $collaborator = $this->refTrackingService->getCollaborator($request, $ref_id);
+
         if (!$collaborator) {
             return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
         }
