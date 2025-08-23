@@ -147,11 +147,19 @@ class OrganizationForm {
                     ->onColor('success')
                     ->offColor('danger')
                     ->inline(false)
-                    ->required()
-                    ->default(true)
-                    ->helperText('Bật để kích hoạt, tắt để vô hiệu')
-                    ->formatStateUsing(fn($state) => $state === 'active')
-                    ->dehydrateStateUsing(fn($state) => $state ? 'active' : 'inactive'),
+                    ->helperText('Bật để kích hoạt, tắt để vô hiệu hoá đơn vị')
+                    ->formatStateUsing(function ($state) {
+                        // Filament đã tự động chuyển đổi string thành boolean
+                        // Nếu state là string, so sánh với 'active'
+                        // Nếu state là boolean, trả về trực tiếp
+                        if (is_string($state)) {
+                            return $state === 'active';
+                        }
+                        return (bool) $state;
+                    })
+                    ->dehydrateStateUsing(function ($state) {
+                        return $state ? 'active' : 'inactive';
+                    }),
             ])
             ->columns(1);
     }
