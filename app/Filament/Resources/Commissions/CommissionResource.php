@@ -15,6 +15,7 @@ use App\Models\CommissionItem;
 use App\Models\Organization;
 use App\Models\Collaborator;
 use App\Filament\Resources\Commissions\Pages\ListCommissions;
+use Illuminate\Support\Facades\Auth;
 
 class CommissionResource extends Resource {
     protected static ?string $model = Commission::class;
@@ -32,7 +33,7 @@ class CommissionResource extends Resource {
     }
 
     public static function table(Table $table): Table {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $isCtv = $user->role === 'ctv';
 
         // Kiểm tra xem CTV có phải là người trực tiếp giới thiệu sinh viên không
@@ -280,6 +281,67 @@ class CommissionResource extends Resource {
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    \Filament\Actions\BulkAction::make('bulk_confirm_payment')
+                        ->label('Xác nhận thanh toán hàng loạt')
+                        ->icon('heroicon-o-currency-dollar')
+                        ->color('success')
+                        ->form([
+                            \Filament\Forms\Components\FileUpload::make('bill')
+                                ->label('Bill thanh toán chung')
+                                ->required()
+                                ->disk('local')
+                                ->directory('commission-bills')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(5120) // 5MB
+                                ->helperText('Upload một bill thanh toán chung cho tất cả các hoa hồng đã chọn'),
+                            \Filament\Forms\Components\Textarea::make('note')
+                                ->label('Ghi chú')
+                                ->rows(3)
+                                ->placeholder('Ghi chú về việc thanh toán hàng loạt này...')
+                                ->helperText('Ghi chú tùy chọn cho việc thanh toán hàng loạt'),
+                        ])
+                        ->modalHeading('Xác nhận thanh toán hàng loạt')
+                        ->modalDescription('Xác nhận đã thanh toán hoa hồng cho tất cả các CTV đã chọn. Một bill chung sẽ được áp dụng cho tất cả.')
+                        ->modalSubmitActionLabel('Xác nhận thanh toán tất cả')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(fn() => Auth::user()->role === 'chủ đơn vị')
+                        ->action(function (array $data, $records) {
+                            $userId = Auth::user()->id;
+                            $billPath = $data['bill'];
+                            $note = $data['note'] ?? null;
+
+                            $successCount = 0;
+                            $errorCount = 0;
+
+                            foreach ($records as $record) {
+                                try {
+                                    // Chỉ xử lý các commission có thể thanh toán
+                                    if (in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])) {
+                                        $record->markAsPaymentConfirmed($billPath, $userId);
+                                        $successCount++;
+                                    }
+                                } catch (\Exception $e) {
+                                    $errorCount++;
+                                }
+                            }
+
+                            // Hiển thị thông báo kết quả
+                            if ($successCount > 0) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title("Đã xác nhận thanh toán thành công {$successCount} hoa hồng")
+                                    ->body($errorCount > 0 ? "Có {$errorCount} hoa hồng không thể xử lý." : "Tất cả hoa hồng đã được xác nhận.")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Không có hoa hồng nào được xác nhận')
+                                    ->body('Vui lòng kiểm tra lại trạng thái của các hoa hồng đã chọn.')
+                                    ->warning()
+                                    ->send();
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa hoa hồng đã chọn')
@@ -289,7 +351,7 @@ class CommissionResource extends Resource {
                 ]),
             ])
             ->modifyQueryUsing(function ($query) {
-                $user = \Illuminate\Support\Facades\Auth::user();
+                $user = Auth::user();
 
                 if ($user->role === 'super_admin') {
                     return;

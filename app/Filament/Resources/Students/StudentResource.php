@@ -11,6 +11,7 @@ use App\Filament\Resources\Students\Schemas\StudentInfolist;
 use App\Filament\Resources\Students\Tables\StudentsTable;
 use App\Models\Student;
 use App\Models\Collaborator;
+use App\Models\Payment;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -57,7 +58,39 @@ class StudentResource extends Resource {
 
     public static function getNavigationBadge(): ?string {
         try {
-            return (string) Student::count();
+            $user = Auth::user();
+            if (!$user) {
+                return null;
+            }
+
+            // Super admin đếm tất cả
+            if ($user->role === 'super_admin') {
+                return (string) Student::count();
+            }
+
+            // Chủ đơn vị chỉ đếm học viên đã xác nhận nộp tiền
+            if ($user->role === 'chủ đơn vị') {
+                $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+                if ($org) {
+                    return (string) Student::where('organization_id', $org->id)
+                        ->whereHas('payment', function ($query) {
+                            $query->where('status', 'verified');
+                        })
+                        ->count();
+                }
+            }
+
+            // CTV đếm học viên của mình và downline
+            if ($user->role === 'ctv') {
+                $collaborator = Collaborator::where('email', $user->email)->first();
+                if ($collaborator) {
+                    $downlineIds = self::getDownlineIds($collaborator->id);
+                    $allCollaboratorIds = array_merge([$collaborator->id], $downlineIds);
+                    return (string) Student::whereIn('collaborator_id', $allCollaboratorIds)->count();
+                }
+            }
+
+            return '0';
         } catch (\Throwable) {
             return null;
         }
@@ -80,11 +113,14 @@ class StudentResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị thấy student của tổ chức mình
+        // Chủ đơn vị chỉ thấy student mới đăng ký và đã được xác nhận nộp tiền
         if ($user->role === 'chủ đơn vị') {
             $org = \App\Models\Organization::where('owner_id', $user->id)->first();
             if ($org) {
-                return $query->where('organization_id', $org->id);
+                return $query->where('organization_id', $org->id)
+                    ->whereHas('payment', function ($paymentQuery) {
+                        $paymentQuery->where('status', 'verified'); // Chỉ hiển thị học viên có payment đã được xác nhận
+                    });
             }
         }
 
