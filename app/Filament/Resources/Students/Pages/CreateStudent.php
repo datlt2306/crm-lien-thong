@@ -38,4 +38,9 @@ class CreateStudent extends CreateRecord {
     public function getBreadcrumb(): string {
         return 'Thêm học viên mới';
     }
+
+    public static function canAccess(array $parameters = []): bool {
+        $user = Auth::user();
+        return $user && in_array($user->role, ['super_admin', 'chủ đơn vị']);
+    }
 }
