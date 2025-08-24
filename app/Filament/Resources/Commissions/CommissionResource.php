@@ -137,11 +137,7 @@ class CommissionResource extends Resource {
                     })
                     ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
 
-                \Filament\Tables\Columns\TextColumn::make('payable_at')
-                    ->label('Có thể thanh toán từ')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
+
 
                 \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
                     ->label('Đã thanh toán lúc')
