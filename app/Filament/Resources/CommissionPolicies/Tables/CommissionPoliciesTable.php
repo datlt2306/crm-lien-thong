@@ -32,7 +32,6 @@ class CommissionPoliciesTable {
                     ->label('Loại')
                     ->formatStateUsing(fn($state) => match ($state) {
                         'FIXED' => 'Cố định',
-                        'PERCENT' => 'Phần trăm',
                         'PASS_THROUGH' => 'Chuyển tiếp',
                         default => $state
                     }),
@@ -44,14 +43,7 @@ class CommissionPoliciesTable {
                         }
                         return '-';
                     }),
-                TextColumn::make('percent')
-                    ->label('Phần trăm (%)')
-                    ->formatStateUsing(function ($state, $record) {
-                        if ($record->type === 'PERCENT' && $state) {
-                            return $state . '%';
-                        }
-                        return '-';
-                    }),
+
                 TextColumn::make('trigger')
                     ->label('Kích hoạt')
                     ->formatStateUsing(fn($state) => $state ? ($state === 'ON_VERIFICATION' ? 'Khi xác nhận' : 'Khi nhập học') : 'Mặc định'),
@@ -63,14 +55,7 @@ class CommissionPoliciesTable {
                     ->badge()
                     ->color(fn($state) => $state ? 'success' : 'danger')
                     ->formatStateUsing(fn($state) => $state ? 'Kích hoạt' : 'Vô hiệu'),
-                TextColumn::make('effective_from')
-                    ->label('Từ ngày')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('effective_to')
-                    ->label('Đến ngày')
-                    ->date()
-                    ->sortable(),
+
             ])
             ->filters([
                 SelectFilter::make('organization_id')
@@ -92,7 +77,6 @@ class CommissionPoliciesTable {
                     ->label('Loại hoa hồng')
                     ->options([
                         'FIXED' => 'Cố định',
-                        'PERCENT' => 'Phần trăm',
                         'PASS_THROUGH' => 'Chuyển tiếp',
                     ]),
                 TernaryFilter::make('active')

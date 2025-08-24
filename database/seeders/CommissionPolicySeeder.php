@@ -92,14 +92,14 @@ class CommissionPolicySeeder extends Seeder {
                 'collaborator_id' => $collaborators->first()->id,
                 'program_type' => null,
                 'role' => 'PRIMARY',
-                'type' => 'PERCENT',
-                'amount_vnd' => null,
-                'percent' => 15,
+                'type' => 'FIXED',
+                'amount_vnd' => 1000000,
+                'percent' => null,
                 'trigger' => 'ON_VERIFICATION',
                 'visibility' => 'INTERNAL',
                 'priority' => 20,
                 'active' => true,
-                'meta' => json_encode(['description' => 'CTV ' . $collaborators->first()->full_name . ' nhận 15%']),
+                'meta' => json_encode(['description' => 'CTV ' . $collaborators->first()->full_name . ' nhận 1,000,000 VND']),
             ],
         ];
 

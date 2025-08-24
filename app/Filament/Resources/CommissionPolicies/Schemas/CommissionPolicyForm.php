@@ -48,7 +48,6 @@ class CommissionPolicyForm {
                     ->label('Loại hoa hồng')
                     ->options([
                         'FIXED' => 'Cố định (VND)',
-                        'PERCENT' => 'Phần trăm (%)',
                         'PASS_THROUGH' => 'Chuyển tiếp (100%)',
                     ])
                     ->required()
@@ -56,8 +55,6 @@ class CommissionPolicyForm {
                     ->afterStateUpdated(function ($state, callable $set) {
                         if ($state === 'FIXED') {
                             $set('percent', null);
-                        } elseif ($state === 'PERCENT') {
-                            $set('amount_vnd', null);
                         } else {
                             $set('amount_vnd', null);
                             $set('percent', null);
@@ -69,14 +66,7 @@ class CommissionPolicyForm {
                     ->visible(fn($get) => $get('type') === 'FIXED')
                     ->required(fn($get) => $get('type') === 'FIXED')
                     ->helperText('Số tiền hoa hồng cố định'),
-                TextInput::make('percent')
-                    ->label('Phần trăm (%)')
-                    ->numeric()
-                    ->minValue(0)
-                    ->maxValue(100)
-                    ->visible(fn($get) => $get('type') === 'PERCENT')
-                    ->required(fn($get) => $get('type') === 'PERCENT')
-                    ->helperText('Phần trăm hoa hồng (0-100%)'),
+
                 Select::make('trigger')
                     ->label('Thời điểm kích hoạt')
                     ->options([
@@ -102,14 +92,7 @@ class CommissionPolicyForm {
                     ->label('Kích hoạt')
                     ->default(true)
                     ->helperText('Bật để kích hoạt chính sách này'),
-                DatePicker::make('effective_from')
-                    ->label('Có hiệu lực từ')
-                    ->helperText('Để trống để có hiệu lực ngay')
-                    ->nullable(),
-                DatePicker::make('effective_to')
-                    ->label('Có hiệu lực đến')
-                    ->helperText('Để trống để không giới hạn thời gian')
-                    ->nullable(),
+
                 Textarea::make('meta')
                     ->label('Thông tin bổ sung')
                     ->helperText('Thông tin bổ sung về chính sách (JSON)')

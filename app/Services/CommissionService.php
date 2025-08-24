@@ -42,7 +42,7 @@ class CommissionService {
      * Tạo commission trực tiếp cho CTV cấp 1
      */
     private function createDirectCommission(Commission $commission, Payment $payment): void {
-        $amount = $this->getDirectCommissionAmount($payment->program_type);
+        $amount = $this->getDirectCommissionAmount($payment);
 
         CommissionItem::create([
             'commission_id' => $commission->id,
@@ -177,13 +177,41 @@ class CommissionService {
     /**
      * Lấy số tiền commission trực tiếp theo hệ đào tạo
      */
-    private function getDirectCommissionAmount(string $programType): float {
-        // Đọc theo cấu hình bảng programs nếu có
-        $program = \App\Models\Program::where('code', strtoupper($programType))->first();
-        if ($program && $program->direct_commission_amount > 0) {
-            return (float) $program->direct_commission_amount;
+    private function getDirectCommissionAmount(Payment $payment): float {
+        $programType = $payment->program_type;
+
+        // Tìm chính sách hoa hồng phù hợp
+        $policy = \App\Models\CommissionPolicy::where('type', 'PASS_THROUGH')
+            ->where('role', 'PRIMARY')
+            ->where('active', true)
+            ->where(function ($query) use ($programType) {
+                $query->whereNull('program_type')
+                    ->orWhere('program_type', strtoupper($programType));
+            })
+            ->orderBy('priority', 'desc')
+            ->first();
+
+        if ($policy) {
+            // PASS_THROUGH: nhận toàn bộ số tiền thanh toán
+            return (float) $payment->amount;
         }
-        // Fallback cứng
+
+        // Fallback: tìm chính sách cố định
+        $fixedPolicy = \App\Models\CommissionPolicy::where('type', 'FIXED')
+            ->where('role', 'PRIMARY')
+            ->where('active', true)
+            ->where(function ($query) use ($programType) {
+                $query->whereNull('program_type')
+                    ->orWhere('program_type', strtoupper($programType));
+            })
+            ->orderBy('priority', 'desc')
+            ->first();
+
+        if ($fixedPolicy) {
+            return (float) $fixedPolicy->amount_vnd ?? 0;
+        }
+
+        // Fallback cứng nếu không có chính sách
         return match (strtolower($programType)) {
             'cq', 'regular' => 1750000,
             'vhvlv', 'part_time' => 750000,

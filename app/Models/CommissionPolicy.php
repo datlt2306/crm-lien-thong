@@ -13,23 +13,17 @@ class CommissionPolicy extends Model {
         'role',
         'type',
         'amount_vnd',
-        'percent',
         'trigger',
         'visibility',
         'priority',
         'active',
-        'effective_from',
-        'effective_to',
         'meta',
     ];
 
     protected $casts = [
         'amount_vnd' => 'decimal:2',
-        'percent' => 'decimal:2',
         'priority' => 'integer',
         'active' => 'boolean',
-        'effective_from' => 'datetime',
-        'effective_to' => 'datetime',
         'meta' => 'array',
     ];
 
