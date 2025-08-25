@@ -52,7 +52,7 @@ class PublicStudentController extends Controller {
             ->get();
 
         // Chuẩn bị dữ liệu cho view
-        $majors = $majorConfigs->map(function ($major) use ($organization) {
+        $majors = $majorConfigs->map(function ($major) use ($organization, $programConfigs) {
             // Lấy programs cho major này từ bảng pivot mới
             $programs = DB::table('major_organization_program')
                 ->join('major_organization', 'major_organization_program.major_organization_id', '=', 'major_organization.id')
@@ -69,17 +69,50 @@ class PublicStudentController extends Controller {
                 })
                 ->toArray();
 
+            // Fallback: nếu ngành chưa gán chương trình cụ thể, dùng toàn bộ chương trình của đơn vị
+            if (empty($programs)) {
+                $programs = $programConfigs->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                    ];
+                })->toArray();
+            }
+
             // Lấy quota hiện tại (còn lại)
             $currentQuota = $this->quotaService->getCurrentQuota($organization->id, $major->id);
+
+            // Sắp xếp intake months theo ngành
+            $intakes = json_decode($major->intake_months, true) ?? [];
+            if (is_array($intakes)) {
+                sort($intakes, SORT_NUMERIC);
+            }
 
             return [
                 'id' => $major->id,
                 'name' => $major->name,
                 'quota' => $currentQuota,
-                'intake_months' => json_decode($major->intake_months, true) ?? [],
+                'intake_months' => $intakes,
                 'programs' => $programs
             ];
         });
+
+        // Fallback: nếu đơn vị chưa cấu hình ngành, hiển thị tất cả ngành đang kích hoạt
+        if ($majors->isEmpty()) {
+            $majors = Major::query()
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('majors', 'is_active'), fn($q) => $q->where('is_active', true))
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(function ($m) use ($organization) {
+                    return [
+                        'id' => $m->id,
+                        'name' => $m->name,
+                        'quota' => $this->quotaService->getCurrentQuota($organization->id, $m->id),
+                        'intake_months' => [],
+                        'programs' => [],
+                    ];
+                });
+        }
 
         $programs = $programConfigs->map(function ($program) {
             return [
@@ -120,7 +153,7 @@ class PublicStudentController extends Controller {
             // Debug info - có thể bỏ sau
             'debug' => [
                 'organization_id' => $organization->id,
-                'major_count' => $majorConfigs->count(),
+                'major_count' => $majors->count(),
                 'program_count' => $programConfigs->count(),
                 'major_details' => $majorDetails,
             ]
@@ -165,8 +198,32 @@ class PublicStudentController extends Controller {
         if (!empty($validated['major_id']) && !$selectedOrg?->majors()->where('majors.id', $validated['major_id'])->exists()) {
             return back()->withErrors(['major_id' => 'Ngành không thuộc đơn vị này'])->withInput();
         }
-        if (!empty($validated['program_id']) && !$selectedOrg?->programs()->where('programs.id', $validated['program_id'])->exists()) {
-            return back()->withErrors(['program_id' => 'Hệ đào tạo không thuộc đơn vị này'])->withInput();
+        if (!empty($validated['program_id'])) {
+            $programValid = false;
+
+            // 1) Hợp lệ nếu chương trình được gán cho ngành trong đơn vị (major_organization_program)
+            if (!empty($validated['major_id'])) {
+                $programValid = DB::table('major_organization_program')
+                    ->join('major_organization', 'major_organization_program.major_organization_id', '=', 'major_organization.id')
+                    ->where('major_organization.organization_id', $selectedOrg->id)
+                    ->where('major_organization.major_id', $validated['major_id'])
+                    ->where('major_organization_program.program_id', $validated['program_id'])
+                    ->exists();
+            }
+
+            // 2) Fallback: hoặc chương trình thuộc đơn vị (organization_program)
+            if (!$programValid) {
+                $programValid = DB::table('organization_program')
+                    ->where('organization_id', $selectedOrg->id)
+                    ->where('program_id', $validated['program_id'])
+                    ->exists();
+            }
+
+            if (!$programValid) {
+                return back()->withErrors([
+                    'program_id' => 'Hệ đào tạo không thuộc đơn vị này hoặc chưa được cấu hình cho ngành đã chọn',
+                ])->withInput();
+            }
         }
 
         // Kiểm tra quota của ngành
@@ -182,20 +239,17 @@ class PublicStudentController extends Controller {
             $selectedMajorName = Major::where('id', $validated['major_id'])->value('name');
         }
         $selectedProgramName = null;
+        $selectedProgramCode = null;
         if (!empty($validated['program_id'])) {
             $selectedProgramName = Program::where('id', $validated['program_id'])->value('name');
+            $selectedProgramCode = Program::where('id', $validated['program_id'])->value('code');
         }
 
         $notes = [];
         if (!empty($validated['notes'])) {
             $notes[] = $validated['notes'];
         }
-        if (!empty($selectedProgramName)) {
-            $notes[] = "Chọn hệ đào tạo: " . $selectedProgramName;
-        }
-        if (!empty($validated['intake_month'])) {
-            $notes[] = "Đợt tuyển: Tháng " . $validated['intake_month'];
-        }
+        // Không thêm hệ/đợt vào ghi chú theo yêu cầu hiển thị riêng
 
         $student = Student::create([
             'full_name' => $validated['full_name'],
@@ -208,6 +262,8 @@ class PublicStudentController extends Controller {
 
             'target_university' => $selectedOrg?->name,
             'major' => $selectedMajorName,
+            'program_type' => $selectedProgramCode,
+            'intake_month' => $validated['intake_month'] ?? null,
             'source' => 'ref',
             'status' => 'new',
             'notes' => !empty($notes) ? implode("\n", $notes) : null,

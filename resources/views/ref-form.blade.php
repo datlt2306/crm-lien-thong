@@ -24,7 +24,7 @@
             </ul>
         </div>
         @endif
-        <form method="POST" action="">
+        <form id="student-form" method="POST" action="">
             @csrf
             <div class="mb-3">
                 <label class="block font-medium mb-1">Họ và tên *</label>
@@ -105,8 +105,8 @@
         const form = document.getElementById('student-form');
 
         // Lấy dữ liệu majors từ server
-        const majorsData = JSON.parse('{!! json_encode($majors ?? []) !!}');
-        const programsData = JSON.parse('{!! json_encode($programs ?? []) !!}');
+        const majorsData = @json($majors ?? []);
+        const programsData = @json($programs ?? []);
 
         // Hàm hiển thị lỗi
         function showError(fieldId, message) {
@@ -189,7 +189,7 @@
             });
 
             if (selectedMajor) {
-                // Cập nhật đợt tuyển theo ngành đã chọn
+                // Reset và cập nhật đợt tuyển theo ngành đã chọn
                 intakeSelect.innerHTML = '<option value="">-- Chọn đợt tuyển --</option>';
                 if (selectedMajor.intake_months && selectedMajor.intake_months.length > 0) {
                     // Sắp xếp tháng theo thứ tự tăng dần
@@ -202,7 +202,7 @@
                     });
                 }
 
-                // Cập nhật hệ đào tạo theo ngành đã chọn
+                // Reset và cập nhật hệ đào tạo theo ngành đã chọn
                 if (selectedMajor.programs && selectedMajor.programs.length > 0) {
                     programSelect.innerHTML = '<option value="">-- Chọn hệ đào tạo --</option>';
                     selectedMajor.programs.forEach(function(program) {
@@ -239,9 +239,12 @@
                     programNames = programsData.map(p => p.name).join(', ');
                 }
 
+                const monthText = (selectedMajor.intake_months && selectedMajor.intake_months.length) ?
+                    ('Tháng ' + selectedMajor.intake_months.join(', ')) :
+                    'Chưa cấu hình';
                 infoDiv.innerHTML = '<strong>Thông tin ngành ' + selectedMajor.name + ':</strong><br>' +
                     'Chỉ tiêu: ' + selectedMajor.quota + ' sinh viên<br>' +
-                    'Đợt tuyển: Tháng ' + selectedMajor.intake_months.join(', ') + '<br>' +
+                    'Đợt tuyển: ' + monthText + '<br>' +
                     'Hệ đào tạo: ' + programNames;
 
                 majorSelect.parentNode.insertBefore(infoDiv, majorSelect.nextSibling);
