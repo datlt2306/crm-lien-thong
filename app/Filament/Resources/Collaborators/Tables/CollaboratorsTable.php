@@ -4,12 +4,15 @@ namespace App\Filament\Resources\Collaborators\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Collaborator;
+use App\Models\User;
 
 class CollaboratorsTable {
     public static function configure(Table $table): Table {
@@ -96,15 +99,41 @@ class CollaboratorsTable {
                     ->label('Xem chi tiết'),
                 EditAction::make()
                     ->label('Chỉnh sửa'),
+                DeleteAction::make()
+                    ->label('Xóa cộng tác viên')
+                    ->modalHeading('Xóa cộng tác viên')
+                    ->modalDescription('Bạn có chắc chắn muốn xóa cộng tác viên này? Hành động này sẽ xóa cả tài khoản người dùng tương ứng và không thể hoàn tác.')
+                    ->modalSubmitActionLabel('Xóa')
+                    ->modalCancelActionLabel('Hủy')
+                    ->before(function (Collaborator $record) {
+                        // Xóa user tương ứng nếu có
+                        if ($record->email) {
+                            $user = User::where('email', $record->email)->first();
+                            if ($user) {
+                                $user->delete();
+                            }
+                        }
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa cộng tác viên đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các cộng tác viên đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các cộng tác viên đã chọn? Hành động này sẽ xóa cả tài khoản người dùng tương ứng và không thể hoàn tác.')
                         ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy'),
+                        ->modalCancelActionLabel('Hủy')
+                        ->before(function ($records) {
+                            // Xóa user tương ứng cho mỗi collaborator
+                            foreach ($records as $record) {
+                                if ($record->email) {
+                                    $user = User::where('email', $record->email)->first();
+                                    if ($user) {
+                                        $user->delete();
+                                    }
+                                }
+                            }
+                        }),
                 ]),
             ]);
     }

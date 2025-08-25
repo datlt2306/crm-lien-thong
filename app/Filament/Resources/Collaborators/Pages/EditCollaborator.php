@@ -40,12 +40,6 @@ class EditCollaborator extends EditRecord {
         return [
             ViewAction::make()
                 ->label('Xem chi tiết'),
-            DeleteAction::make()
-                ->label('Xóa cộng tác viên')
-                ->modalHeading('Xóa cộng tác viên')
-                ->modalDescription('Bạn có chắc chắn muốn xóa cộng tác viên này? Hành động này không thể hoàn tác.')
-                ->modalSubmitActionLabel('Xóa')
-                ->modalCancelActionLabel('Hủy'),
         ];
     }
 

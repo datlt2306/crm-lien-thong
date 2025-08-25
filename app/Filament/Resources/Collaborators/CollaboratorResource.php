@@ -17,6 +17,8 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Filament\Actions\DeleteAction;
+use App\Models\User;
 
 class CollaboratorResource extends Resource {
     protected static ?string $model = Collaborator::class;
