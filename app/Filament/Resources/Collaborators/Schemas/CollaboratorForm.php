@@ -81,8 +81,17 @@ class CollaboratorForm {
                     ->required()
                     ->default(true)
                     ->helperText('Bật để kích hoạt, tắt để vô hiệu')
-                    ->formatStateUsing(fn($state) => $state === 'active')
-                    ->dehydrateStateUsing(fn($state) => $state ? 'active' : 'inactive'),
+                    ->formatStateUsing(function ($state) {
+                        // Chuyển đổi từ string sang boolean cho UI
+                        if (is_string($state)) {
+                            return $state === 'active';
+                        }
+                        return (bool) $state;
+                    })
+                    ->dehydrateStateUsing(function ($state) {
+                        // Chuyển đổi từ boolean sang string cho database
+                        return $state ? 'active' : 'inactive';
+                    }),
             ]);
     }
 }

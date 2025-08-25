@@ -13,6 +13,9 @@ class EditCollaborator extends EditRecord {
     protected static string $resource = CollaboratorResource::class;
 
     protected function mutateFormDataBeforeSave(array $data): array {
+        // Debug: Log data trước khi xử lý
+        \Illuminate\Support\Facades\Log::info('EditCollaborator - Data before save:', $data);
+
         // Cập nhật mật khẩu nếu có
         if (!empty($data['email'])) {
             $user = User::where('email', $data['email'])->first();
@@ -26,6 +29,9 @@ class EditCollaborator extends EditRecord {
 
         // Loại bỏ password khỏi data trước khi lưu Collaborator
         unset($data['password'], $data['password_confirmation']);
+
+        // Debug: Log data sau khi xử lý
+        \Illuminate\Support\Facades\Log::info('EditCollaborator - Data after processing:', $data);
 
         return $data;
     }

@@ -21,6 +21,7 @@ class Collaborator extends Model {
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'status' => 'string',
     ];
 
     /**
@@ -108,7 +109,7 @@ class Collaborator extends Model {
             }
             // organization_id
             if (empty($model->organization_id)) {
-                $user = auth()->user();
+                $user = \Illuminate\Support\Facades\Auth::user();
                 if ($user && $user->role !== 'super_admin') {
                     $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                     if ($org) {

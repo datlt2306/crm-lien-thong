@@ -35,7 +35,18 @@ class MajorResource extends Resource {
                 ->required(),
             \Filament\Forms\Components\Toggle::make('is_active')
                 ->label('Kích hoạt')
-                ->default(true),
+                ->default(true)
+                ->formatStateUsing(function ($state) {
+                    // Chuyển đổi từ string sang boolean cho UI
+                    if (is_string($state)) {
+                        return $state === '1' || $state === true;
+                    }
+                    return (bool) $state;
+                })
+                ->dehydrateStateUsing(function ($state) {
+                    // Chuyển đổi từ boolean sang integer cho database
+                    return $state ? 1 : 0;
+                }),
             // Chỉ tiêu sẽ quản lý ở phần Đơn vị
         ]);
     }
