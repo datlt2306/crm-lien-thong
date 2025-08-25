@@ -37,16 +37,12 @@ class WalletResource extends Resource {
             return true;
         }
 
-        if ($user->role === 'chủ đơn vị') {
-            // Chủ đơn vị thấy menu ví tiền để quản lý ví của tổ chức
-            return true;
-        }
-
         if ($user->role === 'ctv') {
             // CTV thấy menu ví tiền để xem số dư của mình
             return true;
         }
 
+        // Chủ đơn vị không cần chức năng ví
         return false;
     }
 
@@ -59,12 +55,6 @@ class WalletResource extends Resource {
                         $user = \Illuminate\Support\Facades\Auth::user();
                         if ($user->role === 'super_admin') {
                             return \App\Models\Collaborator::pluck('full_name', 'id');
-                        } else if ($user->role === 'chủ đơn vị') {
-                            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-                            if ($org) {
-                                return \App\Models\Collaborator::where('organization_id', $org->id)
-                                    ->pluck('full_name', 'id');
-                            }
                         }
                         return [];
                     })
@@ -135,11 +125,6 @@ class WalletResource extends Resource {
                         $user = \Illuminate\Support\Facades\Auth::user();
                         if ($user->role === 'super_admin') {
                             return \App\Models\Organization::pluck('name', 'id');
-                        } else if ($user->role === 'chủ đơn vị') {
-                            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-                            if ($org) {
-                                return [$org->id => $org->name];
-                            }
                         }
                         return [];
                     }),
@@ -167,14 +152,6 @@ class WalletResource extends Resource {
                         $query->where('collaborator_id', $collaborator->id);
                     } else {
                         $query->whereNull('id'); // Không trả về gì nếu không tìm thấy collaborator
-                    }
-                } else if ($user->role === 'chủ đơn vị') {
-                    // Chủ đơn vị chỉ thấy ví của tổ chức mình
-                    $org = \App\Models\Organization::where('owner_id', $user->id)->first();
-                    if ($org) {
-                        $query->whereHas('collaborator', function ($q) use ($org) {
-                            $q->where('organization_id', $org->id);
-                        });
                     }
                 }
             });
