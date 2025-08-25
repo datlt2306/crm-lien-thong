@@ -102,7 +102,7 @@ class Student extends Model {
         return [
             'full_name' => 'required|string|max:255',
             'phone' => 'required|string|max:20|unique:students,phone,' . (request()->route('record') ?? ''),
-            'email' => 'nullable|email|max:255',
+            'email' => 'nullable|email|max:255|unique:students,email,' . (request()->route('record') ?? ''),
             'organization_id' => 'required|exists:organizations,id',
             'collaborator_id' => 'nullable|exists:collaborators,id',
             'target_university' => 'nullable|string|max:255',

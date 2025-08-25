@@ -172,7 +172,7 @@ class PublicStudentController extends Controller {
             'dob' => 'required|date',
             'address' => 'required|string|max:255',
             'phone' => 'required|string|max:20|unique:students,phone',
-            'email' => 'nullable|email|max:255',
+            'email' => 'nullable|email|max:255|unique:students,email',
 
             'organization_id' => 'required|exists:organizations,id',
             'major_id' => 'required|exists:majors,id',
@@ -187,6 +187,8 @@ class PublicStudentController extends Controller {
             'intake_month.required' => 'Vui lòng chọn đợt tuyển',
             'intake_month.integer' => 'Đợt tuyển phải là số tháng hợp lệ',
             'intake_month.between' => 'Đợt tuyển phải từ tháng 1 đến tháng 12',
+            'phone.unique' => 'Số điện thoại đã tồn tại',
+            'email.unique' => 'Email đã tồn tại',
         ]);
 
         // Xác thực organization phải là của collaborator
@@ -269,8 +271,20 @@ class PublicStudentController extends Controller {
             'notes' => !empty($notes) ? implode("\n", $notes) : null,
         ]);
 
-        // Giảm quota của ngành khi đăng ký thành công
-        $this->quotaService->decreaseQuotaOnStudentRegistration($student);
+        // Tạo bản ghi Payment NOT_PAID để CTV có thể upload bill sau khi sinh viên đăng ký
+        \App\Models\Payment::firstOrCreate(
+            [
+                'student_id' => $student->id,
+            ],
+            [
+                'organization_id' => $student->organization_id,
+                'primary_collaborator_id' => $collaborator->id,
+                'sub_collaborator_id' => null,
+                'program_type' => $selectedProgramCode ?? 'REGULAR',
+                'amount' => 0,
+                'status' => \App\Models\Payment::STATUS_NOT_PAID,
+            ]
+        );
 
         // Xóa cookie sau khi đăng ký thành công
         $this->refTrackingService->clearRefCookie();
