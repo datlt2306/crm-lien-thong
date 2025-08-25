@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Commission;
 use App\Models\CommissionItem;
-use App\Models\DownlineCommissionConfig;
+use App\Models\CommissionPolicy;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\Wallet;
@@ -87,7 +87,7 @@ class CommissionService {
             return null;
         }
 
-        // Tìm CTV cấp 2
+        // Tìm CTV cấp 2 (ref trực tiếp của sinh viên)
         $downlineCollaborator = $student->collaborator;
         if (!$downlineCollaborator || !$downlineCollaborator->upline_id) {
             return null;
@@ -98,25 +98,38 @@ class CommissionService {
             return null;
         }
 
-        // Lấy cấu hình hoa hồng
-        $config = DownlineCommissionConfig::where('upline_collaborator_id', $payment->primary_collaborator_id)
-            ->where('downline_collaborator_id', $downlineCollaborator->id)
-            ->where('is_active', true)
+        // Lấy chính sách hoa hồng (CommissionPolicy) dành cho CTV phụ
+        $programType = strtoupper($payment->program_type);
+        $policy = CommissionPolicy::whereIn('role', ['DOWNLINE', 'SECONDARY', 'CTV_PHU'])
+            ->where('active', true)
+            ->where(function ($q) use ($programType) {
+                $q->whereNull('program_type')
+                    ->orWhere('program_type', $programType)
+                    ->orWhereRaw('upper(program_type) = ?', [$programType]);
+            })
+            ->orderBy('priority', 'desc')
             ->first();
 
-        if (!$config) {
-            return null;
+        // Tính số tiền theo chính sách; nếu không có policy thì fallback 700,000 VND
+        $amount = 0;
+        $trigger = 'PAYMENT_VERIFIED';
+        $policyId = null;
+        if ($policy) {
+            if (strtoupper($policy->type) === 'PASS_THROUGH') {
+                $amount = (float) $payment->amount; // chuyển tiếp toàn bộ
+            } elseif (strtoupper($policy->type) === 'FIXED') {
+                $amount = (float) ($policy->amount_vnd ?? 0);
+            }
+            $trigger = strtoupper($policy->trigger ?? 'PAYMENT_VERIFIED');
+            $policyId = $policy->id;
         }
-
-        $amount = $config->getAmountByProgramType($payment->program_type);
         if ($amount <= 0) {
-            return null;
+            $amount = 700000; // Fallback tạm thời theo yêu cầu
+            $trigger = 'PAYMENT_VERIFIED';
         }
 
-        // Xác định trạng thái dựa trên hình thức thanh toán
-        $status = $config->isImmediatePayment()
-            ? CommissionItem::STATUS_PAYABLE
-            : CommissionItem::STATUS_PENDING;
+        // Trạng thái khởi tạo theo trigger
+        $status = ($trigger === 'PAYMENT_VERIFIED') ? CommissionItem::STATUS_PAYABLE : CommissionItem::STATUS_PENDING;
 
         $item = CommissionItem::create([
             'commission_id' => $commission->id,
@@ -124,14 +137,15 @@ class CommissionService {
             'role' => 'downline',
             'amount' => $amount,
             'status' => $status,
-            'trigger' => $config->isImmediatePayment() ? 'payment_verified' : 'student_enrolled',
-            'payable_at' => $config->isImmediatePayment() ? now() : null,
+            'trigger' => ($trigger === 'PAYMENT_VERIFIED') ? 'payment_verified' : 'student_enrolled',
+            'payable_at' => ($trigger === 'PAYMENT_VERIFIED') ? now() : null,
             'visibility' => 'visible',
             'meta' => [
                 'program_type' => $payment->program_type,
                 'payment_id' => $payment->id,
                 'upline_collaborator_id' => $payment->primary_collaborator_id,
-                'config_id' => $config->id,
+                'policy_id' => $policyId,
+                'fallback_fixed' => $policy ? false : true,
             ],
         ]);
         return $item;
@@ -274,14 +288,31 @@ class CommissionService {
     }
 
     /**
-     * Chủ đơn vị chuyển tiền cho CTV cấp 2 khi đến hạn
+     * CTV cấp 1 xác nhận đã chuyển tiền cho CTV cấp 2 (upload bill) -> chuyển trạng thái sang PAYMENT_CONFIRMED
+     * Không chuyển ví ở bước này.
      */
-    public function confirmDownlineTransfer(CommissionItem $downlineItem): void {
+    public function confirmDownlineTransfer(CommissionItem $downlineItem, ?string $billPath = null, ?int $userId = null): void {
         if ($downlineItem->role !== 'downline') return;
-        // Chỉ xử lý khi đã đến hạn (payable) hoặc đã payment confirmed
-        if (!in_array($downlineItem->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PAYMENT_CONFIRMED])) return;
+        if (!in_array($downlineItem->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE])) return;
 
+        $downlineItem->update([
+            'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
+            'payment_bill_path' => $billPath,
+            'payment_confirmed_at' => now(),
+            'payment_confirmed_by' => $userId ?? (auth()->id() ?? 0),
+        ]);
+    }
+
+    /**
+     * CTV cấp 2 xác nhận đã nhận tiền -> chuyển ví và set RECEIVED_CONFIRMED
+     */
+    public function confirmDownlineReceived(CommissionItem $downlineItem, int $userId): void {
+        if ($downlineItem->role !== 'downline') return;
+        if ($downlineItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
+
+        // Chuyển từ ví CTV cấp 1 sang CTV cấp 2
         $this->transferCommissionToDownline($downlineItem);
-        $downlineItem->markAsReceivedConfirmed(auth()->id() ?? 0);
+
+        $downlineItem->markAsReceivedConfirmed($userId);
     }
 }

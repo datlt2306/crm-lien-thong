@@ -255,6 +255,15 @@ class CommissionResource extends Resource {
                     ->icon('heroicon-o-arrow-path-rounded-square')
                     ->color('primary')
                     ->requiresConfirmation()
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('bill')
+                            ->label('Bill chuyển cho CTV cấp 2')
+                            ->disk('local')
+                            ->directory('commission-bills')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->required(),
+                    ])
                     ->modalHeading('Chuyển tiền cho CTV cấp 2')
                     ->modalDescription('Xác nhận chuyển tiền hoa hồng cho CTV ref của sinh viên.')
                     ->modalSubmitActionLabel('Chuyển tiền')
@@ -268,7 +277,7 @@ class CommissionResource extends Resource {
                             && $record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED
                             && $record->recipient_collaborator_id === $collab->id;
                     })
-                    ->action(function (CommissionItem $record) {
+                    ->action(function (CommissionItem $record, array $data) {
                         $downlineItem = \App\Models\CommissionItem::where('commission_id', $record->commission_id)
                             ->where('role', 'downline')
                             ->orderBy('id')
@@ -292,10 +301,10 @@ class CommissionResource extends Resource {
                             }
                         }
                         $service = new \App\Services\CommissionService();
-                        $service->confirmDownlineTransfer($downlineItem);
+                        $service->confirmDownlineTransfer($downlineItem, $data['bill'] ?? null, \Illuminate\Support\Facades\Auth::id());
 
                         \Filament\Notifications\Notification::make()
-                            ->title('Đã chuyển tiền cho CTV cấp 2')
+                            ->title('Đã xác nhận chuyển tiền cho CTV cấp 2')
                             ->success()
                             ->send();
                     }),
@@ -314,26 +323,30 @@ class CommissionResource extends Resource {
                         return $record->payment_bill_path && in_array($user->role, ['chủ đơn vị', 'ctv']);
                     }),
 
-                // Chủ đơn vị chuyển tiền cho CTV cấp 2
+                // CTV cấp 2 xác nhận đã nhận tiền (tiền chuyển từ ví CTV1 sang CTV2)
                 Action::make('transfer_to_downline')
-                    ->label('Chuyển cho CTV cấp 2')
-                    ->icon('heroicon-o-arrow-right-circle')
-                    ->color('primary')
+                    ->label('CTV cấp 2 xác nhận đã nhận tiền')
+                    ->icon('heroicon-o-hand-thumb-up')
+                    ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Chuyển tiền cho CTV cấp 2')
-                    ->modalDescription('Xác nhận chuyển số tiền hoa hồng cho CTV cấp 2 theo cấu hình.')
-                    ->modalSubmitActionLabel('Chuyển tiền')
+                    ->modalHeading('Xác nhận đã nhận tiền')
+                    ->modalDescription('Xác nhận đã nhận tiền từ CTV cấp 1.')
+                    ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
-                        if ($user->role !== 'chủ đơn vị') return false;
-                        return $record->role === 'downline' && in_array($record->status, [\App\Models\CommissionItem::STATUS_PAYABLE, \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED]);
+                        if ($user->role !== 'ctv') return false;
+                        $collab = \App\Models\Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return false;
+                        return $record->role === 'downline'
+                            && $record->recipient_collaborator_id === $collab->id
+                            && $record->status === \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED;
                     })
                     ->action(function (CommissionItem $record) {
                         $service = new \App\Services\CommissionService();
-                        $service->confirmDownlineTransfer($record);
+                        $service->confirmDownlineReceived($record, \Illuminate\Support\Facades\Auth::id());
 
                         \Filament\Notifications\Notification::make()
-                            ->title('Đã chuyển tiền cho CTV cấp 2')
+                            ->title('Đã xác nhận nhận tiền')
                             ->success()
                             ->send();
                     }),
