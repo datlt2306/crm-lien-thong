@@ -18,6 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\Action;
 use App\Models\User;
 
 class CollaboratorResource extends Resource {
