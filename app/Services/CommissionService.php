@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Student;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CommissionService {
     /**
@@ -16,20 +17,24 @@ class CommissionService {
      */
     public function createCommissionFromPayment(Payment $payment): Commission {
         return DB::transaction(function () use ($payment) {
-            // Tạo commission chính
-            $commission = Commission::create([
-                'organization_id' => $payment->organization_id,
-                'payment_id' => $payment->id,
-                'student_id' => $payment->student_id,
-                'rule' => [
-                    'program_type' => $payment->program_type,
-                    'amount' => $payment->amount,
-                ],
-                'generated_at' => now(),
-            ]);
+            // Tạo commission chính (idempotent theo payment)
+            $commission = Commission::firstOrCreate(
+                ['payment_id' => $payment->id],
+                [
+                    'organization_id' => $payment->organization_id,
+                    'student_id' => $payment->student_id,
+                    'rule' => [
+                        'program_type' => $payment->program_type,
+                        'amount' => $payment->amount,
+                    ],
+                    'generated_at' => now(),
+                ]
+            );
 
-            // Tạo commission cho CTV cấp 1 (direct)
-            $this->createDirectCommission($commission, $payment);
+            // Tạo commission cho CTV cấp 1 (direct) ở trạng thái PAYABLE
+            // Chủ đơn vị sẽ "Xác nhận thanh toán" (upload bill) để chuyển item sang PAYMENT_CONFIRMED,
+            // sau đó CTV cấp 1 mới xác nhận đã nhận để nạp ví.
+            $this->createDirectCommission($commission, $payment, CommissionItem::STATUS_PAYABLE);
 
             // Tạo commission cho CTV cấp 2 (nếu có)
             $this->createDownlineCommission($commission, $payment);
@@ -38,18 +43,29 @@ class CommissionService {
         });
     }
 
+    // createCommissionOnSubmission đã được loại bỏ theo flow mới (chỉ tạo sau VERIFY)
+
     /**
      * Tạo commission trực tiếp cho CTV cấp 1
      */
-    private function createDirectCommission(Commission $commission, Payment $payment): void {
+    private function createDirectCommission(Commission $commission, Payment $payment, string $initialStatus): void {
         $amount = $this->getDirectCommissionAmount($payment);
+
+        // Tránh tạo trùng (idempotent)
+        $exists = CommissionItem::where('commission_id', $commission->id)
+            ->where('recipient_collaborator_id', $payment->primary_collaborator_id)
+            ->where('role', 'direct')
+            ->exists();
+        if ($exists) {
+            return;
+        }
 
         CommissionItem::create([
             'commission_id' => $commission->id,
             'recipient_collaborator_id' => $payment->primary_collaborator_id,
             'role' => 'direct',
             'amount' => $amount,
-            'status' => CommissionItem::STATUS_PAYABLE,
+            'status' => $initialStatus,
             'trigger' => 'payment_verified',
             'payable_at' => now(),
             'visibility' => 'visible',
@@ -58,30 +74,28 @@ class CommissionService {
                 'payment_id' => $payment->id,
             ],
         ]);
-
-        // Nạp tiền vào wallet của CTV cấp 1
-        $this->depositToWallet($payment->primary_collaborator_id, $amount, "Hoa hồng trực tiếp - {$payment->program_type}");
+        // Không nạp tiền ví ngay ở bước SUBMITTED/CONFIRMED. Chờ CTV cấp 1 xác nhận nhận tiền.
     }
 
     /**
      * Tạo commission cho CTV cấp 2
      */
-    private function createDownlineCommission(Commission $commission, Payment $payment): void {
+    public function createDownlineCommission(Commission $commission, Payment $payment): ?CommissionItem {
         // Kiểm tra xem student có ref_id của CTV cấp 2 không
         $student = $payment->student;
         if (!$student || !$student->collaborator_id) {
-            return;
+            return null;
         }
 
         // Tìm CTV cấp 2
         $downlineCollaborator = $student->collaborator;
         if (!$downlineCollaborator || !$downlineCollaborator->upline_id) {
-            return;
+            return null;
         }
 
         // Kiểm tra xem CTV cấp 2 có phải con của CTV cấp 1 không
         if ($downlineCollaborator->upline_id !== $payment->primary_collaborator_id) {
-            return;
+            return null;
         }
 
         // Lấy cấu hình hoa hồng
@@ -91,12 +105,12 @@ class CommissionService {
             ->first();
 
         if (!$config) {
-            return;
+            return null;
         }
 
         $amount = $config->getAmountByProgramType($payment->program_type);
         if ($amount <= 0) {
-            return;
+            return null;
         }
 
         // Xác định trạng thái dựa trên hình thức thanh toán
@@ -104,7 +118,7 @@ class CommissionService {
             ? CommissionItem::STATUS_PAYABLE
             : CommissionItem::STATUS_PENDING;
 
-        CommissionItem::create([
+        $item = CommissionItem::create([
             'commission_id' => $commission->id,
             'recipient_collaborator_id' => $downlineCollaborator->id,
             'role' => 'downline',
@@ -120,6 +134,7 @@ class CommissionService {
                 'config_id' => $config->id,
             ],
         ]);
+        return $item;
     }
 
     /**
@@ -224,15 +239,49 @@ class CommissionService {
      * Nạp tiền vào wallet
      */
     private function depositToWallet(int $collaboratorId, float $amount, string $description): void {
-        $wallet = Wallet::firstOrCreate(
-            ['collaborator_id' => $collaboratorId],
-            [
-                'balance' => 0,
-                'total_received' => 0,
-                'total_paid' => 0,
-            ]
-        );
+        try {
+            $wallet = Wallet::firstOrCreate(
+                ['collaborator_id' => $collaboratorId],
+                [
+                    'balance' => 0,
+                    'total_received' => 0,
+                    'total_paid' => 0,
+                ]
+            );
 
-        $wallet->deposit($amount, $description);
+            $wallet->deposit($amount, $description);
+        } catch (\Throwable $e) {
+            // Không để lỗi ví làm hỏng quá trình tạo commission
+            Log::error('Wallet deposit failed', [
+                'collaborator_id' => $collaboratorId,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
+     */
+    public function confirmDirectReceived(CommissionItem $item, int $userId): void {
+        if ($item->role !== 'direct') return;
+        if ($item->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
+
+        // Nạp tiền vào ví của CTV cấp 1
+        $this->depositToWallet($item->recipient_collaborator_id, (float) $item->amount, 'CTV xác nhận nhận tiền (hoa hồng trực tiếp)');
+
+        $item->markAsReceivedConfirmed($userId);
+    }
+
+    /**
+     * Chủ đơn vị chuyển tiền cho CTV cấp 2 khi đến hạn
+     */
+    public function confirmDownlineTransfer(CommissionItem $downlineItem): void {
+        if ($downlineItem->role !== 'downline') return;
+        // Chỉ xử lý khi đã đến hạn (payable) hoặc đã payment confirmed
+        if (!in_array($downlineItem->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PAYMENT_CONFIRMED])) return;
+
+        $this->transferCommissionToDownline($downlineItem);
+        $downlineItem->markAsReceivedConfirmed(auth()->id() ?? 0);
     }
 }

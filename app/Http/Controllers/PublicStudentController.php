@@ -271,15 +271,18 @@ class PublicStudentController extends Controller {
             'notes' => !empty($notes) ? implode("\n", $notes) : null,
         ]);
 
-        // Tạo bản ghi Payment NOT_PAID để CTV có thể upload bill sau khi sinh viên đăng ký
+        // Xác định CTV cấp 1 (upline) và cấp 2 (nếu có)
+        $primaryCollaboratorId = $collaborator->upline_id ? $collaborator->upline_id : $collaborator->id;
+        $subCollaboratorId = $collaborator->upline_id ? $collaborator->id : null;
+
         \App\Models\Payment::firstOrCreate(
             [
                 'student_id' => $student->id,
             ],
             [
                 'organization_id' => $student->organization_id,
-                'primary_collaborator_id' => $collaborator->id,
-                'sub_collaborator_id' => null,
+                'primary_collaborator_id' => $primaryCollaboratorId,
+                'sub_collaborator_id' => $subCollaboratorId,
                 'program_type' => $selectedProgramCode ?? 'REGULAR',
                 'amount' => 0,
                 'status' => \App\Models\Payment::STATUS_NOT_PAID,
@@ -339,12 +342,16 @@ class PublicStudentController extends Controller {
         // Lưu bill
         $path = $request->file('bill')->store('bills', 'public');
 
+        // Xác định CTV cấp 1 (upline) và cấp 2 (nếu có)
+        $primaryId = $collaborator->upline_id ? $collaborator->upline_id : $collaborator->id;
+        $subId = $collaborator->upline_id ? $collaborator->id : null;
+
         // Tạo payment SUBMITTED
         $payment = Payment::create([
             'organization_id' => $student->organization_id,
             'student_id' => $student->id,
-            'primary_collaborator_id' => $collaborator->id,
-            'sub_collaborator_id' => null,
+            'primary_collaborator_id' => $primaryId,
+            'sub_collaborator_id' => $subId,
             'program_type' => $validated['program_type'],
             'amount' => $validated['amount'],
             'bill_path' => $path,

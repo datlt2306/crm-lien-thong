@@ -366,7 +366,9 @@ class PaymentResource extends Resource {
         if ($user->role === 'chủ đơn vị') {
             $org = Organization::where('owner_id', $user->id)->first();
             if ($org) {
-                return $query->where('organization_id', $org->id);
+                return $query
+                    ->where('organization_id', $org->id)
+                    ->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]); // Thấy bill đã nộp & đã xác nhận
             }
         }
 

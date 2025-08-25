@@ -188,8 +188,8 @@ class CommissionResource extends Resource {
                     }),
 
                 Action::make('confirm_payment')
-                    ->label('Xác nhận đã thanh toán')
-                    ->icon('heroicon-o-check-circle')
+                    ->label('Xác nhận')
+                    ->icon('heroicon-o-currency-dollar')
                     ->color('success')
                     ->form([
                         \Filament\Forms\Components\FileUpload::make('bill')
@@ -205,7 +205,10 @@ class CommissionResource extends Resource {
                     ->modalSubmitActionLabel('Xác nhận thanh toán')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
-                        return in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]) && $user->role === 'chủ đơn vị';
+                        // Chủ đơn vị xác nhận khi item là DIRECT và đang PAYABLE/PENDING
+                        return $user->role === 'chủ đơn vị'
+                            && $record->role === 'direct'
+                            && in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]);
                     })
                     ->action(function (CommissionItem $record, array $data) {
                         $record->markAsPaymentConfirmed($data['bill'], \Illuminate\Support\Facades\Auth::user()->id);
@@ -227,14 +230,72 @@ class CommissionResource extends Resource {
                     ->modalSubmitActionLabel('Xác nhận đã nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
-                        return $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED && $user->role === 'ctv';
+                        if ($user->role !== 'ctv') return false;
+                        // Chỉ hiện cho item DIRECT thuộc CTV hiện tại sau khi Chủ đơn vị xác nhận (PAYMENT_CONFIRMED)
+                        $collab = \App\Models\Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return false;
+                        return $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED
+                            && $record->role === 'direct'
+                            && $record->recipient_collaborator_id === $collab->id;
                     })
                     ->action(function (CommissionItem $record) {
-                        $record->markAsReceivedConfirmed(\Illuminate\Support\Facades\Auth::user()->id);
+                        $service = new \App\Services\CommissionService();
+                        $service->confirmDirectReceived($record, \Illuminate\Support\Facades\Auth::user()->id);
 
                         \Filament\Notifications\Notification::make()
                             ->title('Đã xác nhận nhận tiền')
-                            ->body('Quy trình thanh toán hoa hồng đã hoàn tất.')
+                            ->body('Hoa hồng đã được chuyển vào ví của bạn.')
+                            ->success()
+                            ->send();
+                    }),
+
+                // Từ item DIRECT: CTV cấp 1 (người nhận DIRECT) chuyển tiền cho CTV cấp 2 (ref của sinh viên)
+                Action::make('transfer_downline_from_direct')
+                    ->label('Chuyển cho CTV cấp 2')
+                    ->icon('heroicon-o-arrow-path-rounded-square')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Chuyển tiền cho CTV cấp 2')
+                    ->modalDescription('Xác nhận chuyển tiền hoa hồng cho CTV ref của sinh viên.')
+                    ->modalSubmitActionLabel('Chuyển tiền')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        if ($user->role !== 'ctv') return false;
+                        // Hiển thị nếu là item DIRECT thuộc CTV hiện tại và đã xác nhận nhận tiền
+                        $collab = \App\Models\Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return false;
+                        return $record->role === 'direct'
+                            && $record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED
+                            && $record->recipient_collaborator_id === $collab->id;
+                    })
+                    ->action(function (CommissionItem $record) {
+                        $downlineItem = \App\Models\CommissionItem::where('commission_id', $record->commission_id)
+                            ->where('role', 'downline')
+                            ->orderBy('id')
+                            ->first();
+                        if (!$downlineItem) {
+                            // Tạo item downline nếu chưa có
+                            $commission = $record->commission;
+                            $payment = $commission?->payment;
+                            if (!$commission || !$payment) {
+                                \Filament\Notifications\Notification::make()->title('Thiếu dữ liệu commission/payment')->warning()->send();
+                                return;
+                            }
+                            $service = new \App\Services\CommissionService();
+                            $downlineItem = $service->createDownlineCommission($commission, $payment);
+                            if (!$downlineItem) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Không có cấu hình hoa hồng cho CTV cấp 2')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+                        }
+                        $service = new \App\Services\CommissionService();
+                        $service->confirmDownlineTransfer($downlineItem);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã chuyển tiền cho CTV cấp 2')
                             ->success()
                             ->send();
                     }),
@@ -251,6 +312,30 @@ class CommissionResource extends Resource {
                     ->modalWidth('4xl')
                     ->visible(function (CommissionItem $record) use ($user): bool {
                         return $record->payment_bill_path && in_array($user->role, ['chủ đơn vị', 'ctv']);
+                    }),
+
+                // Chủ đơn vị chuyển tiền cho CTV cấp 2
+                Action::make('transfer_to_downline')
+                    ->label('Chuyển cho CTV cấp 2')
+                    ->icon('heroicon-o-arrow-right-circle')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Chuyển tiền cho CTV cấp 2')
+                    ->modalDescription('Xác nhận chuyển số tiền hoa hồng cho CTV cấp 2 theo cấu hình.')
+                    ->modalSubmitActionLabel('Chuyển tiền')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        if ($user->role !== 'chủ đơn vị') return false;
+                        return $record->role === 'downline' && in_array($record->status, [\App\Models\CommissionItem::STATUS_PAYABLE, \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED]);
+                    })
+                    ->action(function (CommissionItem $record) {
+                        $service = new \App\Services\CommissionService();
+                        $service->confirmDownlineTransfer($record);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã chuyển tiền cho CTV cấp 2')
+                            ->success()
+                            ->send();
                     }),
 
                 Action::make('mark_cancelled')
@@ -345,6 +430,9 @@ class CommissionResource extends Resource {
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy'),
                 ]),
+            ])
+            ->headerActions([
+                // Nút chuyển cho CTV cấp 2: hiển thị khi chọn một item downline ở trạng thái phù hợp
             ])
             ->modifyQueryUsing(function ($query) {
                 $user = Auth::user();

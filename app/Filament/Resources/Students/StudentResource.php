@@ -68,13 +68,13 @@ class StudentResource extends Resource {
                 return (string) Student::count();
             }
 
-            // Chủ đơn vị chỉ đếm học viên đã xác nhận nộp tiền
+            // Chủ đơn vị chỉ đếm học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
             if ($user->role === 'chủ đơn vị') {
                 $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                 if ($org) {
                     return (string) Student::where('organization_id', $org->id)
                         ->whereHas('payment', function ($query) {
-                            $query->where('status', 'verified');
+                            $query->whereIn('status', ['submitted', 'verified']);
                         })
                         ->count();
                 }
@@ -113,13 +113,13 @@ class StudentResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị chỉ thấy student mới đăng ký và đã được xác nhận nộp tiền
+        // Chủ đơn vị chỉ thấy học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
         if ($user->role === 'chủ đơn vị') {
             $org = \App\Models\Organization::where('owner_id', $user->id)->first();
             if ($org) {
                 return $query->where('organization_id', $org->id)
                     ->whereHas('payment', function ($paymentQuery) {
-                        $paymentQuery->where('status', 'verified'); // Chỉ hiển thị học viên có payment đã được xác nhận
+                        $paymentQuery->whereIn('status', ['submitted', 'verified']);
                     });
             }
         }
