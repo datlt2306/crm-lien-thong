@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CommissionService {
     /**
@@ -184,12 +185,15 @@ class CommissionService {
             return;
         }
 
-        $uplineWallet = Wallet::where('collaborator_id', $uplineId)->first();
-        $downlineWallet = Wallet::where('collaborator_id', $item->recipient_collaborator_id)->first();
-
-        if (!$uplineWallet || !$downlineWallet) {
-            return;
-        }
+        // Đảm bảo cả hai ví tồn tại
+        $uplineWallet = Wallet::firstOrCreate(
+            ['collaborator_id' => $uplineId],
+            ['balance' => 0, 'total_received' => 0, 'total_paid' => 0]
+        );
+        $downlineWallet = Wallet::firstOrCreate(
+            ['collaborator_id' => $item->recipient_collaborator_id],
+            ['balance' => 0, 'total_received' => 0, 'total_paid' => 0]
+        );
 
         // Chuyển tiền từ wallet CTV cấp 1 sang CTV cấp 2
         $uplineWallet->transferTo(
@@ -295,12 +299,15 @@ class CommissionService {
         if ($downlineItem->role !== 'downline') return;
         if (!in_array($downlineItem->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE])) return;
 
+        // Cập nhật trạng thái xác nhận đã chuyển tiền (upload bill)
         $downlineItem->update([
             'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
             'payment_bill_path' => $billPath,
             'payment_confirmed_at' => now(),
-            'payment_confirmed_by' => $userId ?? (auth()->id() ?? 0),
+            'payment_confirmed_by' => $userId ?? (Auth::id() ?? 0),
         ]);
+
+        // Không chuyển ví ở bước này để tránh trừ tiền hai lần.
     }
 
     /**
@@ -309,10 +316,10 @@ class CommissionService {
     public function confirmDownlineReceived(CommissionItem $downlineItem, int $userId): void {
         if ($downlineItem->role !== 'downline') return;
         if ($downlineItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
-
-        // Chuyển từ ví CTV cấp 1 sang CTV cấp 2
+        // Thực hiện chuyển tiền từ ví CTV1 sang ví CTV2 tại thời điểm CTV2 xác nhận đã nhận
         $this->transferCommissionToDownline($downlineItem);
 
+        // Đánh dấu đã nhận để hoàn tất quy trình
         $downlineItem->markAsReceivedConfirmed($userId);
     }
 }

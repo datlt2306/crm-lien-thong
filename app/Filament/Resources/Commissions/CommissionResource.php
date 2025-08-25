@@ -67,14 +67,16 @@ class CommissionResource extends Resource {
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv || !$isDirectRef) // Ẩn cho CTV trực tiếp giới thiệu, hiển thị cho CTV khác
                     ->formatStateUsing(function ($state, CommissionItem $record) use ($user) {
-                        // Cho chủ đơn vị, hiển thị CTV cấp 1 thay vì CTV thực tế nhận
                         if ($user->role === 'chủ đơn vị') {
-                            $student = $record->commission->student;
-                            if ($student && $student->collaborator && $student->collaborator->upline) {
-                                return $student->collaborator->upline->full_name; // CTV cấp 1
+                            // Với chủ đơn vị: hiển thị rõ vai trò để tránh hiểu nhầm
+                            if (strtolower($record->role) === 'direct') {
+                                return $state; // CTV cấp 1 nhận trực tiếp
+                            }
+                            if (strtolower($record->role) === 'downline') {
+                                return $state . ' (CTV cấp 2)'; // Hiển thị đúng CTV cấp 2
                             }
                         }
-                        return $state; // CTV thực tế nhận
+                        return $state;
                     }),
 
                 \Filament\Tables\Columns\TextColumn::make('role')
@@ -273,9 +275,20 @@ class CommissionResource extends Resource {
                         // Hiển thị nếu là item DIRECT thuộc CTV hiện tại và đã xác nhận nhận tiền
                         $collab = \App\Models\Collaborator::where('email', $user->email)->first();
                         if (!$collab) return false;
-                        return $record->role === 'direct'
+                        if (!($record->role === 'direct'
                             && $record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED
-                            && $record->recipient_collaborator_id === $collab->id;
+                            && $record->recipient_collaborator_id === $collab->id)) {
+                            return false;
+                        }
+                        // Ẩn nút nếu CTV cấp 2 đã xác nhận nhận tiền (downline item = RECEIVED_CONFIRMED)
+                        $downlineItem = \App\Models\CommissionItem::where('commission_id', $record->commission_id)
+                            ->where('role', 'downline')
+                            ->orderBy('id')
+                            ->first();
+                        if ($downlineItem && $downlineItem->status === \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            return false;
+                        }
+                        return true;
                     })
                     ->action(function (CommissionItem $record, array $data) {
                         $downlineItem = \App\Models\CommissionItem::where('commission_id', $record->commission_id)
@@ -455,14 +468,10 @@ class CommissionResource extends Resource {
                 }
 
                 if ($user->role === 'ctv') {
-                    // CTV thấy commission của mình và downline
+                    // CTV chỉ thấy commission của chính mình (role nào xem role đó)
                     $collaborator = Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
-                        // Lấy tất cả downline IDs
-                        $downlineIds = self::getDownlineIds($collaborator->id);
-                        // Thêm chính mình vào danh sách
-                        $allIds = array_merge([$collaborator->id], $downlineIds);
-                        $query->whereIn('recipient_collaborator_id', $allIds);
+                        $query->where('recipient_collaborator_id', $collaborator->id);
                     } else {
                         $query->whereNull('id');
                     }
@@ -475,6 +484,8 @@ class CommissionResource extends Resource {
                         $query->whereHas('recipient', function ($q) use ($org) {
                             $q->where('organization_id', $org->id);
                         });
+                        // Và chỉ hiển thị khoản hoa hồng CTV cấp 1 (direct)
+                        $query->where('role', 'direct');
                     }
                 }
             });
