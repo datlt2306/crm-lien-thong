@@ -111,12 +111,26 @@ class WalletResource extends Resource {
                 Tables\Columns\TextColumn::make('total_paid')
                     ->label('Tổng chi')
                     ->money('VND')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(function (): bool {
+                        $user = \Illuminate\Support\Facades\Auth::user();
+                        if ($user->role === 'super_admin') return true;
+
+                        if ($user->role === 'ctv') {
+                            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                            // CTV cấp 1 (không có upline) thấy cột chi để theo dõi chuyển cho CTV2
+                            // CTV cấp 2 (có upline) không thấy cột chi
+                            return $collaborator && $collaborator->upline_id === null;
+                        }
+
+                        return false;
+                    }),
 
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Cập nhật lúc')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn(): bool => \Illuminate\Support\Facades\Auth::user()->role === 'super_admin'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('collaborator.organization_id')
