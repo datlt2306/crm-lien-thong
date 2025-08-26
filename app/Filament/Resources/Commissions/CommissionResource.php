@@ -59,7 +59,23 @@ class CommissionResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('commission.student.full_name')
                     ->label('Sinh viên')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->action(
+                        \Filament\Actions\Action::make('view_student')
+                            ->label('Xem thông tin sinh viên')
+                            ->icon('heroicon-o-eye')
+                            ->modalContent(function (CommissionItem $record) {
+                                $student = $record->commission->student;
+                                if (!$student) {
+                                    return '<div class="p-4 text-red-600">Không tìm thấy thông tin sinh viên</div>';
+                                }
+
+                                return view('components.student-info-modal', [
+                                    'student' => $student,
+                                ]);
+                            })
+                            ->modalWidth('4xl')
+                    ),
 
                 \Filament\Tables\Columns\TextColumn::make('recipient.full_name')
                     ->label('CTV nhận hoa hồng')
