@@ -362,6 +362,9 @@ class CommissionResource extends Resource {
                             ->title('Đã xác nhận nhận tiền')
                             ->success()
                             ->send();
+
+                        // Chuyển hướng sang trang Ví tiền để hiển thị ngay số dư mới
+                        return redirect()->route('filament.admin.resources.wallets.index');
                     }),
 
                 Action::make('mark_cancelled')

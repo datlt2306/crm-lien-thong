@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
 
 class Wallet extends Model {
     protected $fillable = [
@@ -81,6 +82,12 @@ class Wallet extends Model {
      */
     public function transferTo(Wallet $targetWallet, float $amount, string $description = '', array $meta = []): ?WalletTransaction {
         if ($this->balance < $amount) {
+            Log::warning('Wallet transfer failed: insufficient funds', [
+                'from_wallet_id' => $this->id,
+                'to_wallet_id' => $targetWallet->id,
+                'amount' => $amount,
+                'balance' => $this->balance,
+            ]);
             return null; // Không đủ tiền
         }
 
@@ -115,6 +122,14 @@ class Wallet extends Model {
             'description' => "Nhận từ {$this->collaborator->full_name}",
             'meta' => $meta,
             'related_wallet_id' => $this->id,
+        ]);
+
+        Log::info('Wallet transfer success', [
+            'from_wallet_id' => $this->id,
+            'to_wallet_id' => $targetWallet->id,
+            'amount' => $amount,
+            'from_balance_after' => $this->balance,
+            'to_balance_after' => $targetWallet->balance,
         ]);
 
         return $outTransaction;
