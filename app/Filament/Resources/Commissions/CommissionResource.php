@@ -138,8 +138,62 @@ class CommissionResource extends Resource {
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
                             return 'Chờ xác nhận nhận tiền';
                         }
+                        // Nếu là CTV và đã xác nhận nhận tiền (ưu tiên hiển thị thông điệp rõ ràng cho CTV1)
+                        if ($user->role === 'ctv' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            return 'Đã nhận tiền thành công';
+                        }
+                        // Với chủ đơn vị: khi CTV cấp 1 đã xác nhận đã nhận (RECEIVED_CONFIRMED)
+                        // hiển thị "Đã chuyển thành công" để phản ánh trạng thái từ phía đơn vị
+                        if (
+                            $user->role === 'chủ đơn vị'
+                            && $record->role === 'direct'
+                            && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED
+                        ) {
+                            return 'Đã chuyển thành công';
+                        }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
+                    })
+                    ->visible(function ($record) use ($isCtv): bool {
+                        if (!$isCtv) return true;
+                        if (!$record) return false;
+                        // Nếu là CTV: chỉ hiển thị cột trạng thái gốc cho item KHÔNG PHẢI direct (downline)
+                        return strtolower($record->role) !== 'direct';
                     }),
+
+                // Dành cho CTV cấp 1: Trạng thái từ đơn vị (khi CTV1 đã nhận tiền từ đơn vị)
+                \Filament\Tables\Columns\BadgeColumn::make('status_from_org')
+                    ->label('Trạng thái từ đơn vị')
+                    ->state(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return null;
+                        if ($record->role !== 'direct') return null;
+                        return $record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED
+                            ? 'Đã nhận tiền thành công'
+                            : null;
+                    })
+                    ->color(function ($state) {
+                        return $state ? 'success' : 'gray';
+                    })
+                    ->visible(fn() => Auth::user()?->role === 'ctv'),
+
+                // Dành cho CTV cấp 1: Trạng thái với CTV (khi đã chuyển cho CTV2 xong)
+                \Filament\Tables\Columns\BadgeColumn::make('status_with_ctv')
+                    ->label('Trạng thái với CTV')
+                    ->state(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return null;
+                        if ($record->role !== 'direct') return null;
+                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
+                            ->where('role', 'downline')
+                            ->orderBy('id')
+                            ->first();
+                        if ($downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            return 'Đã chuyển tiền thành công';
+                        }
+                        return null;
+                    })
+                    ->color(function ($state) {
+                        return $state ? 'success' : 'gray';
+                    })
+                    ->visible(fn() => Auth::user()?->role === 'ctv'),
 
                 // Gợi ý cho CTV cấp 1 (VHVL): cần SV nhập học mới được chuyển cho CTV2
                 \Filament\Tables\Columns\BadgeColumn::make('downline_enroll_hint')

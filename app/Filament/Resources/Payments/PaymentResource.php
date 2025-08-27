@@ -56,7 +56,22 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('student.full_name')
                     ->label('Sinh viên')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->action(
+                        \Filament\Actions\Action::make('view_student')
+                            ->label('Xem thông tin sinh viên')
+                            ->icon('heroicon-o-eye')
+                            ->modalContent(function (Payment $record) {
+                                $student = $record->student;
+                                if (!$student) {
+                                    return '<div class="p-4 text-red-600">Không tìm thấy thông tin sinh viên</div>';
+                                }
+                                return view('components.student-info-modal', [
+                                    'student' => $student,
+                                ]);
+                            })
+                            ->modalWidth('4xl')
+                    ),
 
                 \Filament\Tables\Columns\TextColumn::make('primaryCollaborator.full_name')
                     ->label('Cộng tác viên')
