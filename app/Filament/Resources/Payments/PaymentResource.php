@@ -349,6 +349,18 @@ class PaymentResource extends Resource {
         ];
     }
 
+    public static function getNavigationBadge(): ?string {
+        try {
+            return (string) Payment::count();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string {
+        return 'Tổng số thanh toán';
+    }
+
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery();
         $user = Auth::user();

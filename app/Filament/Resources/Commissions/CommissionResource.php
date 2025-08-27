@@ -630,6 +630,19 @@ class CommissionResource extends Resource {
         ];
     }
 
+    public static function getNavigationBadge(): ?string {
+        try {
+            // Đếm theo Commission để tránh nhân đôi (DIRECT + DOWNLINE)
+            return (string) Commission::count();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string {
+        return 'Tổng số bộ hoa hồng';
+    }
+
     /**
      * Lấy tất cả ID của downline collaborators
      */
