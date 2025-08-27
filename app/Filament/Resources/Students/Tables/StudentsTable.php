@@ -10,6 +10,7 @@ use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Models\Student;
+use App\Models\Payment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -124,17 +125,18 @@ class StudentsTable {
                     ->label('Chỉnh sửa')
                     ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
                 Action::make('mark_enrolled')
-                    ->label('Đánh dấu nhập học')
+                    ->label('Xác nhận SV nhập học')
                     ->icon('heroicon-o-academic-cap')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Đánh dấu nhập học')
+                    ->modalHeading('Xác nhận sinh viên nhập học')
                     ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(
                         fn(Student $record): bool =>
                         $record->status !== Student::STATUS_ENROLLED &&
+                            ($record->payment?->status === Payment::STATUS_VERIFIED) &&
                             in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
                     )
                     ->action(function (Student $record) {
@@ -145,8 +147,36 @@ class StudentsTable {
                         $commissionService->updateCommissionsOnEnrollment($record);
 
                         \Filament\Notifications\Notification::make()
-                            ->title('Đã đánh dấu nhập học')
+                            ->title('Đã xác nhận sinh viên nhập học')
                             ->body('Commission đã được cập nhật tự động.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('mark_left_unit')
+                    ->label('Sinh viên hủy đăng ký')
+                    ->icon('heroicon-o-user-minus')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Xác nhận sinh viên hủy đăng ký')
+                    ->modalDescription('Xác nhận sinh viên này đã hủy đăng ký. Hệ thống sẽ cập nhật trạng thái và bỏ liên kết CTV giới thiệu.')
+                    ->modalSubmitActionLabel('Xác nhận')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(
+                        fn(Student $record): bool =>
+                        $record->status !== Student::STATUS_ENROLLED &&
+                            ($record->payment?->status === Payment::STATUS_VERIFIED) &&
+                            in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
+                    )
+                    ->action(function (Student $record) {
+                        $record->update([
+                            'status' => Student::STATUS_REJECTED,
+                            'collaborator_id' => null,
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Hủy đăng ký')
+                            ->body('Sinh viên đã được cập nhật trạng thái hủy đăng ký và bỏ liên kết CTV.')
                             ->success()
                             ->send();
                     }),
