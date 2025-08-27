@@ -32,6 +32,18 @@ Route::post('/ref/{ref_id}/student', [PublicStudentController::class, 'submitFor
 Route::get('/ref/{ref_id}/payment', [PublicStudentController::class, 'showPaymentForm'])->name('public.ref.payment.form');
 Route::post('/ref/{ref_id}/payment', [PublicStudentController::class, 'submitPayment'])->name('public.ref.payment.submit');
 
+// Trang thông báo thành công
+Route::get('/success', function () {
+    $type = request()->get('type', 'registration');
+    $ref_id = request()->get('ref_id');
+
+    return view('success', [
+        'type' => $type,
+        'ref_id' => $ref_id,
+        'payment_success' => $type === 'payment'
+    ]);
+})->name('public.success');
+
 // Đăng ký tài khoản Cộng tác viên (public)
 Route::get('/ctv/register', [PublicCollaboratorController::class, 'showRegisterForm'])->name('public.ctv.register.form');
 Route::post('/ctv/register', [PublicCollaboratorController::class, 'submitRegister'])->name('public.ctv.register.submit');

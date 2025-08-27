@@ -292,7 +292,7 @@ class PublicStudentController extends Controller {
         // Xóa cookie sau khi đăng ký thành công
         $this->refTrackingService->clearRefCookie();
 
-        return redirect()->back()->with('success', 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
+        return redirect()->route('public.success', ['type' => 'registration']);
     }
 
     /**
@@ -361,6 +361,6 @@ class PublicStudentController extends Controller {
         // Giảm quota của ngành khi nộp tiền thành công
         $this->quotaService->decreaseQuotaOnPaymentSubmission($payment);
 
-        return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ chủ đơn vị xác nhận.');
+        return redirect()->route('public.success', ['type' => 'payment', 'ref_id' => $ref_id]);
     }
 }
