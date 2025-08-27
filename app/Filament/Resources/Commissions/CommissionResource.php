@@ -298,6 +298,40 @@ class CommissionResource extends Resource {
                         return $downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED;
                     }),
 
+                // Hiển thị cho CTV cấp 2: trạng thái đã nhận tiền thành công
+                \Filament\Tables\Columns\BadgeColumn::make('downline_received_confirmed')
+                    ->label('Đã nhận tiền thành công')
+                    ->state(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return null;
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return null;
+                        // Chỉ áp dụng cho item DOWNLINE của CTV cấp 2
+                        if (!($record->role === 'downline' && $record->recipient_collaborator_id === $collab->id)) {
+                            return null;
+                        }
+                        if ($record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            return 'Đã nhận tiền thành công';
+                        }
+                        return null;
+                    })
+                    ->color('success')
+                    ->extraAttributes(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return [];
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return [];
+                        if (!($record->role === 'downline' && $record->recipient_collaborator_id === $collab->id)) {
+                            return [];
+                        }
+                        if ($record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            $time = optional($record->received_confirmed_at)->format('d/m/Y H:i');
+                            return [
+                                'title' => $time ? "Đã nhận tiền lúc {$time}" : 'Đã nhận tiền thành công',
+                            ];
+                        }
+                        return [];
+                    })
+                    ->visible(fn() => true), // Tạm thời hiển thị cho tất cả để debug
+
                 \Filament\Tables\Columns\TextColumn::make('trigger')
                     ->label('Điều kiện kích hoạt')
                     ->badge()
