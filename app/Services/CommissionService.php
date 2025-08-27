@@ -129,8 +129,14 @@ class CommissionService {
             $trigger = 'PAYMENT_VERIFIED';
         }
 
-        // Trạng thái khởi tạo theo trigger
-        $status = ($trigger === 'PAYMENT_VERIFIED') ? CommissionItem::STATUS_PAYABLE : CommissionItem::STATUS_PENDING;
+        // Với VHVL/PART_TIME: chỉ cho phép chuyển sau khi chủ đơn vị xác nhận SV nhập học
+        // → ép trigger = student_enrolled và khởi tạo ở trạng thái pending
+        if (in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
+            $trigger = 'STUDENT_ENROLLED';
+        }
+
+        // Trạng thái khởi tạo theo trigger (case-insensitive)
+        $status = (strtoupper($trigger) === 'PAYMENT_VERIFIED') ? CommissionItem::STATUS_PAYABLE : CommissionItem::STATUS_PENDING;
 
         $item = CommissionItem::create([
             'commission_id' => $commission->id,
@@ -138,8 +144,8 @@ class CommissionService {
             'role' => 'downline',
             'amount' => $amount,
             'status' => $status,
-            'trigger' => ($trigger === 'PAYMENT_VERIFIED') ? 'payment_verified' : 'student_enrolled',
-            'payable_at' => ($trigger === 'PAYMENT_VERIFIED') ? now() : null,
+            'trigger' => (strtoupper($trigger) === 'PAYMENT_VERIFIED') ? 'payment_verified' : 'student_enrolled',
+            'payable_at' => (strtoupper($trigger) === 'PAYMENT_VERIFIED') ? now() : null,
             'visibility' => 'visible',
             'meta' => [
                 'program_type' => $payment->program_type,
@@ -157,11 +163,17 @@ class CommissionService {
      */
     public function updateCommissionsOnEnrollment(Student $student): void {
         DB::transaction(function () use ($student) {
-            // Tìm tất cả commission items pending của CTV cấp 2 liên quan đến student này
-            $pendingItems = CommissionItem::where('recipient_collaborator_id', $student->collaborator_id)
+            // Lấy các commission của student
+            $commissionIds = Commission::where('student_id', $student->id)->pluck('id');
+            if ($commissionIds->isEmpty()) {
+                return;
+            }
+
+            // Tìm tất cả commission items pending của CTV cấp 2 cần kích hoạt khi SV nhập học
+            $pendingItems = CommissionItem::whereIn('commission_id', $commissionIds)
+                ->where('role', 'downline')
                 ->where('status', CommissionItem::STATUS_PENDING)
                 ->where('trigger', 'student_enrolled')
-                ->whereJsonContains('meta->program_type', $student->source ?? 'cq')
                 ->get();
 
             foreach ($pendingItems as $item) {
@@ -169,9 +181,8 @@ class CommissionService {
                     'status' => CommissionItem::STATUS_PAYABLE,
                     'payable_at' => now(),
                 ]);
-
-                // Chuyển tiền từ wallet CTV cấp 1 sang CTV cấp 2
-                $this->transferCommissionToDownline($item);
+                // Không tự động chuyển ví ở bước này.
+                // CTV cấp 1 sẽ chủ động xác nhận đã chuyển cho CTV2 (upload bill) qua confirmDownlineTransfer.
             }
         });
     }

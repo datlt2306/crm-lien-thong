@@ -14,6 +14,7 @@ use App\Models\Commission;
 use App\Models\CommissionItem;
 use App\Models\Organization;
 use App\Models\Collaborator;
+use App\Models\Student;
 use App\Filament\Resources\Commissions\Pages\ListCommissions;
 use Illuminate\Support\Facades\Auth;
 
@@ -138,6 +139,109 @@ class CommissionResource extends Resource {
                             return 'Chờ xác nhận nhận tiền';
                         }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
+                    }),
+
+                // Gợi ý cho CTV cấp 1 (VHVL): cần SV nhập học mới được chuyển cho CTV2
+                \Filament\Tables\Columns\BadgeColumn::make('downline_enroll_hint')
+                    ->label('CTV2 (VHVL)')
+                    ->state(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return null;
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return null;
+                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
+                            return null;
+                        }
+                        $commission = $record->commission;
+                        $payment = $commission?->payment;
+                        $student = $commission?->student;
+                        $programType = strtoupper($payment->program_type ?? $student?->program_type ?? '');
+                        if (!in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
+                            return null;
+                        }
+                        if (!$student || $student->status !== \App\Models\Student::STATUS_ENROLLED) {
+                            return 'Cần SV nhập học để chuyển CTV2';
+                        }
+                        return null;
+                    })
+                    ->color('warning')
+                    ->extraAttributes(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return [];
+                        $commission = $record->commission;
+                        $student = $commission?->student;
+                        if (!$student) return [];
+                        return [
+                            'title' => 'SV hiện chưa được chủ đơn vị xác nhận nhập học (VHVL). Sau khi SV nhập học, bạn có thể chuyển cho CTV2.',
+                        ];
+                    })
+                    ->visible(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return false;
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return false;
+                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
+                            return false;
+                        }
+                        $commission = $record->commission;
+                        $payment = $commission?->payment;
+                        $student = $commission?->student;
+                        $programType = strtoupper($payment->program_type ?? $student?->program_type ?? '');
+                        if (!in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
+                            return false;
+                        }
+                        return !$student || $student->status !== \App\Models\Student::STATUS_ENROLLED;
+                    }),
+
+                // Hiển thị cho CTV cấp 1: chỉ khi downline đã xác nhận nhận tiền
+                \Filament\Tables\Columns\BadgeColumn::make('downline_received_status')
+                    ->label('Chuyển CTV2')
+                    ->state(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return null;
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return null;
+                        // Chỉ áp dụng cho item DIRECT của CTV cấp 1
+                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
+                            return null;
+                        }
+                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
+                            ->where('role', 'downline')
+                            ->orderBy('id')
+                            ->first();
+                        if ($downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            return 'Đã hoàn tất chuyển CTV2';
+                        }
+                        return null;
+                    })
+                    ->color('success')
+                    ->extraAttributes(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return [];
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return [];
+                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
+                            return [];
+                        }
+                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
+                            ->where('role', 'downline')
+                            ->orderBy('id')
+                            ->first();
+                        if ($downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            $time = optional($downlineItem->received_confirmed_at)->format('d/m/Y H:i');
+                            return [
+                                'title' => $time ? "CTV2 xác nhận lúc {$time}" : 'CTV2 đã xác nhận nhận tiền',
+                            ];
+                        }
+                        return [];
+                    })
+                    ->visible(function ($record) use ($user) {
+                        if (!$record || $user->role !== 'ctv') return false;
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return false;
+                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
+                            return false;
+                        }
+                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
+                            ->where('role', 'downline')
+                            ->orderBy('id')
+                            ->first();
+                        return $downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED;
                     }),
 
                 \Filament\Tables\Columns\TextColumn::make('trigger')
@@ -303,6 +407,16 @@ class CommissionResource extends Resource {
                             ->first();
                         if ($downlineItem && $downlineItem->status === \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return false;
+                        }
+                        // Với hệ VHVL/PART_TIME: chỉ hiển thị khi SV đã được chủ đơn vị xác nhận nhập học
+                        $commission = $record->commission;
+                        $payment = $commission?->payment;
+                        $student = $commission?->student;
+                        $programType = strtoupper($payment->program_type ?? $student?->program_type ?? '');
+                        if (in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
+                            if (!$student || $student->status !== Student::STATUS_ENROLLED) {
+                                return false;
+                            }
                         }
                         return true;
                     })
