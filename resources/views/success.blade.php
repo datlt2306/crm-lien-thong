@@ -87,8 +87,8 @@
                         Về trang chủ
                     </a>
 
-                    @if(isset($payment_success) && $payment_success)
-                    <a href="{{ route('public.ref.payment.form', ['ref_id' => $ref_id ?? '']) }}" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 flex items-center justify-center">
+                    @if(isset($payment_success) && $payment_success && !empty($ref_id))
+                    <a href="{{ route('public.ref.payment.form', ['ref_id' => e($ref_id)]) }}" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 flex items-center justify-center">
                         <i class="fas fa-upload mr-2"></i>
                         Upload thêm bill
                     </a>

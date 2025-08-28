@@ -11,7 +11,7 @@
 
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
-        <h1 class="text-2xl font-bold mb-4 text-center">Đăng ký <span class="font-semibold text-green-600">{{ $collaborator->organization->name ?? 'N/A' }}</span></h1>
+        <h1 class="text-2xl font-bold mb-4 text-center">Đăng ký <span class="font-semibold text-green-600">{{ e($collaborator->organization->name ?? 'N/A') }}</span></h1>
         @if($success)
         <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center">{{ $success }}</div>
         @endif
@@ -53,12 +53,12 @@
                 <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn ngành --</option>
                     @foreach(($majors ?? []) as $m)
-                    <option value="{{ $m['id'] }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}
+                    <option value="{{ e($m['id']) }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}
                         @if(isset($m['quota']) && $m['quota'] <=0) disabled @endif>
-                        {{ $m['name'] }}
+                        {{ e($m['name']) }}
                         @if(isset($m['quota']))
                         @if($m['quota'] > 0)
-                        (Chỉ tiêu còn lại: {{ $m['quota'] }})
+                        (Chỉ tiêu còn lại: {{ e($m['quota']) }})
                         @else
                         (Hết chỉ tiêu)
                         @endif
@@ -73,7 +73,7 @@
                 <select name="program_id" id="program_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn hệ đào tạo --</option>
                     @foreach(($programs ?? []) as $p)
-                    <option value="{{ $p['id'] }}" {{ old('program_id') == $p['id'] ? 'selected' : '' }}>{{ $p['name'] }}</option>
+                    <option value="{{ e($p['id']) }}" {{ old('program_id') == $p['id'] ? 'selected' : '' }}>{{ e($p['name']) }}</option>
                     @endforeach
                 </select>
                 <div id="program_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn hệ đào tạo</div>
@@ -83,7 +83,7 @@
                 <select name="intake_month" id="intake_month" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn đợt tuyển --</option>
                     @foreach(($intakeMonths ?? []) as $month)
-                    <option value="{{ $month }}" {{ old('intake_month') == $month ? 'selected' : '' }}>Tháng {{ $month }}</option>
+                    <option value="{{ e($month) }}" {{ old('intake_month') == $month ? 'selected' : '' }}>Tháng {{ e($month) }}</option>
                     @endforeach
                 </select>
                 <div id="intake_month_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>

@@ -12,7 +12,7 @@
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
         <h1 class="text-2xl font-bold mb-4 text-center">Nộp học phí</h1>
-        <p class="mb-2 text-center text-gray-600">Mã giới thiệu: <span class="font-semibold text-blue-600">{{ $ref_id }}</span></p>
+        <p class="mb-2 text-center text-gray-600">Mã giới thiệu: <span class="font-semibold text-blue-600">{{ e($ref_id) }}</span></p>
 
         @if($success)
         <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center">{{ $success }}</div>

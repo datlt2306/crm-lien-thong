@@ -12,7 +12,7 @@
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
         <h1 class="text-2xl font-bold mb-2 text-center">Đăng ký Cộng tác viên</h1>
-        <p class="text-center text-gray-600 mb-4">Upline: <span class="font-semibold">{{ $upline->full_name }}</span> — Đơn vị: <span class="font-semibold">{{ $organization->name ?? 'N/A' }}</span></n>
+        <p class="text-center text-gray-600 mb-4">Upline: <span class="font-semibold">{{ e($upline->full_name) }}</span> — Đơn vị: <span class="font-semibold">{{ e($organization->name ?? 'N/A') }}</span></p>
             @if($success)
         <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center">{{ $success }}</div>
         @endif
@@ -41,7 +41,7 @@
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Đơn vị</label>
-                <input type="text" value="{{ $organization->name ?? 'N/A' }}" disabled class="w-full border rounded px-3 py-2 bg-gray-100" />
+                <input type="text" value="{{ e($organization->name ?? 'N/A') }}" disabled class="w-full border rounded px-3 py-2 bg-gray-100" />
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Mật khẩu *</label>

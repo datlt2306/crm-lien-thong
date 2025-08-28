@@ -43,7 +43,7 @@
                 <select name="organization_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
                     <option value="">-- Chọn đơn vị --</option>
                     @foreach(($organizations ?? []) as $id => $name)
-                    <option value="{{ $id }}" {{ old('organization_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                    <option value="{{ e($id) }}" {{ old('organization_id') == $id ? 'selected' : '' }}>{{ e($name) }}</option>
                     @endforeach
                 </select>
             </div>

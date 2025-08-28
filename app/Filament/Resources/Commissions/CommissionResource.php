@@ -338,7 +338,7 @@ class CommissionResource extends Resource {
                         if ($record->recipient_collaborator_id !== $collab->id) return null;
 
                         return match ($record->status) {
-                            CommissionItem::STATUS_PENDING => 'Chờ xử lý',
+                            CommissionItem::STATUS_PENDING => 'Chờ nhập học',
                             CommissionItem::STATUS_PAYABLE => 'Chưa nhận được hoa hồng',
                             CommissionItem::STATUS_PAYMENT_CONFIRMED => 'Chờ xác nhận nhận tiền',
                             CommissionItem::STATUS_RECEIVED_CONFIRMED => 'Đã nhận thành công',
@@ -369,42 +369,7 @@ class CommissionResource extends Resource {
                         return $record->recipient_collaborator_id === $collab->id;
                     }),
 
-                // Cột trạng thái đơn giản cho CTV cấp 2 (debug)
-                \Filament\Tables\Columns\BadgeColumn::make('simple_status')
-                    ->label('Trạng thái đơn giản')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return null; // Chỉ CTV cấp 2 (có upline)
-                        if ($record->recipient_collaborator_id !== $collab->id) return null;
 
-                        return $record->status;
-                    })
-                    ->color('info')
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return false; // Chỉ CTV cấp 2 (có upline)
-                        return $record->recipient_collaborator_id === $collab->id;
-                    }),
-
-                // Cột debug để kiểm tra dữ liệu
-                \Filament\Tables\Columns\TextColumn::make('debug_info')
-                    ->label('Debug Info')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return 'No collab';
-                        if ($collab->upline_id === null) return 'CTV cấp 1';
-
-                        return "Role: {$record->role}, Recipient: {$record->recipient_collaborator_id}, Collab: {$collab->id}";
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return false; // Chỉ CTV cấp 2 (có upline)
-                        return true; // Hiển thị cho tất cả CTV cấp 2
-                    }),
 
                 // Hiển thị cho CTV cấp 2: trạng thái đã nhận tiền thành công
                 \Filament\Tables\Columns\BadgeColumn::make('downline_received_confirmed')

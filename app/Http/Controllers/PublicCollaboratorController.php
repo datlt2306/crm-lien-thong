@@ -15,7 +15,7 @@ class PublicCollaboratorController extends Controller {
     }
 
     public function showRegisterForm() {
-        $organizations = Organization::orderBy('name')->pluck('name', 'id');
+        $organizations = Organization::orderBy('name')->pluck('name', 'id')->toArray();
         return view('ctv-register', [
             'organizations' => $organizations,
         ]);

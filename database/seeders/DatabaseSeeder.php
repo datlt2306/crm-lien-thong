@@ -45,5 +45,8 @@ class DatabaseSeeder extends Seeder {
         $this->call(StudentSeeder::class);
         $this->call(CommissionPolicySeeder::class);
         $this->call(WalletSeeder::class);
+
+        // Tạo dữ liệu test cho charts
+        $this->call(ChartTestDataSeeder::class);
     }
 }

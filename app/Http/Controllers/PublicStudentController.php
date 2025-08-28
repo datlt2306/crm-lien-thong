@@ -83,9 +83,13 @@ class PublicStudentController extends Controller {
             $currentQuota = $this->quotaService->getCurrentQuota($organization->id, $major->id);
 
             // Sắp xếp intake months theo ngành
-            $intakes = json_decode($major->intake_months, true) ?? [];
-            if (is_array($intakes)) {
-                sort($intakes, SORT_NUMERIC);
+            $intakes = [];
+            if (!empty($major->intake_months)) {
+                $decoded = json_decode($major->intake_months, true);
+                if (is_array($decoded)) {
+                    $intakes = $decoded;
+                    sort($intakes, SORT_NUMERIC);
+                }
             }
 
             return [
@@ -123,8 +127,14 @@ class PublicStudentController extends Controller {
 
         // Lấy thông tin chi tiết về majors để hiển thị trong debug
         $majorDetails = $majorConfigs->map(function ($major) {
-            $months = json_decode($major->intake_months, true) ?? [];
-            sort($months, SORT_NUMERIC);
+            $months = [];
+            if (!empty($major->intake_months)) {
+                $decoded = json_decode($major->intake_months, true);
+                if (is_array($decoded)) {
+                    $months = $decoded;
+                    sort($months, SORT_NUMERIC);
+                }
+            }
             return [
                 'id' => $major->id,
                 'name' => $major->name,
@@ -136,9 +146,11 @@ class PublicStudentController extends Controller {
         // Lấy tất cả đợt tuyển từ cấu hình majors
         $intakeMonths = [];
         foreach ($majorConfigs as $major) {
-            $months = json_decode($major->intake_months, true);
-            if (is_array($months)) {
-                $intakeMonths = array_merge($intakeMonths, $months);
+            if (!empty($major->intake_months)) {
+                $months = json_decode($major->intake_months, true);
+                if (is_array($months)) {
+                    $intakeMonths = array_merge($intakeMonths, $months);
+                }
             }
         }
         $intakeMonths = array_unique($intakeMonths);
@@ -147,15 +159,15 @@ class PublicStudentController extends Controller {
         return view('ref-form', [
             'ref_id' => $ref_id,
             'collaborator' => $collaborator,
-            'majors' => $majors,
-            'programs' => $programs,
+            'majors' => $majors->toArray(),
+            'programs' => $programs->toArray(),
             'intakeMonths' => $intakeMonths,
             // Debug info - có thể bỏ sau
             'debug' => [
-                'organization_id' => $organization->id,
-                'major_count' => $majors->count(),
-                'program_count' => $programConfigs->count(),
-                'major_details' => $majorDetails,
+                'organization_id' => (string) $organization->id,
+                'major_count' => (string) $majors->count(),
+                'program_count' => (string) $programConfigs->count(),
+                'major_details' => $majorDetails->toArray(),
             ]
         ]);
     }
