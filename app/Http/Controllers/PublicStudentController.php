@@ -177,7 +177,7 @@ class PublicStudentController extends Controller {
         $collaborator = $this->refTrackingService->getCollaborator($request, $ref_id);
 
         if (!$collaborator) {
-            return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
+            return redirect()->back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!'])->withInput();
         }
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -332,7 +332,7 @@ class PublicStudentController extends Controller {
         $collaborator = $this->refTrackingService->getCollaborator($request, $ref_id);
 
         if (!$collaborator) {
-            return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
+            return redirect()->back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!'])->withInput();
         }
 
         $validated = $request->validate([
@@ -348,7 +348,7 @@ class PublicStudentController extends Controller {
             ->first();
 
         if (!$student) {
-            return back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.']);
+            return redirect()->back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.'])->withInput();
         }
 
         // Lưu bill

@@ -73,7 +73,7 @@ class PublicCollaboratorController extends Controller {
         $upline = $this->refTrackingService->getCollaborator($request, $ref_id);
 
         if (!$upline) {
-            return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
+            return redirect()->back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!'])->withInput();
         }
 
         $org = $upline->organization;
