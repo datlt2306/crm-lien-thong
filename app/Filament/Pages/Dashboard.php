@@ -14,17 +14,10 @@ class Dashboard extends BaseDashboard {
     }
 
     protected function getHeaderWidgets(): array {
-        return [
-            \App\Filament\Widgets\CommissionOverviewWidget::class,
-        ];
+        return [];
     }
 
     protected function getFooterWidgets(): array {
-        return [
-            \App\Filament\Widgets\CommissionChartWidget::class,
-            \App\Filament\Widgets\PaymentChartWidget::class,
-            \App\Filament\Widgets\StudentChartWidget::class,
-            \App\Filament\Widgets\WalletTransactionChartWidget::class,
-        ];
+        return [];
     }
 }

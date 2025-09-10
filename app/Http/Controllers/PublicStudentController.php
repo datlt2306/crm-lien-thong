@@ -83,13 +83,9 @@ class PublicStudentController extends Controller {
             $currentQuota = $this->quotaService->getCurrentQuota($organization->id, $major->id);
 
             // Sắp xếp intake months theo ngành
-            $intakes = [];
-            if (!empty($major->intake_months)) {
-                $decoded = json_decode($major->intake_months, true);
-                if (is_array($decoded)) {
-                    $intakes = $decoded;
-                    sort($intakes, SORT_NUMERIC);
-                }
+            $intakes = json_decode($major->intake_months, true) ?? [];
+            if (is_array($intakes)) {
+                sort($intakes, SORT_NUMERIC);
             }
 
             return [
@@ -127,14 +123,8 @@ class PublicStudentController extends Controller {
 
         // Lấy thông tin chi tiết về majors để hiển thị trong debug
         $majorDetails = $majorConfigs->map(function ($major) {
-            $months = [];
-            if (!empty($major->intake_months)) {
-                $decoded = json_decode($major->intake_months, true);
-                if (is_array($decoded)) {
-                    $months = $decoded;
-                    sort($months, SORT_NUMERIC);
-                }
-            }
+            $months = json_decode($major->intake_months, true) ?? [];
+            sort($months, SORT_NUMERIC);
             return [
                 'id' => $major->id,
                 'name' => $major->name,
@@ -146,11 +136,9 @@ class PublicStudentController extends Controller {
         // Lấy tất cả đợt tuyển từ cấu hình majors
         $intakeMonths = [];
         foreach ($majorConfigs as $major) {
-            if (!empty($major->intake_months)) {
-                $months = json_decode($major->intake_months, true);
-                if (is_array($months)) {
-                    $intakeMonths = array_merge($intakeMonths, $months);
-                }
+            $months = json_decode($major->intake_months, true);
+            if (is_array($months)) {
+                $intakeMonths = array_merge($intakeMonths, $months);
             }
         }
         $intakeMonths = array_unique($intakeMonths);
@@ -159,15 +147,15 @@ class PublicStudentController extends Controller {
         return view('ref-form', [
             'ref_id' => $ref_id,
             'collaborator' => $collaborator,
-            'majors' => $majors->toArray(),
-            'programs' => $programs->toArray(),
+            'majors' => $majors,
+            'programs' => $programs,
             'intakeMonths' => $intakeMonths,
             // Debug info - có thể bỏ sau
             'debug' => [
-                'organization_id' => (string) $organization->id,
-                'major_count' => (string) $majors->count(),
-                'program_count' => (string) $programConfigs->count(),
-                'major_details' => $majorDetails->toArray(),
+                'organization_id' => $organization->id,
+                'major_count' => $majors->count(),
+                'program_count' => $programConfigs->count(),
+                'major_details' => $majorDetails,
             ]
         ]);
     }
@@ -177,7 +165,7 @@ class PublicStudentController extends Controller {
         $collaborator = $this->refTrackingService->getCollaborator($request, $ref_id);
 
         if (!$collaborator) {
-            return redirect()->back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!'])->withInput();
+            return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
         }
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -304,7 +292,7 @@ class PublicStudentController extends Controller {
         // Xóa cookie sau khi đăng ký thành công
         $this->refTrackingService->clearRefCookie();
 
-        return redirect()->route('public.success', ['type' => 'registration']);
+        return redirect()->back()->with('success', 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
     }
 
     /**
@@ -332,7 +320,7 @@ class PublicStudentController extends Controller {
         $collaborator = $this->refTrackingService->getCollaborator($request, $ref_id);
 
         if (!$collaborator) {
-            return redirect()->back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!'])->withInput();
+            return back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!']);
         }
 
         $validated = $request->validate([
@@ -348,7 +336,7 @@ class PublicStudentController extends Controller {
             ->first();
 
         if (!$student) {
-            return redirect()->back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.'])->withInput();
+            return back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.']);
         }
 
         // Lưu bill
@@ -373,6 +361,6 @@ class PublicStudentController extends Controller {
         // Giảm quota của ngành khi nộp tiền thành công
         $this->quotaService->decreaseQuotaOnPaymentSubmission($payment);
 
-        return redirect()->route('public.success', ['type' => 'payment', 'ref_id' => $ref_id]);
+        return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ chủ đơn vị xác nhận.');
     }
 }

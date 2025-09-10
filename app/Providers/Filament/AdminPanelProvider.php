@@ -36,14 +36,7 @@ class AdminPanelProvider extends PanelProvider {
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
-                \App\Filament\Widgets\CommissionOverviewWidget::class,
-                \App\Filament\Widgets\CommissionChartWidget::class,
-                \App\Filament\Widgets\PaymentChartWidget::class,
-                \App\Filament\Widgets\StudentChartWidget::class,
-                \App\Filament\Widgets\WalletTransactionChartWidget::class,
-                \App\Filament\Widgets\DashboardOverviewWidget::class,
+                // Tất cả widget đã được xóa
             ])
             ->middleware([
                 EncryptCookies::class,
