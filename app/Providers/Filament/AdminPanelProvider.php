@@ -38,6 +38,7 @@ class AdminPanelProvider extends PanelProvider {
             ->widgets([
                 // Tất cả widget đã được xóa
             ])
+            ->maxContentWidth('full')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
