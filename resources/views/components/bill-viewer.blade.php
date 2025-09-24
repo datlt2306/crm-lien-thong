@@ -35,8 +35,8 @@
         </div>
 
         @php
-        $fileUrl = route('files.bill.view', $payment->id);
-        $fileExtension = pathinfo($payment->bill_path ?? '', PATHINFO_EXTENSION);
+        $fileUrl = $fileUrl ?? route('files.bill.view', $payment->id);
+        $fileExtension = pathinfo(($payment->bill_path ?? $payment->receipt_path) ?? '', PATHINFO_EXTENSION);
         $isImage = in_array(strtolower($fileExtension), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
         @endphp
 

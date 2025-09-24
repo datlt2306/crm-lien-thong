@@ -17,18 +17,22 @@ class Payment extends Model {
         'program_type',
         'amount',
         'bill_path',
+        'receipt_path',
         'status',
         'verified_by',
         'verified_at',
         'edit_reason',
         'edited_at',
         'edited_by',
+        'receipt_uploaded_by',
+        'receipt_uploaded_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'verified_at' => 'datetime',
         'edited_at' => 'datetime',
+        'receipt_uploaded_at' => 'datetime',
     ];
 
     // Enum PaymentStatus - Quản lý tiền SV đã chuyển cho Org

@@ -48,5 +48,8 @@ class DatabaseSeeder extends Seeder {
 
         // Tạo dữ liệu test cho charts
         $this->call(ChartTestDataSeeder::class);
+
+        // Tạo user kế toán
+        $this->call(AccountantSeeder::class);
     }
 }

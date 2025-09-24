@@ -15,6 +15,7 @@ use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Models\Organization;
 use App\Models\Collaborator;
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,8 +34,8 @@ class PaymentResource extends Resource {
             return false;
         }
 
-        // Super admin và chủ đơn vị có thể xem payments
-        if (in_array($user->role, ['super_admin', 'chủ đơn vị'])) {
+        // Super admin, chủ đơn vị và kế toán có thể xem payments
+        if (in_array($user->role, ['super_admin', 'chủ đơn vị']) || self::isAccountant()) {
             return true;
         }
 
@@ -323,6 +324,101 @@ class PaymentResource extends Resource {
                             ->success()
                             ->send();
                     }),
+                Action::make('upload_receipt')
+                    ->label('Upload Phiếu thu')
+                    ->icon('heroicon-o-document-arrow-up')
+                    ->color('primary')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('receipt')
+                            ->label('Phiếu thu')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->disk('local')
+                            ->directory('receipts')
+                            ->required(),
+                    ])
+                    ->visible(function (Payment $record): bool {
+                        $user = Auth::user();
+                        if (!(self::isAccountant() || $user->role === 'super_admin')) return false;
+                        // Chỉ upload phiếu thu khi payment đã được xác nhận và chưa có phiếu thu
+                        return $record->status === Payment::STATUS_VERIFIED && empty($record->receipt_path);
+                    })
+                    ->action(function (array $data, Payment $record) {
+                        $record->update([
+                            'receipt_path' => $data['receipt'],
+                            'receipt_uploaded_by' => Auth::id(),
+                            'receipt_uploaded_at' => now(),
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã upload phiếu thu thành công')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('edit_receipt')
+                    ->label('Chỉnh sửa Phiếu thu')
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('warning')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('receipt')
+                            ->label('Phiếu thu mới')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->disk('local')
+                            ->directory('receipts')
+                            ->required(),
+                        \Filament\Forms\Components\Textarea::make('reason')
+                            ->label('Lý do chỉnh sửa (tuỳ chọn)')
+                            ->rows(3),
+                    ])
+                    ->visible(function (Payment $record): bool {
+                        $user = Auth::user();
+                        if (!(self::isAccountant() || $user->role === 'super_admin')) return false;
+                        return $record->status === Payment::STATUS_VERIFIED && !empty($record->receipt_path);
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Chỉnh sửa Phiếu thu')
+                    ->modalDescription('Phiếu thu cũ sẽ được thay thế bằng phiếu thu mới.')
+                    ->modalSubmitActionLabel('Cập nhật')
+                    ->modalCancelActionLabel('Hủy')
+                    ->action(function (array $data, Payment $record) {
+                        if ($record->receipt_path && Storage::disk('local')->exists($record->receipt_path)) {
+                            Storage::disk('local')->delete($record->receipt_path);
+                        }
+
+                        $record->update([
+                            'receipt_path' => $data['receipt'],
+                            'receipt_uploaded_by' => Auth::id(),
+                            'receipt_uploaded_at' => now(),
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã cập nhật phiếu thu')
+                            ->body('Phiếu thu đã được thay thế thành công.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('view_receipt')
+                    ->label('Xem Phiếu thu')
+                    ->icon('heroicon-o-document-text')
+                    ->color('gray')
+                    ->modalHeading('Phiếu thu')
+                    ->modalContent(function (Payment $record) {
+                        if (!$record->receipt_path) {
+                            return 'Không có phiếu thu để hiển thị.';
+                        }
+                        $fileUrl = route('files.receipt.view', $record->id);
+                        $fileName = basename($record->receipt_path);
+                        return view('components.bill-viewer', [
+                            'fileUrl' => $fileUrl,
+                            'fileName' => $fileName,
+                            'payment' => $record,
+                        ]);
+                    })
+                    ->modalWidth('4xl')
+                    ->visible(fn(Payment $record): bool => !empty($record->receipt_path)),
                 Action::make('view_bill')
                     ->label('Xem Bill')
                     ->icon('heroicon-o-document-text')
@@ -397,6 +493,11 @@ class PaymentResource extends Resource {
                     ->where('organization_id', $org->id)
                     ->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]); // Thấy bill đã nộp & đã xác nhận
             }
+        }
+
+        // Kế toán thấy các payment đã xác nhận (để upload phiếu thu)
+        if (self::isAccountant()) {
+            return $query->where('status', Payment::STATUS_VERIFIED);
         }
 
         // CTV thấy payments của mình và downline
@@ -495,5 +596,15 @@ class PaymentResource extends Resource {
 
         // CTV cấp 1 là CTV không có upline_id
         return $collaborator->upline_id === null;
+    }
+
+    /**
+     * Kiểm tra user hiện tại có Spatie role 'kế toán' không
+     */
+    private static function isAccountant(): bool {
+        $user = Auth::user();
+        if (!$user) return false;
+        /** @var User $user */
+        return method_exists($user, 'hasRole') && $user->hasRole('kế toán');
     }
 }

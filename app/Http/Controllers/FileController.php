@@ -55,6 +55,30 @@ class FileController extends Controller {
         abort(403, 'Không có quyền truy cập file này');
     }
 
+    public function viewReceipt($paymentId) {
+        $payment = Payment::findOrFail($paymentId);
+
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Không có quyền truy cập');
+        }
+
+        // Super admin và kế toán (Spatie role) có thể xem tất cả phiếu thu
+        if ($user->role === 'super_admin' || ($user->hasRole('kế toán') ?? false)) {
+            return $this->serveFile($payment->receipt_path);
+        }
+
+        // Chủ đơn vị có thể xem payment của tổ chức mình
+        if ($user->role === 'chủ đơn vị') {
+            $org = Organization::where('owner_id', $user->id)->first();
+            if ($org && $payment->organization_id === $org->id) {
+                return $this->serveFile($payment->receipt_path);
+            }
+        }
+
+        abort(403, 'Không có quyền truy cập file này');
+    }
+
     public function viewCommissionBill($commissionItemId) {
         // Tìm commission item
         $commissionItem = \App\Models\CommissionItem::findOrFail($commissionItemId);

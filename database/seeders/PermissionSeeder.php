@@ -26,6 +26,7 @@ class PermissionSeeder extends Seeder {
             'verify_payment',
             'manage_ctv',
             'manage_org',
+            'upload_receipt',
         ];
 
         foreach ($permissions as $permission) {
@@ -36,6 +37,7 @@ class PermissionSeeder extends Seeder {
         $superAdmin = Role::firstOrCreate(['name' => 'super_admin']);
         $owner = Role::firstOrCreate(['name' => 'chủ đơn vị']);
         $ctv = Role::firstOrCreate(['name' => 'ctv']);
+        $accountant = Role::firstOrCreate(['name' => 'kế toán']);
 
         // Gán permissions cho super_admin (tất cả permissions)
         $superAdmin->syncPermissions(Permission::all());
@@ -57,6 +59,12 @@ class PermissionSeeder extends Seeder {
             'view_commission',
             'view_payment',
             'view_student'
+        ]);
+
+        // Gán permissions cho kế toán
+        $accountant->syncPermissions([
+            'view_payment',
+            'upload_receipt',
         ]);
 
         $this->command->info('Permissions and roles created successfully!');
