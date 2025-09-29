@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -46,5 +48,40 @@ class User extends Authenticatable {
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the push tokens for the user.
+     */
+    public function pushTokens(): HasMany {
+        return $this->hasMany(PushToken::class);
+    }
+
+    /**
+     * Get the notification preferences for the user.
+     */
+    public function notificationPreferences(): HasOne {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    /**
+     * Get or create notification preferences for the user.
+     */
+    public function getNotificationPreferences(): NotificationPreference {
+        return $this->notificationPreferences ?? $this->notificationPreferences()->create([]);
+    }
+
+    /**
+     * Check if user wants to receive notifications for a specific type and channel.
+     */
+    public function wantsNotification(string $type, string $channel = 'in_app'): bool {
+        $preferences = $this->getNotificationPreferences();
+
+        return match ($channel) {
+            'email' => $preferences->wantsEmailFor($type),
+            'push' => $preferences->wantsPushFor($type),
+            'in_app' => $preferences->wantsInAppFor($type),
+            default => false,
+        };
     }
 }

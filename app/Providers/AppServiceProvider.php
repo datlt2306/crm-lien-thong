@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use App\Models\Organization;
 use App\Policies\OrganizationPolicy;
@@ -12,6 +13,8 @@ use App\Models\Collaborator;
 use App\Policies\CollaboratorPolicy;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use App\Events\PaymentVerified;
+use App\Listeners\PaymentVerifiedListener;
 
 class AppServiceProvider extends ServiceProvider {
     /**
@@ -63,6 +66,9 @@ class AppServiceProvider extends ServiceProvider {
         Gate::define('manage_student', function ($user) {
             return $user->hasPermissionTo('manage_student');
         });
+
+        // Đăng ký event listeners
+        Event::listen(PaymentVerified::class, PaymentVerifiedListener::class);
 
         // SQL debug cho các bảng pivot liên quan đến đào tạo
         DB::listen(function ($query) {
