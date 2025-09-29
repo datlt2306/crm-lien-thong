@@ -20,6 +20,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Notification demo page
+Route::get('/notification-demo', function () {
+    return view('notification-demo');
+});
+
 
 
 Route::get('/ref/{ref_id}', [PublicStudentController::class, 'showForm'])->name('public.ref.form');
@@ -44,4 +49,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/files/bill/{paymentId}', [FileController::class, 'viewBill'])->name('files.bill.view');
     Route::get('/files/receipt/{paymentId}', [FileController::class, 'viewReceipt'])->name('files.receipt.view');
     Route::get('/files/commission-bill/{commissionItemId}', [FileController::class, 'viewCommissionBill'])->name('files.commission-bill.view');
+    
+    // Notification routes
+    Route::post('/admin/notifications/{id}/mark-read', function ($id) {
+        $user = auth()->user();
+        $notification = $user->notifications()->find($id);
+        if ($notification) {
+            $notification->markAsRead();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false], 404);
+    })->name('notifications.mark-read');
+    
+    Route::post('/admin/notifications/mark-all-read', function () {
+        $user = auth()->user();
+        $user->unreadNotifications()->update(['read_at' => now()]);
+        return response()->json(['success' => true]);
+    })->name('notifications.mark-all-read');
 });

@@ -39,6 +39,10 @@ class AdminPanelProvider extends PanelProvider {
                 // Tất cả widget đã được xóa
             ])
             ->maxContentWidth('full')
+            ->renderHook(
+                'panels::topbar.end',
+                fn (): string => view('components.notification-bell')->render()
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
