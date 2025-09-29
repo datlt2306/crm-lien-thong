@@ -6,16 +6,14 @@ use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Collection;
 
-class UserNotificationsWidget extends Widget
-{
+class UserNotificationsWidget extends Widget {
     protected string $view = 'filament.widgets.user-notifications-widget';
-    
+
     protected int | string | array $columnSpan = 'full';
-    
+
     public Collection $notifications;
-    
-    public function mount(): void
-    {
+
+    public function mount(): void {
         $user = Auth::user();
         if ($user) {
             $this->notifications = $user->notifications()
@@ -26,19 +24,17 @@ class UserNotificationsWidget extends Widget
             $this->notifications = collect();
         }
     }
-    
-    public function getUnreadCount(): int
-    {
+
+    public function getUnreadCount(): int {
         $user = Auth::user();
         if (!$user) {
             return 0;
         }
-        
+
         return $user->unreadNotifications()->count();
     }
-    
-    public function markAsRead(string $notificationId): void
-    {
+
+    public function markAsRead(string $notificationId): void {
         $user = Auth::user();
         if ($user) {
             $notification = $user->notifications()->find($notificationId);
@@ -51,9 +47,8 @@ class UserNotificationsWidget extends Widget
             }
         }
     }
-    
-    public function markAllAsRead(): void
-    {
+
+    public function markAllAsRead(): void {
         $user = Auth::user();
         if ($user) {
             $user->unreadNotifications()->update(['read_at' => now()]);

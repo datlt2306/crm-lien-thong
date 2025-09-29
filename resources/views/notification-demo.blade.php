@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,16 +10,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/heroicons@2.0.18/24/outline/index.css">
 </head>
+
 <body class="bg-gray-900 text-white min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-8">Notification Bell Demo</h1>
-        
+
         <div class="flex justify-between items-center mb-8">
             <div>
                 <h2 class="text-xl font-semibold mb-2">Thông báo In-App</h2>
                 <p class="text-gray-400">Click vào icon chuông để xem thông báo</p>
             </div>
-            
+
             <!-- Notification Bell Component -->
             <x-notification-bell />
         </div>
@@ -61,4 +63,5 @@
         }
     </style>
 </body>
+
 </html>
