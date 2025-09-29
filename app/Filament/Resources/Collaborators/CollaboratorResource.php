@@ -38,6 +38,11 @@ class CollaboratorResource extends Resource {
             return true;
         }
 
+        if ($user->role === 'chủ đơn vị') {
+            // Chủ đơn vị luôn thấy menu CTV để xem CTV cấp 1
+            return true;
+        }
+
         if ($user->role === 'ctv') {
             // Kiểm tra xem user có phải là CTV và có tuyến dưới không
             $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
@@ -82,18 +87,38 @@ class CollaboratorResource extends Resource {
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery();
         $user = Auth::user();
-        if ($user && $user->role === 'chủ đơn vị') {
-            // Tìm collaborator của user hiện tại
+
+        if (!$user) {
+            return $query;
+        }
+
+        // Super admin thấy tất cả
+        if ($user->role === 'super_admin') {
+            return $query;
+        }
+
+        // Chủ đơn vị: thấy CTV cấp 1 trong tổ chức của mình (upline_id = null)
+        if ($user->role === 'chủ đơn vị') {
+            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+            if ($org) {
+                return $query->where('organization_id', $org->id)
+                    ->whereNull('upline_id');
+            }
+            // Không có tổ chức -> không trả về gì
+            return $query->whereNull('id');
+        }
+
+        // CTV: thấy CTV cấp 2 trực tiếp (downlines trực tiếp)
+        if ($user->role === 'ctv') {
             $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
-                // CTV chỉ thấy CTV con của mình (downlines)
-                $query->where('upline_id', $collaborator->id);
-            } else {
-                // Nếu không tìm thấy collaborator, không trả về gì
-                $query->whereNull('id');
+                return $query->where('upline_id', $collaborator->id);
             }
+            return $query->whereNull('id');
         }
-        return $query;
+
+        // Mặc định: không thấy gì
+        return $query->whereNull('id');
     }
 
     public static function getNavigationBadge(): ?string {
@@ -107,10 +132,12 @@ class CollaboratorResource extends Resource {
             }
 
             if ($user->role === 'chủ đơn vị') {
-                // Chủ đơn vị thấy số CTV của tổ chức mình
+                // Chủ đơn vị thấy số CTV cấp 1 trong tổ chức (upline_id = null)
                 $org = \App\Models\Organization::where('owner_id', $user->id)->first();
                 if ($org) {
-                    return (string) Collaborator::where('organization_id', $org->id)->count();
+                    return (string) Collaborator::where('organization_id', $org->id)
+                        ->whereNull('upline_id')
+                        ->count();
                 }
             }
 
