@@ -27,6 +27,7 @@ class UserForm {
                         'super_admin' => 'Super Admin',
                         'chủ đơn vị' => 'Chủ đơn vị',
                         'ctv' => 'Cộng tác viên',
+                        'kế toán' => 'Kế toán',
                     ])
                     ->required()
                     ->default('ctv'),
