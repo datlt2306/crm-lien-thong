@@ -42,7 +42,7 @@ class AdminPanelProvider extends PanelProvider {
             ->maxContentWidth('full')
             ->renderHook(
                 'panels::topbar.end',
-                fn(): string => view('components.notification-bell-tailwind')->render()
+                fn(): string => view('components.notification-bell')->render()
             )
             ->renderHook(
                 'panels::head.end',
