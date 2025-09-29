@@ -6,6 +6,7 @@ use Filament\Pages\Dashboard as BaseDashboard;
 use App\Filament\Widgets\AdminKpiStats;
 use App\Filament\Widgets\RevenueOverTime;
 use App\Filament\Widgets\RecentPayments;
+use App\Filament\Widgets\CollaboratorRevenueChart;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {
@@ -18,44 +19,43 @@ class Dashboard extends BaseDashboard {
     }
 
     protected function getHeaderWidgets(): array {
-        $user = Auth::user();
-        if ($user?->hasRole('admin')) {
-            return [AdminKpiStats::class];
-        }
-        if ($user?->hasRole('ctv')) {
-            return [AdminKpiStats::class];
-        }
-        if ($user?->hasRole('kế toán')) {
-            return [AdminKpiStats::class];
-        }
-        return [AdminKpiStats::class];
+        return [];
     }
 
     public function getWidgets(): array {
         $user = Auth::user();
-        if ($user?->hasRole('admin')) {
-            return [RevenueOverTime::class];
+        $role = $user?->role;
+
+        if (in_array($role, ['super_admin', 'admin'])) {
+            return [
+                AdminKpiStats::class,
+                RevenueOverTime::class,
+                CollaboratorRevenueChart::class,
+                RecentPayments::class,
+            ];
         }
-        if ($user?->hasRole('ctv')) {
-            return [];
+
+        if ($role === 'ctv') {
+            return [
+                AdminKpiStats::class,
+                RecentPayments::class,
+            ];
         }
-        if ($user?->hasRole('kế toán')) {
-            return [];
+
+        if ($role === 'kế toán') {
+            return [
+                AdminKpiStats::class,
+                RecentPayments::class,
+            ];
         }
-        return [];
+
+        return [
+            AdminKpiStats::class,
+            RecentPayments::class,
+        ];
     }
 
     protected function getFooterWidgets(): array {
-        $user = Auth::user();
-        if ($user?->hasRole('admin')) {
-            return [RecentPayments::class];
-        }
-        if ($user?->hasRole('ctv')) {
-            return [RecentPayments::class];
-        }
-        if ($user?->hasRole('kế toán')) {
-            return [RecentPayments::class];
-        }
-        return [RecentPayments::class];
+        return [];
     }
 }

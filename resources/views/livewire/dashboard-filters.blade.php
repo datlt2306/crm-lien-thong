@@ -1,4 +1,4 @@
-<div class="flex flex-wrap items-end gap-3">
+<div class="flex flex-wrap items-end gap-3" x-data="{ range: @entangle('filters.range') }">
     <div class="flex flex-col">
         <label class="text-sm text-gray-600">Khoảng thời gian</label>
         <select wire:model="filters.range" class="fi-input w-48">
@@ -9,11 +9,11 @@
             <option value="custom">Tùy chọn</option>
         </select>
     </div>
-    <div class="flex flex-col" x-show="@js($filters['range'] === 'custom')">
+    <div class="flex flex-col" x-show="range === 'custom'">
         <label class="text-sm text-gray-600">Từ ngày</label>
         <input type="date" wire:model="filters.from" class="fi-input" />
     </div>
-    <div class="flex flex-col" x-show="@js($filters['range'] === 'custom')">
+    <div class="flex flex-col" x-show="range === 'custom'">
         <label class="text-sm text-gray-600">Đến ngày</label>
         <input type="date" wire:model="filters.to" class="fi-input" />
     </div>
@@ -41,6 +41,14 @@
             @foreach($majors as $m)
             <option value="{{ $m->id }}">{{ $m->name }}</option>
             @endforeach
+        </select>
+    </div>
+    <div class="flex flex-col">
+        <label class="text-sm text-gray-600">Nhóm theo</label>
+        <select wire:model="filters.group" class="fi-input w-40">
+            <option value="day">Ngày</option>
+            <option value="month">Tháng</option>
+            <option value="year">Năm</option>
         </select>
     </div>
 </div>

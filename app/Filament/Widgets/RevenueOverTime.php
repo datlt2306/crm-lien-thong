@@ -12,6 +12,7 @@ class RevenueOverTime extends ChartWidget {
     use WithDashboardFilters;
     protected ?string $heading = 'Doanh thu theo ngày';
     protected ?string $pollingInterval = '60s';
+    // protected int|string|array $columnSpan = 'full';
 
     protected function getData(): array {
         $filters = $this->filters;
@@ -65,24 +66,70 @@ class RevenueOverTime extends ChartWidget {
 
         $payments = $query->get(['verified_at', 'amount']);
 
+        // Fallback: nếu khoảng thời gian không có dữ liệu, hiển thị toàn thời gian với cùng filter khác
+        if ($payments->isEmpty()) {
+            $fallback = Payment::query()
+                ->whereNotNull('verified_at')
+                ->where('status', Payment::STATUS_VERIFIED);
+            if (!empty($filters['program_type'])) {
+                $fallback->where('program_type', $filters['program_type']);
+            }
+            if (!empty($filters['organization_id'])) {
+                $fallback->where('organization_id', $filters['organization_id']);
+            }
+            $payments = $fallback->get(['verified_at', 'amount']);
+        }
+
         $buckets = [];
+        $group = $filters['group'] ?? 'day'; // day | month | year
         foreach ($payments as $p) {
-            $dateKey = optional($p->verified_at)->setTimezone($tz)?->toDateString();
-            if (!$dateKey) {
+            $dt = optional($p->verified_at)->setTimezone($tz);
+            if (!$dt) {
                 continue;
             }
+            $dateKey = match ($group) {
+                'month' => $dt->format('Y-m'),
+                'year' => $dt->format('Y'),
+                default => $dt->toDateString(),
+            };
             $buckets[$dateKey] = ($buckets[$dateKey] ?? 0) + (float) $p->amount;
         }
 
         $labels = [];
         $dataset = [];
-        $cursor = CarbonImmutable::parse($from, $tz)->startOfDay();
-        $end = CarbonImmutable::parse($to, $tz)->endOfDay();
-        while ($cursor->lessThanOrEqualTo($end)) {
-            $key = $cursor->toDateString();
-            $labels[] = $key;
-            $dataset[] = (float) ($buckets[$key] ?? 0);
-            $cursor = $cursor->addDay();
+        if ($group === 'year') {
+            $cursor = CarbonImmutable::parse($from, $tz)->startOfYear();
+            $end = CarbonImmutable::parse($to, $tz)->endOfYear();
+            while ($cursor->lessThanOrEqualTo($end)) {
+                $key = $cursor->format('Y');
+                $labels[] = $key;
+                $dataset[] = (float) ($buckets[$key] ?? 0);
+                $cursor = $cursor->addYear();
+            }
+        } elseif ($group === 'month') {
+            $cursor = CarbonImmutable::parse($from, $tz)->startOfMonth();
+            $end = CarbonImmutable::parse($to, $tz)->endOfMonth();
+            while ($cursor->lessThanOrEqualTo($end)) {
+                $key = $cursor->format('Y-m');
+                $labels[] = $key;
+                $dataset[] = (float) ($buckets[$key] ?? 0);
+                $cursor = $cursor->addMonth();
+            }
+        } else {
+            $cursor = CarbonImmutable::parse($from, $tz)->startOfDay();
+            $end = CarbonImmutable::parse($to, $tz)->endOfDay();
+            while ($cursor->lessThanOrEqualTo($end)) {
+                $key = $cursor->toDateString();
+                $labels[] = $key;
+                $dataset[] = (float) ($buckets[$key] ?? 0);
+                $cursor = $cursor->addDay();
+            }
+        }
+
+        // Nếu vẫn trống, đảm bảo trả về ít nhất một điểm 0
+        if (empty($labels)) {
+            $labels = [CarbonImmutable::now($tz)->toDateString()];
+            $dataset = [0];
         }
 
         return [

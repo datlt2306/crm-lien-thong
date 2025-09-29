@@ -10,6 +10,7 @@ trait WithDashboardFilters {
         'program_type' => null,
         'organization_id' => null,
         'major' => null,
+        'group' => 'day', // day | month | year
     ];
 
     protected function getListeners(): array {
