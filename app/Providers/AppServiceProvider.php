@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\Payment;
+use App\Observers\PaymentObserver;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -13,6 +15,7 @@ use App\Models\Collaborator;
 use App\Policies\CollaboratorPolicy;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use App\Policies\PaymentPolicy;
 use App\Events\PaymentVerified;
 use App\Listeners\PaymentVerifiedListener;
 
@@ -31,6 +34,7 @@ class AppServiceProvider extends ServiceProvider {
         Gate::policy(Organization::class, OrganizationPolicy::class);
         Gate::policy(Collaborator::class, CollaboratorPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(Payment::class, PaymentPolicy::class);
 
         // Define Gates for permissions
         Gate::define('view_finance', function ($user) {
@@ -80,5 +84,8 @@ class AppServiceProvider extends ServiceProvider {
                 ]);
             }
         });
+
+        // Bust cache khi Payment thay đổi
+        Payment::observe(PaymentObserver::class);
     }
 }

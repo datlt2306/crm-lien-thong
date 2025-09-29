@@ -16,13 +16,18 @@ class ListPayments extends ListRecords {
             return false;
         }
 
-        // Super admin và chủ đơn vị có thể xem payments
-        if (in_array($user->role, ['super_admin', 'chủ đơn vị'])) {
+        // Super admin, admin và chủ đơn vị có thể xem payments
+        if (in_array($user->role, ['super_admin', 'admin', 'chủ đơn vị'])) {
             return true;
         }
 
         // CTV có thể xem payments của mình
         if ($user->role === 'ctv') {
+            return true;
+        }
+
+        // Kế toán có quyền xem để xử lý phiếu thu
+        if ($user->role === 'kế toán') {
             return true;
         }
 

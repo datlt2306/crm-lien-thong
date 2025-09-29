@@ -34,8 +34,8 @@ class PaymentResource extends Resource {
             return false;
         }
 
-        // Super admin, chủ đơn vị và kế toán có thể xem payments
-        if (in_array($user->role, ['super_admin', 'chủ đơn vị']) || self::isAccountant()) {
+        // Super admin, admin, chủ đơn vị và kế toán có thể xem payments
+        if (in_array($user->role, ['super_admin', 'admin', 'chủ đơn vị']) || self::isAccountant()) {
             return true;
         }
 
@@ -481,7 +481,7 @@ class PaymentResource extends Resource {
         }
 
         // Super admin thấy tất cả
-        if ($user->role === 'super_admin') {
+        if (in_array($user->role, ['super_admin', 'admin'])) {
             return $query;
         }
 
