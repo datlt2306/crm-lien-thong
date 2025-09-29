@@ -4,7 +4,8 @@ namespace App\Filament\Pages;
 
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\User;
 
 class ViewAllNotifications extends Page {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bell';
@@ -19,47 +20,44 @@ class ViewAllNotifications extends Page {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Thông báo';
 
-    public Collection $notifications;
-
-    public int $unreadCount;
-
-    public function mount(): void {
-        $user = Auth::user();
-        if ($user) {
-            $this->notifications = $user->notifications()
-                ->latest()
-                ->paginate(20);
-            $this->unreadCount = $user->unreadNotifications()->count();
-        } else {
-            $this->notifications = collect();
-            $this->unreadCount = 0;
-        }
-    }
+    // Tránh khai báo public property với kiểu không được Livewire hỗ trợ (Paginator)
 
     public function markAsRead(string $notificationId): void {
         $user = Auth::user();
-        if ($user) {
+        if ($user instanceof User) {
             $notification = $user->notifications()->find($notificationId);
             if ($notification) {
                 $notification->markAsRead();
-                $this->mount(); // Refresh data
+                $this->dispatch('$refresh');
             }
         }
     }
 
     public function markAllAsRead(): void {
         $user = Auth::user();
-        if ($user) {
+        if ($user instanceof User) {
             $user->unreadNotifications()->update(['read_at' => now()]);
-            $this->mount(); // Refresh data
+            $this->dispatch('$refresh');
         }
     }
 
-    public function getNotificationsProperty(): Collection {
-        return $this->notifications;
+    public function getNotificationsProperty(): LengthAwarePaginator {
+        $user = Auth::user();
+        if ($user instanceof User) {
+            return $user->notifications()
+                ->latest()
+                ->paginate(20);
+        }
+
+        return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
     }
 
     public function getUnreadCountProperty(): int {
-        return $this->unreadCount;
+        $user = Auth::user();
+        if ($user instanceof User) {
+            return $user->unreadNotifications()->count();
+        }
+
+        return 0;
     }
 }
