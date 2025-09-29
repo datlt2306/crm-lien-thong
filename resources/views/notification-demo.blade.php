@@ -22,7 +22,7 @@
             </div>
 
             <!-- Notification Bell Component -->
-            <x-notification-bell />
+            <x-notification-bell-tailwind />
         </div>
 
         <div class="bg-gray-800 rounded-lg p-6 mb-8">
