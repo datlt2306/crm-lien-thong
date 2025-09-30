@@ -7,6 +7,14 @@ use App\Filament\Widgets\AdminKpiStats;
 use App\Filament\Widgets\RevenueOverTime;
 use App\Filament\Widgets\RecentPayments;
 use App\Filament\Widgets\CollaboratorRevenueChart;
+use App\Filament\Widgets\CtvPersonalStats;
+use App\Filament\Widgets\CtvWalletWidget;
+use App\Filament\Widgets\CtvStudentsWidget;
+use App\Filament\Widgets\AccountantPendingReceipts;
+use App\Filament\Widgets\AccountantCashFlow;
+use App\Filament\Widgets\AccountantFinancialSummary;
+use App\Filament\Widgets\RealtimeNotificationsWidget;
+use App\Filament\Widgets\KpiComparisonWidget;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {
@@ -28,23 +36,31 @@ class Dashboard extends BaseDashboard {
 
         if (in_array($role, ['super_admin', 'admin'])) {
             return [
+                RealtimeNotificationsWidget::class,
                 AdminKpiStats::class,
                 RevenueOverTime::class,
                 CollaboratorRevenueChart::class,
+                KpiComparisonWidget::class,
                 RecentPayments::class,
             ];
         }
 
         if ($role === 'ctv') {
             return [
-                AdminKpiStats::class,
+                RealtimeNotificationsWidget::class,
+                CtvPersonalStats::class,
+                CtvWalletWidget::class,
+                CtvStudentsWidget::class,
                 RecentPayments::class,
             ];
         }
 
         if ($role === 'kế toán') {
             return [
-                AdminKpiStats::class,
+                RealtimeNotificationsWidget::class,
+                AccountantPendingReceipts::class,
+                AccountantFinancialSummary::class,
+                AccountantCashFlow::class,
                 RecentPayments::class,
             ];
         }
