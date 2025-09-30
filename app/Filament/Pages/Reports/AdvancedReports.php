@@ -23,13 +23,25 @@ use Illuminate\Support\Facades\Storage;
 class AdvancedReports extends Page implements HasForms {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
     protected static string $view = 'filament.pages.reports.advanced-reports';
-    protected static ?string $title = 'Báo cáo nâng cao';
-    protected static ?string $navigationLabel = 'Báo cáo nâng cao';
-    protected static ?string $navigationGroup = 'Báo cáo';
 
     public ?array $data = [];
+
+    public static function getNavigationIcon(): string {
+        return 'heroicon-o-document-chart-bar';
+    }
+
+    public static function getNavigationGroup(): string {
+        return 'Báo cáo';
+    }
+
+    public function getTitle(): string {
+        return 'Báo cáo nâng cao';
+    }
+
+    public static function getNavigationLabel(): string {
+        return 'Báo cáo nâng cao';
+    }
 
     public function mount(): void {
         $this->form->fill([
