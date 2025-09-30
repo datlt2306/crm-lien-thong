@@ -82,7 +82,7 @@ class RealtimeNotificationsWidget extends Widget {
             $userId = $user->id;
 
             // Commission mới - tối ưu query
-            $newCommissions = CommissionItem::where('collaborator_id', $userId)
+            $newCommissions = CommissionItem::where('recipient_collaborator_id', $userId)
                 ->where('status', 'pending')
                 ->where('created_at', '>=', now()->subHours(24))
                 ->sum('amount');
@@ -100,7 +100,7 @@ class RealtimeNotificationsWidget extends Widget {
 
             // Học viên mới - tối ưu query
             $newStudents = \App\Models\Student::whereHas('payments', function ($query) use ($userId) {
-                $query->where('collaborator_id', $userId);
+                $query->where('primary_collaborator_id', $userId);
             })->where('created_at', '>=', now()->subHours(24))->count();
 
             if ($newStudents > 0) {

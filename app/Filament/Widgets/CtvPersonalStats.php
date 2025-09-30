@@ -38,22 +38,22 @@ class CtvPersonalStats extends BaseWidget {
 
         // Tổng học viên
         $totalStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
-            $query->where('collaborator_id', $userId);
+            $query->where('primary_collaborator_id', $userId);
         })->count();
 
         // Doanh thu cá nhân trong khoảng thời gian
-        $personalRevenue = Payment::where('collaborator_id', $userId)
+        $personalRevenue = Payment::where('primary_collaborator_id', $userId)
             ->where('status', 'verified')
             ->whereBetween('created_at', [$from, $to])
             ->sum('amount');
 
         // Hoa hồng đã nhận
-        $commissionEarned = CommissionItem::where('collaborator_id', $userId)
+        $commissionEarned = CommissionItem::where('recipient_collaborator_id', $userId)
             ->where('status', 'paid')
             ->sum('amount');
 
         // Hoa hồng chờ
-        $pendingCommission = CommissionItem::where('collaborator_id', $userId)
+        $pendingCommission = CommissionItem::where('recipient_collaborator_id', $userId)
             ->where('status', 'pending')
             ->sum('amount');
 

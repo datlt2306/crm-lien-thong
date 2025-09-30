@@ -16,24 +16,24 @@ class SimpleCollaboratorChart extends ChartWidget {
 
     protected function getData(): array {
         $filters = $this->filters;
-        
+
         // Lấy top 5 CTV có doanh thu cao nhất
         $collaborators = Payment::where('status', 'verified')
-            ->whereNotNull('collaborator_id')
-            ->selectRaw('collaborator_id, SUM(amount) as total_revenue')
-            ->groupBy('collaborator_id')
+            ->whereNotNull('primary_collaborator_id')
+            ->selectRaw('primary_collaborator_id, SUM(amount) as total_revenue')
+            ->groupBy('primary_collaborator_id')
             ->orderBy('total_revenue', 'desc')
             ->limit(5)
             ->get();
-        
+
         $labels = [];
         $dataset = [];
-        
+
         foreach ($collaborators as $collab) {
-            $labels[] = 'CTV ' . $collab->collaborator_id;
+            $labels[] = 'CTV ' . $collab->primary_collaborator_id;
             $dataset[] = (float) $collab->total_revenue;
         }
-        
+
         // Nếu không có dữ liệu, tạo dữ liệu mẫu
         if (empty($labels)) {
             $labels = ['CTV 1', 'CTV 2', 'CTV 3', 'CTV 4', 'CTV 5'];

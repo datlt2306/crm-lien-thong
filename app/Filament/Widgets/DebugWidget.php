@@ -16,20 +16,20 @@ class DebugWidget extends BaseWidget {
     protected function getCards(): array {
         $user = Auth::user();
         $role = $user?->role;
-        
+
         // Kiểm tra dữ liệu cơ bản
         $totalPayments = Payment::count();
         $verifiedPayments = Payment::where('status', 'verified')->count();
         $totalStudents = Student::count();
         $totalCommissions = CommissionItem::count();
-        
+
         // Kiểm tra dữ liệu theo role
         $userSpecificData = [];
         if ($role === 'ctv') {
             $userId = $user->id;
-            $userPayments = Payment::where('collaborator_id', $userId)->count();
+            $userPayments = Payment::where('primary_collaborator_id', $userId)->count();
             $userStudents = Student::whereHas('payments', function ($query) use ($userId) {
-                $query->where('collaborator_id', $userId);
+                $query->where('primary_collaborator_id', $userId);
             })->count();
             $userSpecificData = [
                 'user_payments' => $userPayments,

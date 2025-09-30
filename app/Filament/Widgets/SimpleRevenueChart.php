@@ -15,21 +15,21 @@ class SimpleRevenueChart extends ChartWidget {
 
     protected function getData(): array {
         $filters = $this->filters;
-        
+
         // Tạo dữ liệu mẫu nếu không có dữ liệu thật
         $labels = [];
         $dataset = [];
-        
+
         // Tạo 7 ngày gần đây
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $labels[] = $date->format('d/m');
-            
+
             // Lấy dữ liệu thật hoặc tạo dữ liệu mẫu
             $revenue = Payment::where('status', 'verified')
                 ->whereDate('created_at', $date)
                 ->sum('amount');
-                
+
             $dataset[] = $revenue ?: rand(100000, 500000); // Dữ liệu mẫu nếu không có
         }
 
