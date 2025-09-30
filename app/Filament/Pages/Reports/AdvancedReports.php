@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Storage;
 class AdvancedReports extends Page implements HasForms {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.pages.reports.advanced-reports';
+    protected string $view = 'filament.pages.reports.advanced-reports';
 
     public ?array $data = [];
 
