@@ -19,6 +19,7 @@ use App\Filament\Widgets\OptimizedDashboardLoader;
 use App\Filament\Widgets\DebugWidget;
 use App\Filament\Widgets\SimpleRevenueChart;
 use App\Filament\Widgets\SimpleCollaboratorChart;
+use App\Filament\Widgets\DataDebugWidget;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {
@@ -40,6 +41,7 @@ class Dashboard extends BaseDashboard {
 
         if (in_array($role, ['super_admin', 'admin'])) {
             return [
+                DataDebugWidget::class,
                 DebugWidget::class,
                 RealtimeNotificationsWidget::class,
                 AdminKpiStats::class,

@@ -25,12 +25,12 @@ class SimpleRevenueChart extends ChartWidget {
             $date = now()->subDays($i);
             $labels[] = $date->format('d/m');
 
-            // Lấy dữ liệu thật hoặc tạo dữ liệu mẫu
+            // Lấy dữ liệu thật
             $revenue = Payment::where('status', 'verified')
-                ->whereDate('created_at', $date)
+                ->whereDate('verified_at', $date)
                 ->sum('amount');
-
-            $dataset[] = $revenue ?: rand(100000, 500000); // Dữ liệu mẫu nếu không có
+                
+            $dataset[] = $revenue ?: 0; // Hiển thị 0 nếu không có dữ liệu
         }
 
         return [
