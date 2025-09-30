@@ -29,7 +29,7 @@ class AccountantCashFlow extends ChartWidget {
     protected function buildCashFlowSeries(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
         $groupBy = $filters['group'] ?? 'day';
-        
+
         $revenueData = [];
         $commissionData = [];
         $labels = [];
@@ -38,7 +38,7 @@ class AccountantCashFlow extends ChartWidget {
         while ($current->lte($to)) {
             $start = $current->copy();
             $end = $current->copy();
-            
+
             switch ($groupBy) {
                 case 'day':
                     $end->endOfDay();

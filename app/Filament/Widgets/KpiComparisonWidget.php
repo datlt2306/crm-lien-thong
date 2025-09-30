@@ -13,7 +13,7 @@ use Filament\Widgets\ChartWidget;
 class KpiComparisonWidget extends ChartWidget {
     use WithDashboardFilters;
     protected ?string $heading = 'So sánh KPI theo thời gian';
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
     protected int|string|array $columnSpan = 'full';
 
     protected function getData(): array {
@@ -31,7 +31,7 @@ class KpiComparisonWidget extends ChartWidget {
     protected function buildComparisonSeries(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
         $groupBy = $filters['group'] ?? 'day';
-        
+
         $revenueData = [];
         $commissionData = [];
         $studentData = [];
@@ -41,7 +41,7 @@ class KpiComparisonWidget extends ChartWidget {
         while ($current->lte($to)) {
             $start = $current->copy();
             $end = $current->copy();
-            
+
             switch ($groupBy) {
                 case 'day':
                     $end->endOfDay();

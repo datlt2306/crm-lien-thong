@@ -14,12 +14,12 @@ use Illuminate\Support\Facades\Auth;
 
 class CtvStudentsWidget extends BaseWidget {
     use WithDashboardFilters;
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
     protected function getCards(): array {
         $filters = $this->filters;
         $userId = Auth::id();
-        
+
         $stats = DashboardCacheService::remember("ctv:students:{$userId}", $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters, $userId) {
             return $this->calculateStudentStats($filters, $userId);
         });
@@ -34,7 +34,7 @@ class CtvStudentsWidget extends BaseWidget {
 
     protected function calculateStudentStats(array $filters, int $userId): array {
         [$from, $to] = $this->getRangeBounds($filters);
-        
+
         // Học viên mới trong khoảng thời gian
         $newStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
             $query->where('collaborator_id', $userId);
@@ -43,7 +43,7 @@ class CtvStudentsWidget extends BaseWidget {
         // Học viên đã thanh toán trong khoảng thời gian
         $paidStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
             $query->where('collaborator_id', $userId)
-                  ->where('status', 'verified');
+                ->where('status', 'verified');
         })->whereBetween('created_at', [$from, $to])->count();
 
         // Tổng học viên trong khoảng thời gian

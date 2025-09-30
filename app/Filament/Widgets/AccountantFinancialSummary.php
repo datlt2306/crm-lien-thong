@@ -17,7 +17,7 @@ class AccountantFinancialSummary extends BaseWidget {
 
     protected function getCards(): array {
         $filters = $this->filters;
-        
+
         $stats = DashboardCacheService::remember('accountant:financial_summary', $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters) {
             return $this->calculateFinancialSummary($filters);
         });
@@ -32,7 +32,7 @@ class AccountantFinancialSummary extends BaseWidget {
 
     protected function calculateFinancialSummary(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
-        
+
         // Tổng doanh thu trong khoảng thời gian
         $totalRevenue = Payment::where('status', 'verified')
             ->whereBetween('created_at', [$from, $to])

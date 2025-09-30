@@ -15,6 +15,7 @@ use App\Filament\Widgets\AccountantCashFlow;
 use App\Filament\Widgets\AccountantFinancialSummary;
 use App\Filament\Widgets\RealtimeNotificationsWidget;
 use App\Filament\Widgets\KpiComparisonWidget;
+use App\Filament\Widgets\OptimizedDashboardLoader;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {

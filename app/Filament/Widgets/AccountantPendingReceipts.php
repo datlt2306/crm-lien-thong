@@ -16,7 +16,7 @@ class AccountantPendingReceipts extends BaseWidget {
 
     protected function getCards(): array {
         $filters = $this->filters;
-        
+
         $stats = DashboardCacheService::remember('accountant:pending_receipts', $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters) {
             return $this->calculatePendingReceiptsStats($filters);
         });
@@ -31,7 +31,7 @@ class AccountantPendingReceipts extends BaseWidget {
 
     protected function calculatePendingReceiptsStats(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
-        
+
         // Phiếu thu chờ xử lý (verified nhưng chưa có receipt)
         $pendingCount = Payment::where('status', 'verified')
             ->whereNull('receipt_path')

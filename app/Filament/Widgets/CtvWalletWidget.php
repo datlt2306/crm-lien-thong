@@ -13,11 +13,11 @@ use Illuminate\Support\Facades\Auth;
 
 class CtvWalletWidget extends BaseWidget {
     use WithDashboardFilters;
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
     protected function getCards(): array {
         $userId = Auth::id();
-        
+
         $walletData = DashboardCacheService::remember("ctv:wallet:{$userId}", [], DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($userId) {
             return $this->getWalletData($userId);
         });
@@ -32,7 +32,7 @@ class CtvWalletWidget extends BaseWidget {
 
     protected function getWalletData(int $userId): array {
         $wallet = Wallet::where('user_id', $userId)->first();
-        
+
         if (!$wallet) {
             return [
                 'balance' => '0 VND',
@@ -59,8 +59,8 @@ class CtvWalletWidget extends BaseWidget {
             'balance' => number_format($wallet->balance) . ' VND',
             'total_deposit' => number_format($totalDeposit) . ' VND',
             'total_withdraw' => number_format($totalWithdraw) . ' VND',
-            'last_transaction' => $lastTransaction ? 
-                ($lastTransaction->type === 'deposit' ? '+' : '-') . number_format($lastTransaction->amount) . ' VND' : 
+            'last_transaction' => $lastTransaction ?
+                ($lastTransaction->type === 'deposit' ? '+' : '-') . number_format($lastTransaction->amount) . ' VND' :
                 'Chưa có giao dịch',
             'last_transaction_date' => $lastTransaction ? $lastTransaction->created_at->format('d/m/Y H:i') : '',
         ];

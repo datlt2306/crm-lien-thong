@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\Auth;
 
 class CtvPersonalStats extends BaseWidget {
     use WithDashboardFilters;
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
     protected function getCards(): array {
         $filters = $this->filters;
         $userId = Auth::id();
-        
+
         $stats = DashboardCacheService::remember("ctv:personal:{$userId}", $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters, $userId) {
             return $this->calculateCtvStats($filters, $userId);
         });
@@ -35,7 +35,7 @@ class CtvPersonalStats extends BaseWidget {
 
     protected function calculateCtvStats(array $filters, int $userId): array {
         [$from, $to] = $this->getRangeBounds($filters);
-        
+
         // Tổng học viên
         $totalStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
             $query->where('collaborator_id', $userId);
