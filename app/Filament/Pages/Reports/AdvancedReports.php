@@ -77,13 +77,13 @@ class AdvancedReports extends Page implements HasForms {
 
                                 DatePicker::make('from_date')
                                     ->label('Từ ngày')
-                                    ->visible(fn (callable $get) => $get('date_range') === 'custom')
-                                    ->required(fn (callable $get) => $get('date_range') === 'custom'),
+                                    ->visible(fn(callable $get) => $get('date_range') === 'custom')
+                                    ->required(fn(callable $get) => $get('date_range') === 'custom'),
 
                                 DatePicker::make('to_date')
                                     ->label('Đến ngày')
-                                    ->visible(fn (callable $get) => $get('date_range') === 'custom')
-                                    ->required(fn (callable $get) => $get('date_range') === 'custom'),
+                                    ->visible(fn(callable $get) => $get('date_range') === 'custom')
+                                    ->required(fn(callable $get) => $get('date_range') === 'custom'),
 
                                 Select::make('group_by')
                                     ->label('Nhóm theo')
@@ -127,10 +127,10 @@ class AdvancedReports extends Page implements HasForms {
 
     public function generateReport(): void {
         $data = $this->form->getState();
-        
+
         try {
             $reportData = $this->prepareReportData($data);
-            
+
             switch ($data['format']) {
                 case 'excel':
                     $this->generateExcelReport($reportData, $data);
@@ -142,12 +142,11 @@ class AdvancedReports extends Page implements HasForms {
                     $this->generateCsvReport($reportData, $data);
                     break;
             }
-            
+
             Notification::make()
                 ->title('Báo cáo đã được tạo thành công')
                 ->success()
                 ->send();
-                
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Lỗi khi tạo báo cáo')
@@ -159,7 +158,7 @@ class AdvancedReports extends Page implements HasForms {
 
     protected function prepareReportData(array $data): array {
         [$from, $to] = $this->getDateRange($data);
-        
+
         switch ($data['report_type']) {
             case 'revenue':
                 return $this->getRevenueData($from, $to, $data['group_by']);
@@ -179,7 +178,7 @@ class AdvancedReports extends Page implements HasForms {
     protected function getDateRange(array $data): array {
         $tz = DashboardCacheService::getTimezone();
         $now = CarbonImmutable::now($tz);
-        
+
         switch ($data['date_range']) {
             case 'today':
                 return [$now->startOfDay(), $now->endOfDay()];
@@ -205,11 +204,11 @@ class AdvancedReports extends Page implements HasForms {
     protected function getRevenueData($from, $to, $groupBy): array {
         $data = [];
         $current = $from->copy();
-        
+
         while ($current->lte($to)) {
             $start = $current->copy();
             $end = $current->copy();
-            
+
             switch ($groupBy) {
                 case 'day':
                     $end->endOfDay();
@@ -228,11 +227,11 @@ class AdvancedReports extends Page implements HasForms {
                     $label = $current->year;
                     break;
             }
-            
+
             $revenue = Payment::where('status', 'verified')
                 ->whereBetween('created_at', [$start, $end])
                 ->sum('amount');
-                
+
             $data[] = [
                 'period' => $label,
                 'revenue' => $revenue,
@@ -240,7 +239,7 @@ class AdvancedReports extends Page implements HasForms {
                     ->whereBetween('created_at', [$start, $end])
                     ->count(),
             ];
-            
+
             switch ($groupBy) {
                 case 'day':
                     $current->addDay();
@@ -256,18 +255,18 @@ class AdvancedReports extends Page implements HasForms {
                     break;
             }
         }
-        
+
         return $data;
     }
 
     protected function getCommissionData($from, $to, $groupBy): array {
         $data = [];
         $current = $from->copy();
-        
+
         while ($current->lte($to)) {
             $start = $current->copy();
             $end = $current->copy();
-            
+
             switch ($groupBy) {
                 case 'day':
                     $end->endOfDay();
@@ -286,11 +285,11 @@ class AdvancedReports extends Page implements HasForms {
                     $label = $current->year;
                     break;
             }
-            
+
             $commission = CommissionItem::where('status', 'paid')
                 ->whereBetween('updated_at', [$start, $end])
                 ->sum('amount');
-                
+
             $data[] = [
                 'period' => $label,
                 'commission' => $commission,
@@ -298,7 +297,7 @@ class AdvancedReports extends Page implements HasForms {
                     ->whereBetween('updated_at', [$start, $end])
                     ->count(),
             ];
-            
+
             switch ($groupBy) {
                 case 'day':
                     $current->addDay();
@@ -314,18 +313,18 @@ class AdvancedReports extends Page implements HasForms {
                     break;
             }
         }
-        
+
         return $data;
     }
 
     protected function getStudentsData($from, $to, $groupBy): array {
         $data = [];
         $current = $from->copy();
-        
+
         while ($current->lte($to)) {
             $start = $current->copy();
             $end = $current->copy();
-            
+
             switch ($groupBy) {
                 case 'day':
                     $end->endOfDay();
@@ -344,20 +343,20 @@ class AdvancedReports extends Page implements HasForms {
                     $label = $current->year;
                     break;
             }
-            
+
             $newStudents = Student::whereBetween('created_at', [$start, $end])->count();
             $paidStudents = Student::whereHas('payments', function ($query) use ($start, $end) {
                 $query->where('status', 'verified')
-                      ->whereBetween('created_at', [$start, $end]);
+                    ->whereBetween('created_at', [$start, $end]);
             })->count();
-                
+
             $data[] = [
                 'period' => $label,
                 'new_students' => $newStudents,
                 'paid_students' => $paidStudents,
                 'conversion_rate' => $newStudents > 0 ? round(($paidStudents / $newStudents) * 100, 2) : 0,
             ];
-            
+
             switch ($groupBy) {
                 case 'day':
                     $current->addDay();
@@ -373,23 +372,23 @@ class AdvancedReports extends Page implements HasForms {
                     break;
             }
         }
-        
+
         return $data;
     }
 
     protected function getCollaboratorsData($from, $to, $groupBy): array {
         $collaborators = Collaborator::with(['user', 'commissionItems' => function ($query) use ($from, $to) {
             $query->where('status', 'paid')
-                  ->whereBetween('updated_at', [$from, $to]);
+                ->whereBetween('updated_at', [$from, $to]);
         }])->get();
-        
+
         $data = [];
         foreach ($collaborators as $collaborator) {
             $totalCommission = $collaborator->commissionItems->sum('amount');
             $studentCount = Student::whereHas('payments', function ($query) use ($collaborator) {
                 $query->where('collaborator_id', $collaborator->user_id);
             })->count();
-            
+
             $data[] = [
                 'name' => $collaborator->user->name,
                 'email' => $collaborator->user->email,
@@ -398,18 +397,18 @@ class AdvancedReports extends Page implements HasForms {
                 'avg_commission_per_student' => $studentCount > 0 ? round($totalCommission / $studentCount, 2) : 0,
             ];
         }
-        
+
         return $data;
     }
 
     protected function getFinancialData($from, $to, $groupBy): array {
         $data = [];
         $current = $from->copy();
-        
+
         while ($current->lte($to)) {
             $start = $current->copy();
             $end = $current->copy();
-            
+
             switch ($groupBy) {
                 case 'day':
                     $end->endOfDay();
@@ -428,15 +427,15 @@ class AdvancedReports extends Page implements HasForms {
                     $label = $current->year;
                     break;
             }
-            
+
             $revenue = Payment::where('status', 'verified')
                 ->whereBetween('created_at', [$start, $end])
                 ->sum('amount');
-                
+
             $commission = CommissionItem::where('status', 'paid')
                 ->whereBetween('updated_at', [$start, $end])
                 ->sum('amount');
-                
+
             $data[] = [
                 'period' => $label,
                 'revenue' => $revenue,
@@ -444,7 +443,7 @@ class AdvancedReports extends Page implements HasForms {
                 'net_profit' => $revenue - $commission,
                 'commission_rate' => $revenue > 0 ? round(($commission / $revenue) * 100, 2) : 0,
             ];
-            
+
             switch ($groupBy) {
                 case 'day':
                     $current->addDay();
@@ -460,14 +459,14 @@ class AdvancedReports extends Page implements HasForms {
                     break;
             }
         }
-        
+
         return $data;
     }
 
     protected function generateExcelReport(array $data, array $config): void {
         // Implementation for Excel export
         $filename = 'bao_cao_' . $config['report_type'] . '_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
-        
+
         // This would need a proper Excel export class
         // For now, we'll create a simple CSV-like structure
         $this->generateCsvReport($data, $config);
@@ -475,17 +474,17 @@ class AdvancedReports extends Page implements HasForms {
 
     protected function generatePdfReport(array $data, array $config): void {
         $filename = 'bao_cao_' . $config['report_type'] . '_' . now()->format('Y_m_d_H_i_s') . '.pdf';
-        
+
         // Simple PDF generation without external library
         $html = view('reports.pdf-template', [
             'data' => $data,
             'config' => $config,
             'title' => 'Báo cáo ' . $this->getReportTitle($config['report_type']),
         ])->render();
-        
+
         // For now, save as HTML file
         Storage::disk('public')->put('reports/' . str_replace('.pdf', '.html', $filename), $html);
-        
+
         Notification::make()
             ->title('Báo cáo đã được tạo')
             ->body('File: ' . str_replace('.pdf', '.html', $filename))
@@ -495,12 +494,12 @@ class AdvancedReports extends Page implements HasForms {
 
     protected function generateCsvReport(array $data, array $config): void {
         $filename = 'bao_cao_' . $config['report_type'] . '_' . now()->format('Y_m_d_H_i_s') . '.csv';
-        
+
         // Create CSV content
         $csvContent = $this->arrayToCsv($data);
-        
+
         Storage::disk('public')->put('reports/' . $filename, $csvContent);
-        
+
         Notification::make()
             ->title('Báo cáo CSV đã được tạo')
             ->body('File: ' . $filename)
@@ -512,15 +511,15 @@ class AdvancedReports extends Page implements HasForms {
         if (empty($data)) {
             return '';
         }
-        
+
         $csv = '';
         $headers = array_keys($data[0]);
         $csv .= implode(',', $headers) . "\n";
-        
+
         foreach ($data as $row) {
             $csv .= implode(',', array_values($row)) . "\n";
         }
-        
+
         return $csv;
     }
 
