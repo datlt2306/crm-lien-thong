@@ -16,6 +16,9 @@ use App\Filament\Widgets\AccountantFinancialSummary;
 use App\Filament\Widgets\RealtimeNotificationsWidget;
 use App\Filament\Widgets\KpiComparisonWidget;
 use App\Filament\Widgets\OptimizedDashboardLoader;
+use App\Filament\Widgets\DebugWidget;
+use App\Filament\Widgets\SimpleRevenueChart;
+use App\Filament\Widgets\SimpleCollaboratorChart;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {
@@ -37,11 +40,11 @@ class Dashboard extends BaseDashboard {
 
         if (in_array($role, ['super_admin', 'admin'])) {
             return [
+                DebugWidget::class,
                 RealtimeNotificationsWidget::class,
                 AdminKpiStats::class,
-                RevenueOverTime::class,
-                CollaboratorRevenueChart::class,
-                KpiComparisonWidget::class,
+                SimpleRevenueChart::class,
+                SimpleCollaboratorChart::class,
                 RecentPayments::class,
             ];
         }

@@ -18,14 +18,14 @@ class OptimizedDashboardLoader extends Widget {
     protected function preloadDashboardData(): void {
         $user = Auth::user();
         $role = $user?->role;
-        
+
         // Preload cache cho các widget chính
         $cacheKeys = [];
-        
+
         if (in_array($role, ['super_admin', 'admin'])) {
             $cacheKeys = [
                 'admin:kpi',
-                'admin:chart', 
+                'admin:chart',
                 'admin:collab_revenue',
                 'kpi:comparison'
             ];
@@ -42,7 +42,7 @@ class OptimizedDashboardLoader extends Widget {
                 'accountant:cash_flow'
             ];
         }
-        
+
         // Warm up cache
         foreach ($cacheKeys as $key) {
             if (!cache()->has($key)) {

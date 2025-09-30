@@ -30,25 +30,25 @@ class RealtimeNotificationsWidget extends Widget {
     public function loadNotifications(): void {
         $user = Auth::user();
         $role = $user?->role;
-        
+
         $notifications = [];
-        
+
         // Sử dụng cache để giảm database queries
         $cacheKey = "notifications:{$user->id}:{$role}";
         $cachedNotifications = cache()->get($cacheKey);
-        
+
         if ($cachedNotifications && now()->diffInMinutes($cachedNotifications['timestamp']) < 5) {
             $this->notifications = $cachedNotifications['data'];
             return;
         }
-        
+
         // Thông báo cho admin và kế toán
         if (in_array($role, ['super_admin', 'admin', 'kế toán'])) {
             // Payment mới chờ xác minh - tối ưu query
             $newPayments = Payment::where('status', 'pending')
                 ->where('created_at', '>=', now()->subHours(24))
                 ->count();
-                
+
             if ($newPayments > 0) {
                 $notifications[] = [
                     'type' => 'payment',
@@ -59,12 +59,12 @@ class RealtimeNotificationsWidget extends Widget {
                     'time' => now()->format('H:i'),
                 ];
             }
-            
+
             // Payment đã được xác minh - tối ưu query
             $verifiedPayments = Payment::where('status', 'verified')
                 ->where('updated_at', '>=', now()->subHours(24))
                 ->count();
-                
+
             if ($verifiedPayments > 0) {
                 $notifications[] = [
                     'type' => 'payment_verified',
@@ -76,17 +76,17 @@ class RealtimeNotificationsWidget extends Widget {
                 ];
             }
         }
-        
+
         // Thông báo cho CTV
         if ($role === 'ctv') {
             $userId = $user->id;
-            
+
             // Commission mới - tối ưu query
             $newCommissions = CommissionItem::where('collaborator_id', $userId)
                 ->where('status', 'pending')
                 ->where('created_at', '>=', now()->subHours(24))
                 ->sum('amount');
-                
+
             if ($newCommissions > 0) {
                 $notifications[] = [
                     'type' => 'commission',
@@ -97,12 +97,12 @@ class RealtimeNotificationsWidget extends Widget {
                     'time' => now()->format('H:i'),
                 ];
             }
-            
+
             // Học viên mới - tối ưu query
             $newStudents = \App\Models\Student::whereHas('payments', function ($query) use ($userId) {
                 $query->where('collaborator_id', $userId);
             })->where('created_at', '>=', now()->subHours(24))->count();
-            
+
             if ($newStudents > 0) {
                 $notifications[] = [
                     'type' => 'student',
@@ -114,14 +114,14 @@ class RealtimeNotificationsWidget extends Widget {
                 ];
             }
         }
-        
+
         // Thông báo cho kế toán
         if ($role === 'kế toán') {
             // Phiếu thu chờ upload - tối ưu query
             $pendingReceipts = Payment::where('status', 'verified')
                 ->whereNull('receipt_path')
                 ->count();
-                
+
             if ($pendingReceipts > 0) {
                 $notifications[] = [
                     'type' => 'receipt',
@@ -133,13 +133,13 @@ class RealtimeNotificationsWidget extends Widget {
                 ];
             }
         }
-        
+
         // Cache notifications trong 5 phút
         cache()->put($cacheKey, [
             'data' => $notifications,
             'timestamp' => now()
         ], 300);
-        
+
         $this->notifications = $notifications;
     }
 
