@@ -28,7 +28,7 @@ class DebugWidget extends BaseWidget {
         if ($role === 'ctv') {
             $userId = $user->id;
             $userPayments = Payment::where('primary_collaborator_id', $userId)->count();
-            $userStudents = Student::whereHas('payments', function ($query) use ($userId) {
+            $userStudents = Student::whereHas('payment', function ($query) use ($userId) {
                 $query->where('primary_collaborator_id', $userId);
             })->count();
             $userSpecificData = [

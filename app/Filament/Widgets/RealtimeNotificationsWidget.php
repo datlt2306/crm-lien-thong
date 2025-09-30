@@ -99,7 +99,7 @@ class RealtimeNotificationsWidget extends Widget {
             }
 
             // Học viên mới - tối ưu query
-            $newStudents = \App\Models\Student::whereHas('payments', function ($query) use ($userId) {
+            $newStudents = \App\Models\Student::whereHas('payment', function ($query) use ($userId) {
                 $query->where('primary_collaborator_id', $userId);
             })->where('created_at', '>=', now()->subHours(24))->count();
 

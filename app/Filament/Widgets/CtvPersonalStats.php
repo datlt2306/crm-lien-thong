@@ -37,7 +37,7 @@ class CtvPersonalStats extends BaseWidget {
         [$from, $to] = $this->getRangeBounds($filters);
 
         // Tổng học viên
-        $totalStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
+        $totalStudents = Student::whereHas('payment', function (Builder $query) use ($userId) {
             $query->where('primary_collaborator_id', $userId);
         })->count();
 

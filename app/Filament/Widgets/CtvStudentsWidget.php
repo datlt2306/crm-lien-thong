@@ -36,18 +36,18 @@ class CtvStudentsWidget extends BaseWidget {
         [$from, $to] = $this->getRangeBounds($filters);
 
         // Học viên mới trong khoảng thời gian
-        $newStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
+        $newStudents = Student::whereHas('payment', function (Builder $query) use ($userId) {
             $query->where('primary_collaborator_id', $userId);
         })->whereBetween('created_at', [$from, $to])->count();
 
         // Học viên đã thanh toán trong khoảng thời gian
-        $paidStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
+        $paidStudents = Student::whereHas('payment', function (Builder $query) use ($userId) {
             $query->where('primary_collaborator_id', $userId)
                 ->where('status', 'verified');
         })->whereBetween('created_at', [$from, $to])->count();
 
         // Tổng học viên trong khoảng thời gian
-        $totalStudents = Student::whereHas('payments', function (Builder $query) use ($userId) {
+        $totalStudents = Student::whereHas('payment', function (Builder $query) use ($userId) {
             $query->where('primary_collaborator_id', $userId);
         })->whereBetween('created_at', [$from, $to])->count();
 
