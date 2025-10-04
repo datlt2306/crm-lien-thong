@@ -1,166 +1,59 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    Tất cả thông báo
-                </h2>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Quản lý và xem tất cả thông báo của bạn
-                </p>
-            </div>
-            
-            @if($this->unreadCount > 0)
-                <x-filament::button
-                    wire:click="markAllAsRead"
-                    color="primary"
-                    size="sm"
-                >
-                    Đánh dấu tất cả đã đọc ({{ $this->unreadCount }})
-                </x-filament::button>
-            @endif
-        </div>
-
-        <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                        <x-heroicon-o-bell class="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Tổng thông báo</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $this->notifications->total() }}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                        <x-heroicon-o-exclamation-circle class="h-6 w-6 text-red-600 dark:text-red-400" />
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Chưa đọc</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $this->unreadCount }}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                        <x-heroicon-o-check-circle class="h-6 w-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Đã đọc</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $this->notifications->total() - $this->unreadCount }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notifications List -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-            @if($this->notifications->isEmpty())
-                <div class="p-12 text-center">
-                    <x-heroicon-o-bell class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                        Không có thông báo
-                    </h3>
-                    <p class="text-gray-600 dark:text-gray-400">
-                        Bạn sẽ nhận được thông báo khi có sự kiện mới trong hệ thống.
-                    </p>
-                </div>
-            @else
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    @foreach($this->notifications as $notification)
-                        @php
-                            $icon = match($notification->data['icon'] ?? '') {
-                                'heroicon-o-check-circle' => 'heroicon-o-check-circle',
-                                'heroicon-o-x-circle' => 'heroicon-o-x-circle',
-                                'heroicon-o-currency-dollar' => 'heroicon-o-currency-dollar',
-                                'heroicon-o-exclamation-triangle' => 'heroicon-o-exclamation-triangle',
-                                default => 'heroicon-o-bell'
-                            };
-                            $color = match($notification->data['color'] ?? '') {
-                                'success' => 'text-green-600 dark:text-green-400',
-                                'danger' => 'text-red-600 dark:text-red-400',
-                                'warning' => 'text-yellow-600 dark:text-yellow-400',
-                                'info' => 'text-blue-600 dark:text-blue-400',
-                                default => 'text-gray-600 dark:text-gray-400'
-                            };
-                            $bgColor = $notification->read_at ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-blue-900/20';
-                        @endphp
-                        
-                        <div class="p-6 {{ $bgColor }} hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                             @if(!$notification->read_at) style="border-left: 4px solid #3b82f6;" @endif>
-                            <div class="flex items-start space-x-4">
-                                <div class="flex-shrink-0">
-                                    <div class="p-2 rounded-lg {{ str_replace('text-', 'bg-', str_replace('-600', '-100', $color)) }} dark:bg-gray-700">
-                                        <x-dynamic-component :component="$icon" class="h-5 w-5 {{ $color }}" />
-                                    </div>
-                                </div>
-                                
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {{ $notification->data['title'] ?? 'Thông báo' }}
-                                        </h4>
-                                        <div class="flex items-center space-x-2">
-                                            <span class="text-xs text-gray-500 dark:text-gray-400">
-                                                {{ $notification->created_at->diffForHumans() }}
-                                            </span>
-                                            @if(!$notification->read_at)
-                                                <x-filament::button
-                                                    wire:click="markAsRead('{{ $notification->id }}')"
-                                                    size="xs"
-                                                    color="gray"
-                                                >
-                                                    Đánh dấu đã đọc
-                                                </x-filament::button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    
-                                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                                        {{ $notification->data['body'] ?? '' }}
-                                    </p>
-                                    
-                                    @if(isset($notification->data['data']) && is_array($notification->data['data']))
-                                        <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                                            @if(isset($notification->data['data']['payment_id']))
-                                                <span class="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-                                                    Payment ID: {{ $notification->data['data']['payment_id'] }}
-                                                </span>
-                                            @endif
-                                            @if(isset($notification->data['data']['amount']))
-                                                <span class="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ml-2">
-                                                    {{ number_format($notification->data['data']['amount'], 0, ',', '.') }} VNĐ
-                                                </span>
-                                            @endif
-                                        </div>
-                                    @endif
-                                </div>
-                                
-                                @if(!$notification->read_at)
-                                    <div class="flex-shrink-0">
-                                        <div class="h-3 w-3 bg-blue-600 rounded-full"></div>
-                                    </div>
-                                @endif
-                            </div>
+    <div class="space-y-4">
+        @if($this->getNotifications()->count() > 0)
+        <div class="grid gap-4">
+            @foreach($this->getNotifications() as $notification)
+            <div class="bg-white rounded-lg border p-4 {{ $notification->read_at ? '' : 'border-blue-200 bg-blue-50' }}">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            @if(!$notification->read_at)
+                            <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                            @endif
+                            <h3 class="font-medium text-gray-900">
+                                {{ $notification->data['title'] ?? 'Thông báo' }}
+                            </h3>
                         </div>
-                    @endforeach
-                </div>
-                
-                <!-- Pagination -->
-                @if($this->notifications->hasPages())
-                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                        {{ $this->notifications->links() }}
+
+                        <p class="text-gray-600 mt-2">
+                            {{ $notification->data['body'] ?? 'Nội dung thông báo' }}
+                        </p>
+
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-sm text-gray-500">
+                                {{ $notification->created_at->format('d/m/Y H:i') }}
+                                ({{ $notification->created_at->diffForHumans() }})
+                            </span>
+
+                            @if(!$notification->read_at)
+                            <button
+                                wire:click="markAsRead('{{ $notification->id }}')"
+                                class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                Đánh dấu đã đọc
+                            </button>
+                            @else
+                            <span class="text-sm text-green-600 font-medium">
+                                Đã đọc
+                            </span>
+                            @endif
+                        </div>
                     </div>
-                @endif
-            @endif
+                </div>
+            </div>
+            @endforeach
         </div>
+
+        <div class="mt-6">
+            {{ $this->getNotifications()->links() }}
+        </div>
+        @else
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Không có thông báo</h3>
+            <p class="mt-1 text-sm text-gray-500">Bạn chưa có thông báo nào.</p>
+        </div>
+        @endif
     </div>
 </x-filament-panels::page>

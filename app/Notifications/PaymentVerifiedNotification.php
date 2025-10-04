@@ -6,7 +6,6 @@ use App\Models\Payment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use Filament\Notifications\Notification as FilamentNotification;
 
@@ -31,11 +30,7 @@ class PaymentVerifiedNotification extends Notification implements ShouldQueue {
             $channels[] = 'mail';
         }
 
-        // Add broadcast for real-time if user wants it
-        if ($notifiable->wantsNotification('payment_verified', 'push')) {
-            $channels[] = 'broadcast';
-            $channels[] = 'firebase';
-        }
+        // real-time and push channels removed
 
         return $channels;
     }
@@ -55,22 +50,7 @@ class PaymentVerifiedNotification extends Notification implements ShouldQueue {
             ->line('Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!');
     }
 
-    /**
-     * Get the broadcastable representation of the notification.
-     */
-    public function toBroadcast(object $notifiable): BroadcastMessage {
-        return new BroadcastMessage([
-            'title' => 'Thanh toán đã được xác minh',
-            'body' => 'Thanh toán ' . number_format($this->payment->amount, 0, ',', '.') . ' VNĐ đã được xác minh thành công.',
-            'icon' => 'heroicon-o-check-circle',
-            'color' => 'success',
-            'data' => [
-                'payment_id' => $this->payment->id,
-                'amount' => $this->payment->amount,
-                'program_type' => $this->payment->program_type,
-            ]
-        ]);
-    }
+    // real-time broadcast removed
 
     /**
      * Get the array representation of the notification.
@@ -89,23 +69,7 @@ class PaymentVerifiedNotification extends Notification implements ShouldQueue {
         ];
     }
 
-    /**
-     * Get the Firebase representation of the notification.
-     */
-    public function toFirebase(object $notifiable): array {
-        return [
-            'title' => 'Thanh toán đã được xác minh',
-            'body' => 'Thanh toán ' . number_format($this->payment->amount, 0, ',', '.') . ' VNĐ đã được xác minh thành công.',
-            'icon' => 'heroicon-o-check-circle',
-            'color' => 'success',
-            'data' => [
-                'payment_id' => $this->payment->id,
-                'amount' => $this->payment->amount,
-                'program_type' => $this->payment->program_type,
-                'type' => 'payment_verified',
-            ]
-        ];
-    }
+    // push notification (firebase) removed
 
     /**
      * Send Filament notification for in-app display.

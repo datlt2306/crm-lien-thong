@@ -35,18 +35,6 @@ return [
         ],
     ],
 
-    'firebase' => [
-        'server_key' => env('FIREBASE_SERVER_KEY'),
-        'project_id' => env('FIREBASE_PROJECT_ID'),
-        'api_url' => 'https://fcm.googleapis.com/fcm/send',
-    ],
-
-    'pusher' => [
-        'app_id' => env('PUSHER_APP_ID'),
-        'key' => env('PUSHER_APP_KEY'),
-        'secret' => env('PUSHER_APP_SECRET'),
-        'cluster' => env('PUSHER_APP_CLUSTER'),
-        'use_tls' => true,
-    ],
+    // realtime/push removed
 
 ];

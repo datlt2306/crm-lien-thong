@@ -65,7 +65,10 @@ class PaymentResource extends Resource {
                             ->modalContent(function (Payment $record) {
                                 $student = $record->student;
                                 if (!$student) {
-                                    return '<div class="p-4 text-red-600">Không tìm thấy thông tin sinh viên</div>';
+                                    return view('components.student-info', [
+                                        'student' => null,
+                                        'error' => 'Không tìm thấy thông tin sinh viên'
+                                    ]);
                                 }
                                 return view('components.student-info-modal', [
                                     'student' => $student,
@@ -407,7 +410,9 @@ class PaymentResource extends Resource {
                     ->modalHeading('Phiếu thu')
                     ->modalContent(function (Payment $record) {
                         if (!$record->receipt_path) {
-                            return 'Không có phiếu thu để hiển thị.';
+                            return view('components.no-content', [
+                                'message' => 'Không có phiếu thu để hiển thị.'
+                            ]);
                         }
                         $fileUrl = route('files.receipt.view', $record->id);
                         $fileName = basename($record->receipt_path);
@@ -426,7 +431,9 @@ class PaymentResource extends Resource {
                     ->modalHeading('Bill thanh toán')
                     ->modalContent(function (Payment $record) {
                         if (!$record->bill_path) {
-                            return 'Không có bill để hiển thị.';
+                            return view('components.no-content', [
+                                'message' => 'Không có bill để hiển thị.'
+                            ]);
                         }
 
                         $fileUrl = route('files.bill.view', $record->id);

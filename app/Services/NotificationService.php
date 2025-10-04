@@ -9,8 +9,6 @@ use App\Notifications\PaymentVerifiedNotification;
 use App\Notifications\PaymentRejectedNotification;
 use App\Notifications\CommissionEarnedNotification;
 use App\Notifications\QuotaWarningNotification;
-use App\Broadcasting\NotificationChannel;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
 
 class NotificationService {
@@ -24,16 +22,7 @@ class NotificationService {
             if ($user->wantsNotification('payment_verified')) {
                 $user->notify(new PaymentVerifiedNotification($payment));
                 $this->sendFilamentNotification($user, 'payment_verified', $payment);
-                $this->broadcastNotification($user, [
-                    'title' => 'Thanh toán đã được xác minh',
-                    'body' => 'Thanh toán ' . number_format($payment->amount, 0, ',', '.') . ' VNĐ đã được xác minh thành công.',
-                    'icon' => 'heroicon-o-check-circle',
-                    'color' => 'success',
-                    'data' => [
-                        'payment_id' => $payment->id,
-                        'type' => 'payment_verified',
-                    ]
-                ]);
+                // real-time broadcast removed
             }
         }
     }
@@ -48,17 +37,7 @@ class NotificationService {
             if ($user->wantsNotification('payment_rejected')) {
                 $user->notify(new PaymentRejectedNotification($payment, $reason));
                 $this->sendFilamentNotification($user, 'payment_rejected', $payment);
-                $this->broadcastNotification($user, [
-                    'title' => 'Thanh toán bị từ chối',
-                    'body' => 'Thanh toán ' . number_format($payment->amount, 0, ',', '.') . ' VNĐ đã bị từ chối.',
-                    'icon' => 'heroicon-o-x-circle',
-                    'color' => 'danger',
-                    'data' => [
-                        'payment_id' => $payment->id,
-                        'type' => 'payment_rejected',
-                        'reason' => $reason,
-                    ]
-                ]);
+                // real-time broadcast removed
             }
         }
     }
@@ -81,16 +60,7 @@ class NotificationService {
         if ($user->wantsNotification('commission_earned')) {
             $user->notify(new CommissionEarnedNotification($commissionItem));
             $this->sendFilamentNotification($user, 'commission_earned', $commissionItem);
-            $this->broadcastNotification($user, [
-                'title' => 'Bạn đã nhận được hoa hồng',
-                'body' => 'Bạn đã nhận được ' . number_format($commissionItem->amount, 0, ',', '.') . ' VNĐ hoa hồng.',
-                'icon' => 'heroicon-o-currency-dollar',
-                'color' => 'success',
-                'data' => [
-                    'commission_item_id' => $commissionItem->id,
-                    'type' => 'commission_earned',
-                ]
-            ]);
+            // real-time broadcast removed
         }
     }
 
@@ -108,18 +78,7 @@ class NotificationService {
                     'remaining_quota' => $remainingQuota,
                     'total_quota' => $totalQuota,
                 ]);
-                $this->broadcastNotification($user, [
-                    'title' => 'Cảnh báo: Chỉ tiêu sắp hết',
-                    'body' => 'Ngành ' . $majorName . ' chỉ còn ' . $remainingQuota . ' chỉ tiêu.',
-                    'icon' => 'heroicon-o-exclamation-triangle',
-                    'color' => 'warning',
-                    'data' => [
-                        'major_name' => $majorName,
-                        'remaining_quota' => $remainingQuota,
-                        'total_quota' => $totalQuota,
-                        'type' => 'quota_warning',
-                    ]
-                ]);
+                // real-time broadcast removed
             }
         }
     }
@@ -155,13 +114,13 @@ class NotificationService {
         foreach ($superAdmins as $admin) {
             $users[] = $admin;
         }
-        
+
         // Add accountants
         $accountants = User::where('role', 'kế toán')->get();
         foreach ($accountants as $accountant) {
             $users[] = $accountant;
         }
-        
+
         return array_unique($users, SORT_REGULAR);
     }
 
@@ -231,18 +190,5 @@ class NotificationService {
         $notification->sendToDatabase($user);
     }
 
-    /**
-     * Broadcast notification for real-time updates.
-     */
-    private function broadcastNotification(User $user, array $notification): void {
-        if (!$user->wantsNotification('system_updates', 'push')) {
-            return;
-        }
-
-        try {
-            Broadcast::event(new NotificationChannel($user->id, $notification));
-        } catch (\Exception $e) {
-            Log::error('Failed to broadcast notification: ' . $e->getMessage());
-        }
-    }
+    // real-time broadcasting removed
 }

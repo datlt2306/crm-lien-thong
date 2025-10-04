@@ -68,7 +68,10 @@ class CommissionResource extends Resource {
                             ->modalContent(function (CommissionItem $record) {
                                 $student = $record->commission->student;
                                 if (!$student) {
-                                    return '<div class="p-4 text-red-600">Không tìm thấy thông tin sinh viên</div>';
+                                    return view('components.student-info', [
+                                        'student' => null,
+                                        'error' => 'Không tìm thấy thông tin sinh viên'
+                                    ]);
                                 }
 
                                 return view('components.student-info-modal', [

@@ -6,7 +6,6 @@ use App\Models\Payment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use Filament\Notifications\Notification as FilamentNotification;
 
@@ -32,10 +31,7 @@ class PaymentRejectedNotification extends Notification implements ShouldQueue {
             $channels[] = 'mail';
         }
 
-        // Add broadcast for real-time if user wants it
-        if ($notifiable->wantsNotification('payment_rejected', 'push')) {
-            $channels[] = 'broadcast';
-        }
+        // real-time and push channels removed
 
         return $channels;
     }
@@ -60,23 +56,7 @@ class PaymentRejectedNotification extends Notification implements ShouldQueue {
         return $mail->line('Vui lòng liên hệ với chúng tôi nếu bạn có thắc mắc.');
     }
 
-    /**
-     * Get the broadcastable representation of the notification.
-     */
-    public function toBroadcast(object $notifiable): BroadcastMessage {
-        return new BroadcastMessage([
-            'title' => 'Thanh toán bị từ chối',
-            'body' => 'Thanh toán ' . number_format($this->payment->amount, 0, ',', '.') . ' VNĐ đã bị từ chối.',
-            'icon' => 'heroicon-o-x-circle',
-            'color' => 'danger',
-            'data' => [
-                'payment_id' => $this->payment->id,
-                'amount' => $this->payment->amount,
-                'program_type' => $this->payment->program_type,
-                'reason' => $this->reason,
-            ]
-        ]);
-    }
+    // real-time broadcast removed
 
     /**
      * Get the array representation of the notification.

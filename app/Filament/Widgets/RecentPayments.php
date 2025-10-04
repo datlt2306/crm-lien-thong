@@ -39,16 +39,16 @@ class RecentPayments extends BaseWidget {
                         $student = $record->student?->full_name ?? '—';
                         $amount = number_format((float) $record->amount, 0, '.', ',') . ' ₫';
                         $status = Payment::getStatusOptions()[$record->status] ?? $record->status;
+
                         $created = optional($record->created_at)->format('d/m/Y H:i');
-                        return <<<HTML
-<div class="space-y-2">
-  <div><span class="font-medium">ID:</span> {$record->id}</div>
-  <div><span class="font-medium">Sinh viên:</span> {$student}</div>
-  <div><span class="font-medium">Số tiền:</span> {$amount}</div>
-  <div><span class="font-medium">Trạng thái:</span> {$status}</div>
-  <div><span class="font-medium">Tạo lúc:</span> {$created}</div>
-</div>
-HTML;
+
+                        return view('components.payment-detail-modal', [
+                            'student' => $student,
+                            'amount' => $amount,
+                            'status' => $status,
+                            'record' => $record,
+                            'created' => $created
+                        ]);
                     }),
                 Action::make('verify')->label('Verify')->icon('heroicon-o-check')
                     ->visible(fn(Payment $r) => $r->status === Payment::STATUS_SUBMITTED && Gate::allows('verify_payment'))

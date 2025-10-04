@@ -6,7 +6,6 @@ use App\Models\CommissionItem;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use Filament\Notifications\Notification as FilamentNotification;
 
@@ -31,10 +30,7 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
             $channels[] = 'mail';
         }
 
-        // Add broadcast for real-time if user wants it
-        if ($notifiable->wantsNotification('commission_earned', 'push')) {
-            $channels[] = 'broadcast';
-        }
+        // real-time and push channels removed
 
         return $channels;
     }
@@ -54,24 +50,7 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
             ->line('Cảm ơn bạn đã đóng góp vào thành công của chúng tôi!');
     }
 
-    /**
-     * Get the broadcastable representation of the notification.
-     */
-    public function toBroadcast(object $notifiable): BroadcastMessage {
-        return new BroadcastMessage([
-            'title' => 'Bạn đã nhận được hoa hồng',
-            'body' => 'Bạn đã nhận được ' . number_format($this->commissionItem->amount, 0, ',', '.') . ' VNĐ hoa hồng.',
-            'icon' => 'heroicon-o-currency-dollar',
-            'color' => 'success',
-            'data' => [
-                'commission_item_id' => $this->commissionItem->id,
-                'commission_id' => $this->commissionItem->commission_id,
-                'amount' => $this->commissionItem->amount,
-                'role' => $this->commissionItem->role,
-                'status' => $this->commissionItem->status,
-            ]
-        ]);
-    }
+    // real-time broadcast removed
 
     /**
      * Get the array representation of the notification.

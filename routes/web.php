@@ -20,10 +20,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Notification demo page
-Route::get('/notification-demo', function () {
-    return view('notification-demo');
-});
+// Notification demo page (removed)
 
 
 

@@ -50,12 +50,6 @@ class User extends Authenticatable {
         ];
     }
 
-    /**
-     * Get the push tokens for the user.
-     */
-    public function pushTokens(): HasMany {
-        return $this->hasMany(PushToken::class);
-    }
 
     /**
      * Get the notification preferences for the user.

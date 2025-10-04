@@ -3,61 +3,49 @@
 namespace App\Filament\Pages;
 
 use Filament\Pages\Page;
+use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Pagination\LengthAwarePaginator;
-use App\Models\User;
+use Illuminate\Notifications\DatabaseNotification;
 
 class ViewAllNotifications extends Page {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bell';
-
     protected string $view = 'filament.pages.view-all-notifications';
-
-    protected static ?string $navigationLabel = 'Tất cả thông báo';
-
     protected static ?string $title = 'Tất cả thông báo';
+    protected static ?string $navigationLabel = 'Thông báo';
+    protected static ?int $navigationSort = 100;
 
-    protected static ?int $navigationSort = 10;
+    public function getHeaderActions(): array {
+        return [
+            Action::make('mark_all_read')
+                ->label('Đánh dấu tất cả đã đọc')
+                ->icon('heroicon-o-check')
+                ->color('success')
+                ->visible(fn() => Auth::user()->unreadNotifications()->count() > 0)
+                ->action(function () {
+                    Auth::user()->unreadNotifications()->update(['read_at' => now()]);
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Thông báo';
-
-    // Tránh khai báo public property với kiểu không được Livewire hỗ trợ (Paginator)
+                    $this->dispatch('notify', [
+                        'type' => 'success',
+                        'message' => 'Đã đánh dấu tất cả thông báo là đã đọc'
+                    ]);
+                }),
+        ];
+    }
 
     public function markAsRead(string $notificationId): void {
-        $user = Auth::user();
-        if ($user instanceof User) {
-            $notification = $user->notifications()->find($notificationId);
-            if ($notification) {
-                $notification->markAsRead();
-                $this->dispatch('$refresh');
-            }
+        $notification = Auth::user()->notifications()->find($notificationId);
+
+        if ($notification && !$notification->read_at) {
+            $notification->markAsRead();
+
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Đã đánh dấu thông báo là đã đọc'
+            ]);
         }
     }
 
-    public function markAllAsRead(): void {
-        $user = Auth::user();
-        if ($user instanceof User) {
-            $user->unreadNotifications()->update(['read_at' => now()]);
-            $this->dispatch('$refresh');
-        }
-    }
-
-    public function getNotificationsProperty(): LengthAwarePaginator {
-        $user = Auth::user();
-        if ($user instanceof User) {
-            return $user->notifications()
-                ->latest()
-                ->paginate(20);
-        }
-
-        return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
-    }
-
-    public function getUnreadCountProperty(): int {
-        $user = Auth::user();
-        if ($user instanceof User) {
-            return $user->unreadNotifications()->count();
-        }
-
-        return 0;
+    public function getNotifications() {
+        return Auth::user()->notifications()->latest()->paginate(20);
     }
 }

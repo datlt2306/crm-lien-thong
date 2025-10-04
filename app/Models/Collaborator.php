@@ -81,6 +81,20 @@ class Collaborator extends Model {
     }
 
     /**
+     * Quan hệ: Payments (khi là primary collaborator)
+     */
+    public function payments() {
+        return $this->hasMany(Payment::class, 'primary_collaborator_id');
+    }
+
+    /**
+     * Quan hệ: Payments (khi là sub collaborator)
+     */
+    public function subPayments() {
+        return $this->hasMany(Payment::class, 'sub_collaborator_id');
+    }
+
+    /**
      * Kiểm tra xem có phải CTV cấp 1 không (có upline là null)
      */
     public function isLevel1() {

@@ -13,13 +13,11 @@ use App\Filament\Widgets\CtvStudentsWidget;
 use App\Filament\Widgets\AccountantPendingReceipts;
 use App\Filament\Widgets\AccountantCashFlow;
 use App\Filament\Widgets\AccountantFinancialSummary;
-use App\Filament\Widgets\RealtimeNotificationsWidget;
 use App\Filament\Widgets\KpiComparisonWidget;
 use App\Filament\Widgets\OptimizedDashboardLoader;
-use App\Filament\Widgets\DebugWidget;
 use App\Filament\Widgets\SimpleRevenueChart;
 use App\Filament\Widgets\SimpleCollaboratorChart;
-use App\Filament\Widgets\DataDebugWidget;
+use App\Filament\Widgets\CollaboratorStatsWidget;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {
@@ -41,10 +39,8 @@ class Dashboard extends BaseDashboard {
 
         if (in_array($role, ['super_admin', 'admin'])) {
             return [
-                DataDebugWidget::class,
-                DebugWidget::class,
-                RealtimeNotificationsWidget::class,
                 AdminKpiStats::class,
+                CollaboratorStatsWidget::class,
                 SimpleRevenueChart::class,
                 SimpleCollaboratorChart::class,
                 RecentPayments::class,
@@ -53,7 +49,6 @@ class Dashboard extends BaseDashboard {
 
         if ($role === 'ctv') {
             return [
-                RealtimeNotificationsWidget::class,
                 CtvPersonalStats::class,
                 CtvWalletWidget::class,
                 CtvStudentsWidget::class,
@@ -63,7 +58,6 @@ class Dashboard extends BaseDashboard {
 
         if ($role === 'kế toán') {
             return [
-                RealtimeNotificationsWidget::class,
                 AccountantPendingReceipts::class,
                 AccountantFinancialSummary::class,
                 AccountantCashFlow::class,

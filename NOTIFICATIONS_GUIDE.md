@@ -1,13 +1,11 @@
-# Hướng dẫn sử dụng hệ thống Notifications thông minh
+# Hướng dẫn sử dụng hệ thống Notifications
 
 ## Tổng quan
 
 Hệ thống notifications đã được tích hợp vào CRM với các tính năng:
 
 -   ✅ **Email Notifications**: Gửi thông báo qua email
--   ✅ **Push Notifications**: Gửi thông báo push qua Firebase FCM
 -   ✅ **In-App Notifications**: Hiển thị thông báo trong ứng dụng Filament
--   ✅ **Real-time Notifications**: Thông báo real-time qua WebSocket
 -   ✅ **Notification Preferences**: Cài đặt tùy chỉnh cho từng loại thông báo
 -   ✅ **Smart Targeting**: Tự động gửi thông báo cho đúng người dùng
 
@@ -18,10 +16,10 @@ Hệ thống notifications đã được tích hợp vào CRM với các tính n
 -   Lưu trữ tất cả thông báo trong hệ thống
 -   Sử dụng Laravel Notifications mặc định
 
-### 2. Bảng `push_tokens`
+### 2. Bảng `push_tokens` (đã gỡ bỏ)
 
--   Lưu trữ FCM tokens cho push notifications
--   Hỗ trợ đa nền tảng (Web, iOS, Android)
+-   ~~Lưu trữ FCM tokens cho push notifications~~
+-   ~~Hỗ trợ đa nền tảng (Web, iOS, Android)~~
 
 ### 3. Bảng `notification_preferences`
 
@@ -34,25 +32,25 @@ Hệ thống notifications đã được tích hợp vào CRM với các tính n
 
 -   **Kích hoạt**: Khi thanh toán được xác minh
 -   **Người nhận**: CTV, chủ đơn vị, kế toán, super admin
--   **Channels**: Email, Push, In-App, Real-time
+-   **Channels**: Email, In-App
 
 ### 2. PaymentRejectedNotification
 
 -   **Kích hoạt**: Khi thanh toán bị từ chối
 -   **Người nhận**: CTV, chủ đơn vị, kế toán, super admin
--   **Channels**: Email, Push, In-App, Real-time
+-   **Channels**: Email, In-App
 
 ### 3. CommissionEarnedNotification
 
 -   **Kích hoạt**: Khi CTV nhận được hoa hồng
 -   **Người nhận**: CTV nhận hoa hồng
--   **Channels**: Email, Push, In-App, Real-time
+-   **Channels**: Email, In-App
 
 ### 4. QuotaWarningNotification
 
 -   **Kích hoạt**: Khi chỉ tiêu sắp hết
 -   **Người nhận**: Super admin, chủ đơn vị
--   **Channels**: Email, Push, In-App, Real-time
+-   **Channels**: Email, In-App
 
 ## Cách sử dụng
 
@@ -90,71 +88,13 @@ $payment = Payment::find(1);
 event(new PaymentVerified($payment));
 ```
 
-### 3. Đăng ký Push Token
+### 3. Push Notifications (đã gỡ bỏ)
 
-```php
-use App\Services\PushNotificationService;
-
-$pushService = app(PushNotificationService::class);
-
-// Đăng ký token cho user
-$user = User::find(1);
-$token = $pushService->registerToken(
-    $user,
-    'fcm_token_from_client',
-    'web', // hoặc 'ios', 'android'
-    'device_id_123',
-    'Chrome Browser'
-);
-```
-
-### 4. Gửi Push Notification trực tiếp
-
-```php
-use App\Services\PushNotificationService;
-
-$pushService = app(PushNotificationService::class);
-
-$notification = [
-    'title' => 'Tiêu đề thông báo',
-    'body' => 'Nội dung thông báo',
-    'icon' => 'heroicon-o-bell',
-    'color' => 'success',
-    'data' => [
-        'type' => 'custom',
-        'id' => 123,
-    ]
-];
-
-// Gửi cho một user
-$user = User::find(1);
-$pushService->sendToUser($user, $notification);
-
-// Gửi cho nhiều users
-$pushService->sendToUsers([1, 2, 3], $notification);
-
-// Gửi cho một role
-$pushService->sendToRole('super_admin', $notification);
-```
+~~Push notifications đã được gỡ bỏ khỏi hệ thống.~~
 
 ## Cấu hình Environment
 
-Thêm vào file `.env`:
-
-```env
-# Firebase Configuration
-FIREBASE_SERVER_KEY=your_firebase_server_key
-FIREBASE_PROJECT_ID=your_firebase_project_id
-
-# Pusher Configuration (cho real-time)
-PUSHER_APP_ID=your_pusher_app_id
-PUSHER_APP_KEY=your_pusher_app_key
-PUSHER_APP_SECRET=your_pusher_app_secret
-PUSHER_APP_CLUSTER=your_pusher_cluster
-
-# Broadcasting
-BROADCAST_DRIVER=pusher
-```
+Không cần cấu hình thêm cho notifications (đã gỡ bỏ real-time và push).
 
 ## Filament Admin Interface
 
@@ -164,11 +104,11 @@ BROADCAST_DRIVER=pusher
 -   **Chức năng**: Quản lý cài đặt thông báo cho từng user
 -   **Quyền**: Super admin
 
-### 2. Push Tokens
+### 2. Push Tokens (đã gỡ bỏ)
 
--   **Đường dẫn**: `/admin/push-tokens`
--   **Chức năng**: Quản lý FCM tokens
--   **Quyền**: Super admin
+-   ~~**Đường dẫn**: `/admin/push-tokens`~~
+-   ~~**Chức năng**: Quản lý FCM tokens~~
+-   ~~**Quyền**: Super admin~~
 
 ### 3. Dashboard Widgets
 
@@ -177,64 +117,9 @@ BROADCAST_DRIVER=pusher
 
 ## JavaScript/Frontend Integration
 
-### 1. Đăng ký Push Token (Web)
+### 1. JavaScript/Frontend Integration (đã gỡ bỏ)
 
-```javascript
-// Đăng ký service worker
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js");
-}
-
-// Lấy FCM token
-import { initializeApp } from "firebase/app";
-import { getMessaging, getToken } from "firebase/messaging";
-
-const firebaseConfig = {
-    // Cấu hình Firebase
-};
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
-getToken(messaging, { vapidKey: "your_vapid_key" }).then((currentToken) => {
-    if (currentToken) {
-        // Gửi token lên server
-        fetch("/api/push-tokens", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector(
-                    'meta[name="csrf-token"]'
-                ).content,
-            },
-            body: JSON.stringify({
-                token: currentToken,
-                platform: "web",
-                device_name: navigator.userAgent,
-            }),
-        });
-    }
-});
-```
-
-### 2. Lắng nghe Real-time Notifications
-
-```javascript
-// Sử dụng Pusher để lắng nghe real-time notifications
-import Pusher from "pusher-js";
-
-const pusher = new Pusher("your_pusher_key", {
-    cluster: "your_cluster",
-    authEndpoint: "/broadcasting/auth",
-});
-
-const channel = pusher.subscribe("private-notifications.USER_ID");
-
-channel.bind("notification.received", function (data) {
-    // Hiển thị notification
-    showNotification(data.title, data.body, data.icon);
-});
-```
+~~Push notifications và real-time notifications đã được gỡ bỏ khỏi hệ thống.~~
 
 ## Testing
 
@@ -262,36 +147,16 @@ class NotificationTest extends TestCase
 }
 ```
 
-### 2. Test Push Notifications
+### 2. Test Push Notifications (đã gỡ bỏ)
 
-```php
-use Tests\TestCase;
-use App\Services\PushNotificationService;
-use App\Models\User;
-
-class PushNotificationTest extends TestCase
-{
-    public function test_send_push_notification()
-    {
-        $user = User::factory()->create();
-        $pushService = app(PushNotificationService::class);
-
-        $result = $pushService->sendToUser($user, [
-            'title' => 'Test',
-            'body' => 'Test notification'
-        ]);
-
-        $this->assertTrue($result);
-    }
-}
-```
+~~Push notification tests đã được gỡ bỏ.~~
 
 ## Monitoring và Debugging
 
 ### 1. Log Files
 
 -   Thông báo lỗi: `storage/logs/laravel.log`
--   Push notification errors: Tìm kiếm "Failed to send push notification"
+-   ~~Push notification errors: Tìm kiếm "Failed to send push notification"~~
 
 ### 2. Database Queries
 
@@ -301,11 +166,11 @@ SELECT type, COUNT(*) as count
 FROM notifications
 GROUP BY type;
 
--- Xem push tokens hoạt động
-SELECT platform, COUNT(*) as count
-FROM push_tokens
-WHERE is_active = 1
-GROUP BY platform;
+-- Xem push tokens hoạt động (đã gỡ bỏ)
+-- SELECT platform, COUNT(*) as count
+-- FROM push_tokens
+-- WHERE is_active = 1
+-- GROUP BY platform;
 
 -- Xem preferences
 SELECT

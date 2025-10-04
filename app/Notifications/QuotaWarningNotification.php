@@ -5,7 +5,6 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use Filament\Notifications\Notification as FilamentNotification;
 
@@ -33,10 +32,7 @@ class QuotaWarningNotification extends Notification implements ShouldQueue {
             $channels[] = 'mail';
         }
 
-        // Add broadcast for real-time if user wants it
-        if ($notifiable->wantsNotification('quota_warning', 'push')) {
-            $channels[] = 'broadcast';
-        }
+        // real-time and push channels removed
 
         return $channels;
     }
@@ -58,26 +54,7 @@ class QuotaWarningNotification extends Notification implements ShouldQueue {
             ->line('Vui lòng liên hệ với chúng tôi nếu bạn cần hỗ trợ thêm.');
     }
 
-    /**
-     * Get the broadcastable representation of the notification.
-     */
-    public function toBroadcast(object $notifiable): BroadcastMessage {
-        $percentage = round(($this->remainingQuota / $this->totalQuota) * 100, 1);
-
-        return new BroadcastMessage([
-            'title' => 'Cảnh báo: Chỉ tiêu sắp hết',
-            'body' => 'Ngành ' . $this->majorName . ' chỉ còn ' . $this->remainingQuota . ' chỉ tiêu (' . $percentage . '%)',
-            'icon' => 'heroicon-o-exclamation-triangle',
-            'color' => 'warning',
-            'data' => [
-                'major_name' => $this->majorName,
-                'remaining_quota' => $this->remainingQuota,
-                'total_quota' => $this->totalQuota,
-                'percentage' => $percentage,
-                'organization_id' => $this->organizationId,
-            ]
-        ]);
-    }
+    // real-time broadcast removed
 
     /**
      * Get the array representation of the notification.
