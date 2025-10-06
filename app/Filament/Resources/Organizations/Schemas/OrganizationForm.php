@@ -27,7 +27,8 @@ class OrganizationForm {
                             ->relationship('owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'chủ đơn vị']))
                             ->searchable()
                             ->preload()
-                            ->placeholder('Chọn tài khoản có sẵn...'),
+                            ->placeholder('Chọn tài khoản có sẵn...')
+                            ->required(fn($context) => $context === 'create'),
                         // Ẩn các trường tạo tài khoản mới khi tạo mới đơn vị; chỉ hiển thị ở chế độ sửa
                         \Filament\Forms\Components\TextInput::make('owner_email')
                             ->label('Email chủ đơn vị (nếu tạo mới)')
@@ -52,6 +53,11 @@ class OrganizationForm {
                 Section::make('Đào tạo')
                     ->description('Chọn ngành, chỉ tiêu và hệ đào tạo')
                     ->columns(1)
+                    ->visible(
+                        fn($context) =>
+                        // Chỉ chủ đơn vị được phép cấu hình phần đào tạo
+                        $context === 'edit' && Auth::user()?->role === 'chủ đơn vị'
+                    )
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('training_rows')
                             ->label('Ngành / Chỉ tiêu / Hệ đào tạo / Đợt tuyển')

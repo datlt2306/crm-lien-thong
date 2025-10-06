@@ -51,7 +51,8 @@ class PermissionSeeder extends Seeder {
             'view_payment',
             'view_student',
             'view_collaborator',
-            'view_organization'
+            'view_organization',
+            'manage_organization'
         ]);
 
         // Gán permissions cho CTV

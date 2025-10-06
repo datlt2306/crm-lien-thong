@@ -30,7 +30,8 @@ class UserForm {
                         'kế toán' => 'Kế toán',
                     ])
                     ->required()
-                    ->default('ctv'),
+                    ->default('ctv')
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->role === 'super_admin'),
                 \Filament\Forms\Components\TextInput::make('password')
                     ->password()
                     ->label('Mật khẩu')

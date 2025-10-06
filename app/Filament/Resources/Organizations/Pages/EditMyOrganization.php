@@ -3,40 +3,44 @@
 namespace App\Filament\Resources\Organizations\Pages;
 
 use App\Filament\Resources\Organizations\OrganizationResource;
-use App\Models\User;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\ViewAction;
+use App\Models\Organization;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Arr;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Models\Organization;
+use Illuminate\Database\Eloquent\Model;
 
-class EditOrganization extends EditRecord {
+class EditMyOrganization extends EditRecord {
     protected static string $resource = OrganizationResource::class;
 
     /** @var array<int,array<string,mixed>> */
     protected array $pendingTrainingRows = [];
 
+    public function mount(int | string $record): void {
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        // Chỉ chủ đơn vị được truy cập
+        if ($user?->role !== 'chủ đơn vị') {
+            abort(403, 'Bạn không có quyền truy cập trang này.');
+        }
+
+        // Tìm đơn vị của chủ đơn vị
+        $organization = Organization::where('owner_id', $user->id)->first();
+
+        if (!$organization) {
+            abort(404, 'Không tìm thấy đơn vị của bạn.');
+        }
+
+        // Mount với record của đơn vị
+        parent::mount($organization->id);
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array {
         // Lưu tạm training_rows nhưng KHÔNG loại bỏ khỏi $data
         $this->pendingTrainingRows = $data['training_rows'] ?? [];
 
-        // Cập nhật mật khẩu nếu có
-        if (!empty($data['owner_email']) && !empty($data['owner_password'])) {
-            $user = User::where('email', $data['owner_email'])->first();
-            if ($user) {
-                $user->update([
-                    'password' => Hash::make($data['owner_password'])
-                ]);
-            }
-        }
-
-        // Loại bỏ password khỏi data trước khi lưu Organization
-        unset($data['owner_password'], $data['owner_password_confirmation']);
+        // Loại bỏ các field không cần thiết
+        unset($data['owner_id']); // Chủ đơn vị không được thay đổi owner
 
         return $data;
     }
@@ -52,7 +56,7 @@ class EditOrganization extends EditRecord {
         } catch (\Throwable) {
             $state = [];
         }
-        Log::info('ORG_EDIT::syncTrainingRowsFromAction:state', [
+        Log::info('ORG_MY_EDIT::syncTrainingRowsFromAction:state', [
             'state' => $state,
         ]);
 
@@ -66,7 +70,7 @@ class EditOrganization extends EditRecord {
 
     private function syncTrainingRows(array $rows): void {
         if (!is_array($rows)) return;
-        Log::info('ORG_EDIT::syncTrainingRows:rows', [
+        Log::info('ORG_MY_EDIT::syncTrainingRows:rows', [
             'org_id' => $this->record?->id,
             'rows' => $rows,
         ]);
@@ -132,14 +136,15 @@ class EditOrganization extends EditRecord {
             }
         }
 
-        Log::info('ORG_EDIT::syncTrainingRows:done', [
+        Log::info('ORG_MY_EDIT::syncTrainingRows:done', [
             'majors_synced' => array_keys($syncMajors),
             'major_program_mappings' => $majorProgramMappings,
         ]);
     }
 
     protected function handleRecordUpdate(Model $record, array $data): Model {
-        Log::info('ORG_EDIT::handleRecordUpdate:data', $data);
+        Log::info('ORG_MY_EDIT::handleRecordUpdate:data', $data);
+
         // Validate unique name friendly (tránh vấp UNIQUE ở DB)
         if (!empty($data['name'])) {
             $exists = Organization::where('name', $data['name'])
@@ -168,22 +173,10 @@ class EditOrganization extends EditRecord {
     }
 
     protected function getHeaderActions(): array {
-        $actions = [
-            ViewAction::make()
+        return [
+            \Filament\Actions\ViewAction::make()
                 ->label('Xem chi tiết'),
         ];
-
-        // Chỉ super admin mới có thể xóa đơn vị
-        if (\Illuminate\Support\Facades\Auth::user()?->role === 'super_admin') {
-            $actions[] = DeleteAction::make()
-                ->label('Xóa đơn vị')
-                ->modalHeading('Xóa đơn vị')
-                ->modalDescription('Bạn có chắc chắn muốn xóa đơn vị này? Hành động này không thể hoàn tác.')
-                ->modalSubmitActionLabel('Xóa')
-                ->modalCancelActionLabel('Hủy');
-        }
-
-        return $actions;
     }
 
     protected function getFormActions(): array {
@@ -192,7 +185,7 @@ class EditOrganization extends EditRecord {
                 ->label('Lưu thay đổi')
                 ->after(function () {
                     // Refresh form sau khi lưu để hiển thị dữ liệu mới
-                    $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
+                    $this->redirect($this->getResource()::getUrl('my-organization'));
                 }),
             $this->getCancelFormAction()
                 ->label('Hủy'),
@@ -200,25 +193,10 @@ class EditOrganization extends EditRecord {
     }
 
     public function getTitle(): string {
-        return 'Chỉnh sửa đơn vị';
+        return 'Cấu hình đơn vị';
     }
 
     public function getBreadcrumb(): string {
-        return 'Chỉnh sửa đơn vị';
-    }
-
-    public function mount(int | string $record): void {
-        parent::mount($record);
-
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        // Kiểm tra quyền truy cập
-        if ($user?->role === 'chủ đơn vị' && $this->record->owner_id !== $user->id) {
-            abort(403, 'Bạn chỉ có thể chỉnh sửa đơn vị của mình.');
-        }
-
-        if (!in_array($user?->role, ['super_admin', 'chủ đơn vị'])) {
-            abort(403, 'Bạn không có quyền truy cập trang này.');
-        }
+        return 'Cấu hình đơn vị';
     }
 }

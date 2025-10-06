@@ -200,6 +200,15 @@ class CreateOrganization extends CreateRecord {
         return 'Tạo đơn vị';
     }
 
+    public function mount(): void {
+        // Chỉ super admin mới được truy cập trang tạo đơn vị
+        if (\Illuminate\Support\Facades\Auth::user()?->role !== 'super_admin') {
+            abort(403, 'Bạn không có quyền truy cập trang này.');
+        }
+
+        parent::mount();
+    }
+
     protected function getFormActions(): array {
         return [
             $this->getCreateFormAction()

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublicStudentController;
 use App\Http\Controllers\PublicCollaboratorController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\CollaboratorRegistrationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,6 +34,11 @@ Route::post('/ref/{ref_id}/student', [PublicStudentController::class, 'submitFor
 // Upload bill/payment
 Route::get('/ref/{ref_id}/payment', [PublicStudentController::class, 'showPaymentForm'])->name('public.ref.payment.form');
 Route::post('/ref/{ref_id}/payment', [PublicStudentController::class, 'submitPayment'])->name('public.ref.payment.submit');
+
+// Đăng ký cộng tác viên mới (cần admin approve)
+Route::get('/collaborator/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('collaborator.register.form');
+Route::post('/collaborator/register', [CollaboratorRegistrationController::class, 'store'])->name('collaborator.register.submit');
+Route::post('/collaborator/check-status', [CollaboratorRegistrationController::class, 'checkStatus'])->name('collaborator.check.status');
 
 // Đăng ký tài khoản Cộng tác viên (public)
 Route::get('/ctv/register', [PublicCollaboratorController::class, 'showRegisterForm'])->name('public.ctv.register.form');
