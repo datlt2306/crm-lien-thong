@@ -29,19 +29,8 @@ class ProgramResource extends Resource {
 
     public static function form(Schema $schema): Schema {
         return $schema->components([
-            \Filament\Forms\Components\TextInput::make('code')
-                ->label('Mã hệ')
-                ->required()
-                ->unique(ignoreRecord: true)
-                ->live(onBlur: true)
-                ->afterStateUpdated(fn($state, callable $set) => $set('code', strtoupper($state))),
             \Filament\Forms\Components\TextInput::make('name')
                 ->label('Tên hệ')
-                ->required(),
-            \Filament\Forms\Components\TextInput::make('direct_commission_amount')
-                ->label('Hoa hồng CTV1 mặc định (VND)')
-                ->numeric()
-                ->minValue(0)
                 ->required(),
             \Filament\Forms\Components\Toggle::make('is_active')
                 ->label('Kích hoạt')
@@ -62,18 +51,10 @@ class ProgramResource extends Resource {
 
     public static function table(Table $table): Table {
         return $table->columns([
-            \Filament\Tables\Columns\TextColumn::make('code')
-                ->label('Mã')
-                ->sortable()
-                ->searchable(),
             \Filament\Tables\Columns\TextColumn::make('name')
                 ->label('Tên hệ')
                 ->sortable()
                 ->searchable(),
-            \Filament\Tables\Columns\TextColumn::make('direct_commission_amount')
-                ->label('Hoa hồng mặc định')
-                ->money('VND')
-                ->sortable(),
             \Filament\Tables\Columns\BadgeColumn::make('is_active')
                 ->label('Trạng thái')
                 ->formatStateUsing(fn($state) => $state ? 'Kích hoạt' : 'Vô hiệu')

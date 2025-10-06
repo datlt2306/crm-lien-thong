@@ -241,10 +241,18 @@ class PublicStudentController extends Controller {
             $selectedMajorName = Major::where('id', $validated['major_id'])->value('name');
         }
         $selectedProgramName = null;
-        $selectedProgramCode = null;
+        $selectedProgramType = null;
         if (!empty($validated['program_id'])) {
-            $selectedProgramName = Program::where('id', $validated['program_id'])->value('name');
-            $selectedProgramCode = Program::where('id', $validated['program_id'])->value('code');
+            $program = Program::find($validated['program_id']);
+            if ($program) {
+                $selectedProgramName = $program->name;
+                // Map tên hệ đào tạo sang mã enum
+                $selectedProgramType = match (strtolower($program->name)) {
+                    'chính quy', 'hệ chính quy' => 'REGULAR',
+                    'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
+                    default => 'REGULAR' // Default fallback
+                };
+            }
         }
 
         $notes = [];
@@ -264,7 +272,7 @@ class PublicStudentController extends Controller {
 
             'target_university' => $selectedOrg?->name,
             'major' => $selectedMajorName,
-            'program_type' => $selectedProgramCode,
+            'program_type' => $selectedProgramType,
             'intake_month' => $validated['intake_month'] ?? null,
             'source' => 'ref',
             'status' => 'new',
@@ -283,7 +291,7 @@ class PublicStudentController extends Controller {
                 'organization_id' => $student->organization_id,
                 'primary_collaborator_id' => $primaryCollaboratorId,
                 'sub_collaborator_id' => $subCollaboratorId,
-                'program_type' => $selectedProgramCode ?? 'REGULAR',
+                'program_type' => $selectedProgramType ?? 'REGULAR',
                 'amount' => 0,
                 'status' => \App\Models\Payment::STATUS_NOT_PAID,
             ]
@@ -326,9 +334,16 @@ class PublicStudentController extends Controller {
         $validated = $request->validate([
             'phone' => 'required|string|max:20',
             'amount' => 'required|numeric|min:1000',
-            'program_type' => 'required|in:REGULAR,PART_TIME',
+            'program_type' => 'required|string',
             'bill' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ]);
+
+        // Map program_type từ tên tiếng Việt sang mã enum
+        $validated['program_type'] = match (strtolower($validated['program_type'])) {
+            'chính quy', 'hệ chính quy' => 'REGULAR',
+            'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
+            default => 'REGULAR' // Default fallback
+        };
 
         // Tìm student theo số điện thoại và collaborator hiện tại
         $student = Student::where('phone', $validated['phone'])
@@ -358,8 +373,7 @@ class PublicStudentController extends Controller {
             'status' => 'SUBMITTED',
         ]);
 
-        // Giảm quota của ngành khi nộp tiền thành công
-        $this->quotaService->decreaseQuotaOnPaymentSubmission($payment);
+        // Quota sẽ được trừ khi payment được verify (trong PaymentObserver)
 
         return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ chủ đơn vị xác nhận.');
     }
