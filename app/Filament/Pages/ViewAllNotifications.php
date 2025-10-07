@@ -12,7 +12,8 @@ class ViewAllNotifications extends Page {
     protected string $view = 'filament.pages.view-all-notifications';
     protected static ?string $title = 'Tất cả thông báo';
     protected static ?string $navigationLabel = 'Thông báo';
-    protected static ?int $navigationSort = 100;
+    protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
+    protected static ?int $navigationSort = 5;
 
     public function getHeaderActions(): array {
         return [

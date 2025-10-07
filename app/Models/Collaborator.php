@@ -125,7 +125,7 @@ class Collaborator extends Model {
             if (empty($model->organization_id)) {
                 $user = \Illuminate\Support\Facades\Auth::user();
                 if ($user && $user->role !== 'super_admin') {
-                    $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+                    $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
                     if ($org) {
                         $model->organization_id = $org->id;
                     }

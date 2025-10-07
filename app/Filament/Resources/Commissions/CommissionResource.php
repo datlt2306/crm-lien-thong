@@ -20,8 +20,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CommissionResource extends Resource {
     protected static ?string $model = Commission::class;
-    protected static string|\UnitEnum|null $navigationGroup = 'Thanh toán & Hoa hồng';
-    protected static ?string $navigationLabel = 'Hoa hồng';
+    protected static string|\UnitEnum|null $navigationGroup = 'Tài chính';
+    protected static ?string $navigationLabel = 'Hoa hồng & Đối soát';
     protected static ?int $navigationSort = 2;
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
 
@@ -156,7 +156,7 @@ class CommissionResource extends Resource {
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return 'Đã nhận tiền thành công';
                         }
-                        // Với organization_owner: khi CTV cấp 1 đã xác nhận đã nhận (RECEIVED_CONFIRMED)
+                        // Với chủ đơn vị: khi CTV cấp 1 đã xác nhận đã nhận (RECEIVED_CONFIRMED)
                         // hiển thị "Đã chuyển thành công" để phản ánh trạng thái từ phía đơn vị
                         if (
                             $user->role === 'organization_owner'
@@ -257,7 +257,7 @@ class CommissionResource extends Resource {
                         $student = $commission?->student;
                         if (!$student) return [];
                         return [
-                            'title' => 'SV hiện chưa được organization_owner xác nhận nhập học (VHVL). Sau khi SV nhập học, bạn có thể chuyển cho CTV2.',
+                            'title' => 'SV hiện chưa được chủ đơn vị xác nhận nhập học (VHVL). Sau khi SV nhập học, bạn có thể chuyển cho CTV2.',
                         ];
                     })
                     ->visible(function ($record) use ($user) {
@@ -464,7 +464,7 @@ class CommissionResource extends Resource {
                     ->label('Đã thanh toán lúc')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho organization_owner và super admin
+                    ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho chủ đơn vị và super admin
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
@@ -547,7 +547,7 @@ class CommissionResource extends Resource {
                     ->color('info')
                     ->requiresConfirmation()
                     ->modalHeading('Xác nhận đã nhận tiền')
-                    ->modalDescription('Xác nhận đã nhận được tiền hoa hồng từ organization_owner.')
+                    ->modalDescription('Xác nhận đã nhận được tiền hoa hồng từ chủ đơn vị.')
                     ->modalSubmitActionLabel('Xác nhận đã nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
@@ -607,7 +607,7 @@ class CommissionResource extends Resource {
                         if ($downlineItem && $downlineItem->status === \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return false;
                         }
-                        // Với hệ VHVL/PART_TIME: chỉ hiển thị khi SV đã được organization_owner xác nhận nhập học
+                        // Với hệ VHVL/PART_TIME: chỉ hiển thị khi SV đã được chủ đơn vị xác nhận nhập học
                         $commission = $record->commission;
                         $payment = $commission?->payment;
                         $student = $commission?->student;

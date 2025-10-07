@@ -105,8 +105,8 @@ class NotificationService {
         }
 
         // Add organization owner
-        if ($payment->organization && $payment->organization->owner) {
-            $users[] = $payment->organization->owner;
+        if ($payment->organization && $payment->organization->organization_owner) {
+            $users[] = $payment->organization->organization_owner;
         }
 
         // Add super admins
@@ -139,8 +139,8 @@ class NotificationService {
         // Add organization owner if specified
         if ($organizationId) {
             $organization = \App\Models\Organization::find($organizationId);
-            if ($organization && $organization->owner) {
-                $users[] = $organization->owner;
+            if ($organization && $organization->organization_owner) {
+                $users[] = $organization->organization_owner;
             }
         }
 

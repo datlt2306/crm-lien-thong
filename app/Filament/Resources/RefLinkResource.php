@@ -17,7 +17,7 @@ class RefLinkResource extends Resource {
 
     protected static ?string $pluralModelLabel = 'Link giới thiệu';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Thanh toán & Hoa hồng';
+    protected static string|\UnitEnum|null $navigationGroup = 'Cộng tác viên';
     protected static ?int $navigationSort = 4;
 
     public static function shouldRegisterNavigation(): bool {

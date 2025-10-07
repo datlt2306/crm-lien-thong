@@ -74,8 +74,8 @@ class CollaboratorSeeder extends Seeder {
             $collaborator = Collaborator::create($collaboratorData);
 
             // Cập nhật organization owner_id nếu chưa có
-            if (!$organization->owner_id) {
-                $organization->update(['owner_id' => $user->id]);
+            if (!$organization->organization_owner_id) {
+                $organization->update(['organization_owner_id' => $user->id]);
             }
         }
     }

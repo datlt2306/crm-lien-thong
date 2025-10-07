@@ -22,10 +22,10 @@ class OrganizationResource extends Resource {
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý dữ liệu';
+    protected static string|\UnitEnum|null $navigationGroup = 'Tổ chức';
 
     protected static ?string $navigationLabel = 'Đơn vị';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 1;
 
     public static function getNavigationUrl(): string {
         $user = Auth::user();

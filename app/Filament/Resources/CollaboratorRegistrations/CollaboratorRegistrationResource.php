@@ -19,13 +19,13 @@ class CollaboratorRegistrationResource extends Resource {
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserPlus;
 
-    protected static ?string $navigationLabel = 'Đăng ký CTV';
+    protected static ?string $navigationLabel = 'Mời/Đăng ký CTV';
+    protected static string|\UnitEnum|null $navigationGroup = 'Cộng tác viên';
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $modelLabel = 'Đăng ký Cộng tác viên';
 
     protected static ?string $pluralModelLabel = 'Đăng ký Cộng tác viên';
-
-    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema {
         return CollaboratorRegistrationForm::configure($schema);

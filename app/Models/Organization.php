@@ -11,7 +11,7 @@ class Organization extends Model {
         'name',
         'code',
         'status',
-        'owner_id',
+        'organization_owner_id',
     ];
 
     /**
@@ -31,8 +31,8 @@ class Organization extends Model {
     /**
      * Quan hệ: Chủ tổ chức (User)
      */
-    public function owner() {
-        return $this->belongsTo(User::class, 'owner_id');
+    public function organization_owner() {
+        return $this->belongsTo(User::class, 'organization_owner_id');
     }
 
     public function majors() {

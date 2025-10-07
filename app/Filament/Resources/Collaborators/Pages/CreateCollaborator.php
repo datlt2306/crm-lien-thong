@@ -18,7 +18,7 @@ class CreateCollaborator extends CreateRecord {
             // Nếu là super_admin, cho phép chọn organization_id và upline_id (không làm gì)
         } else {
             // Nếu là chủ tổ chức hoặc CTV, tự động gán organization_id và upline_id
-            $org = Organization::where('owner_id', $user->id)->first();
+            $org = Organization::where('organization_owner_id', $user->id)->first();
             if ($org) {
                 $data['organization_id'] = $org->id;
             } else {
@@ -46,11 +46,11 @@ class CreateCollaborator extends CreateRecord {
             // Gán role 'ctv' cho collaborator
             $userAccount->assignRole('ctv');
 
-            // Cập nhật organization owner_id nếu chưa có
+            // Cập nhật organization organization_owner_id nếu chưa có
             if (isset($data['organization_id'])) {
                 $org = Organization::find($data['organization_id']);
-                if ($org && !$org->owner_id) {
-                    $org->update(['owner_id' => $userAccount->id]);
+                if ($org && !$org->organization_owner_id) {
+                    $org->update(['organization_owner_id' => $userAccount->id]);
                 }
             }
         }

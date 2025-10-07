@@ -18,7 +18,7 @@ class OrganizationFactory extends Factory {
             'name' => $this->faker->company(),
             'code' => $this->faker->unique()->regexify('[A-Z]{3}[0-9]{3}'),
             'status' => 'active',
-            'owner_id' => null,
+            'organization_owner_id' => null,
         ];
     }
 }

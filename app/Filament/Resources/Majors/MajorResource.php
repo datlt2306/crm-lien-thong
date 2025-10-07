@@ -18,7 +18,7 @@ class MajorResource extends Resource {
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquaresPlus;
     protected static ?string $navigationLabel = 'Ngành học';
-    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý dữ liệu';
+    protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 5;
 
     public static function shouldRegisterNavigation(): bool {

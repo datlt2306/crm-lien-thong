@@ -29,11 +29,11 @@ class CreateOrganization extends CreateRecord {
         }
         // Tách training_rows ra để sync pivot sau khi tạo record
         $this->pendingTrainingRows = Arr::pull($data, 'training_rows', []);
-        // Nếu có chọn owner_id có sẵn, sử dụng luôn
-        if (!empty($data['owner_id'])) {
+        // Nếu có chọn organization_owner_id có sẵn, sử dụng luôn
+        if (!empty($data['organization_owner_id'])) {
             // Không cần làm gì thêm, chỉ cần loại bỏ các field không cần thiết
         }
-        // Nếu không có owner_id nhưng có email, tạo user mới
+        // Nếu không có organization_owner_id nhưng có email, tạo user mới
         elseif (!empty($data['owner_email'])) {
             $password = !empty($data['owner_password']) ? $data['owner_password'] : '123456';
 
@@ -45,12 +45,12 @@ class CreateOrganization extends CreateRecord {
                 'email_verified_at' => now(),
             ]);
 
-            // Gán owner_id cho organization
-            $data['owner_id'] = $userAccount->id;
+            // Gán organization_owner_id cho organization
+            $data['organization_owner_id'] = $userAccount->id;
         }
         // Nếu không có cả hai, hiển thị validation error
         else {
-            $this->addError('owner_id', '❌ Bắt buộc phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho organization_owner');
+            $this->addError('organization_owner_id', '❌ Bắt buộc phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho chủ đơn vị');
             $this->halt();
         }
 
@@ -101,11 +101,11 @@ class CreateOrganization extends CreateRecord {
                 }
             }
 
-            $ownerId = $state['owner_id'] ?? null;
+            $ownerId = $state['organization_owner_id'] ?? null;
             $this->record = \App\Models\Organization::create([
                 'name' => $name,
                 'code' => $code ?: ('draft-' . uniqid()),
-                'owner_id' => $ownerId,
+                'organization_owner_id' => $ownerId,
                 'status' => 'inactive',
             ]);
             Log::info('ORG_CREATE::draftCreated', ['org_id' => $this->record->id]);
@@ -118,8 +118,8 @@ class CreateOrganization extends CreateRecord {
             if (!empty($state['code'])) {
                 $dataUpdate['code'] = $state['code'];
             }
-            if (!empty($state['owner_id'])) {
-                $dataUpdate['owner_id'] = $state['owner_id'];
+            if (!empty($state['organization_owner_id'])) {
+                $dataUpdate['organization_owner_id'] = $state['organization_owner_id'];
             }
             if (!empty($dataUpdate)) {
                 $this->record->update($dataUpdate);

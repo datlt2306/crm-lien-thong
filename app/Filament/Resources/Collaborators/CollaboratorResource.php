@@ -24,7 +24,7 @@ use App\Models\User;
 class CollaboratorResource extends Resource {
     protected static ?string $model = Collaborator::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý dữ liệu';
+    protected static string|\UnitEnum|null $navigationGroup = 'Cộng tác viên';
     protected static ?string $navigationLabel = 'Cộng tác viên';
     protected static ?int $navigationSort = 1;
 

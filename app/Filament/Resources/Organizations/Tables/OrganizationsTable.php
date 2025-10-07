@@ -19,7 +19,7 @@ class OrganizationsTable {
                 // TextColumn::make('code')
                 //     ->label('Mã đơn vị')
                 //     ->searchable(),
-                TextColumn::make('owner.name')
+                TextColumn::make('organization_owner.name')
                     ->label('Chủ đơn vị')
                     ->searchable()
                     ->sortable(),

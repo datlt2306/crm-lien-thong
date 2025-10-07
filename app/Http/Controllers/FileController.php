@@ -29,7 +29,7 @@ class FileController extends Controller {
 
         // Chủ đơn vị có thể xem payment của tổ chức mình
         if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_owner_id', $user->id)->first();
+            $org = Organization::where('organization_organization_owner_id', $user->id)->first();
             if ($org && $payment->organization_id === $org->id) {
                 return $this->serveFile($payment->bill_path);
             }
@@ -70,7 +70,7 @@ class FileController extends Controller {
 
         // Chủ đơn vị có thể xem payment của tổ chức mình
         if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_owner_id', $user->id)->first();
+            $org = Organization::where('organization_organization_owner_id', $user->id)->first();
             if ($org && $payment->organization_id === $org->id) {
                 return $this->serveFile($payment->receipt_path);
             }
@@ -97,7 +97,7 @@ class FileController extends Controller {
 
         // Chủ đơn vị có thể xem commission bill của tổ chức mình
         if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_owner_id', $user->id)->first();
+            $org = Organization::where('organization_organization_owner_id', $user->id)->first();
             if ($org && $commissionItem->recipient->organization_id === $org->id) {
                 return $this->serveFile($commissionItem->payment_bill_path);
             }

@@ -26,7 +26,7 @@ class WalletResource extends Resource {
 
     protected static ?string $pluralModelLabel = 'Ví tiền';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Thanh toán & Hoa hồng';
+    protected static string|\UnitEnum|null $navigationGroup = 'Cộng tác viên';
     protected static ?int $navigationSort = 3;
 
     public static function shouldRegisterNavigation(): bool {

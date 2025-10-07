@@ -29,7 +29,7 @@ class CommissionItem extends Model {
     public const STATUS_PAYABLE = 'payable';                    // Payable → đến hạn chi, CTV có thể nhận
     public const STATUS_PAID = 'paid';                          // Paid → đã chi trả (ghi nhận bằng tay, đính bill)
     public const STATUS_CANCELLED = 'cancelled';                // Cancelled → huỷ (VD: SV không nhập học)
-    public const STATUS_PAYMENT_CONFIRMED = 'payment_confirmed'; // Payment confirmed → organization_owner đã xác nhận thanh toán + upload bill
+    public const STATUS_PAYMENT_CONFIRMED = 'payment_confirmed'; // Payment confirmed → chủ đơn vị đã xác nhận thanh toán + upload bill
     public const STATUS_RECEIVED_CONFIRMED = 'received_confirmed'; // Received confirmed → CTV đã xác nhận nhận tiền
 
     public static function getStatusOptions(): array {
@@ -111,7 +111,7 @@ class CommissionItem extends Model {
     }
 
     /**
-     * Đánh dấu organization_owner đã xác nhận thanh toán
+     * Đánh dấu chủ đơn vị đã xác nhận thanh toán
      */
     public function markAsPaymentConfirmed(string $billPath, int $userId): void {
         $this->update([

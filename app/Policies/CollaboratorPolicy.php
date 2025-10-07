@@ -19,7 +19,7 @@ class CollaboratorPolicy {
      */
     public function view($user, $model): bool {
         if ($user->role === 'super_admin') return true;
-        $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+        $org = \App\Models\Organization::where('organization_organization_owner_id', $user->id)->first();
         return $user->role === 'organization_owner' && $org && $model->organization_id === $org->id;
     }
 
@@ -35,7 +35,7 @@ class CollaboratorPolicy {
      */
     public function update($user, $model): bool {
         if ($user->role === 'super_admin') return true;
-        $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+        $org = \App\Models\Organization::where('organization_organization_owner_id', $user->id)->first();
         return $user->role === 'organization_owner' && $org && $model->organization_id === $org->id;
     }
 
@@ -44,7 +44,7 @@ class CollaboratorPolicy {
      */
     public function delete($user, $model): bool {
         if ($user->role === 'super_admin') return true;
-        $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+        $org = \App\Models\Organization::where('organization_organization_owner_id', $user->id)->first();
         return $user->role === 'organization_owner' && $org && $model->organization_id === $org->id;
     }
 
@@ -53,7 +53,7 @@ class CollaboratorPolicy {
      */
     public function restore($user, $model): bool {
         if ($user->role === 'super_admin') return true;
-        $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+        $org = \App\Models\Organization::where('organization_organization_owner_id', $user->id)->first();
         return $user->role === 'organization_owner' && $org && $model->organization_id === $org->id;
     }
 
@@ -62,7 +62,7 @@ class CollaboratorPolicy {
      */
     public function forceDelete($user, $model): bool {
         if ($user->role === 'super_admin') return true;
-        $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+        $org = \App\Models\Organization::where('organization_organization_owner_id', $user->id)->first();
         return $user->role === 'organization_owner' && $org && $model->organization_id === $org->id;
     }
 }

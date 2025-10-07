@@ -31,7 +31,7 @@ class OrganizationForm {
                             ->required(fn($context) => $context === 'create'),
                         // Ẩn các trường tạo tài khoản mới khi tạo mới đơn vị; chỉ hiển thị ở chế độ sửa
                         \Filament\Forms\Components\TextInput::make('organization_owner_email')
-                            ->label('Email organization_owner (nếu tạo mới)')
+                            ->label('Email chủ đơn vị (nếu tạo mới)')
                             ->email()
                             ->helperText('Chỉ điền nếu muốn tạo tài khoản mới (chỉ trong chỉnh sửa)')
                             ->visible(fn($get, $context) => $context === 'edit' && !$get('organization_owner_id')),

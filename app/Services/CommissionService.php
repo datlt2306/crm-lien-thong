@@ -129,7 +129,7 @@ class CommissionService {
             $trigger = 'PAYMENT_VERIFIED';
         }
 
-        // Với VHVL/PART_TIME: chỉ cho phép chuyển sau khi organization_owner xác nhận SV nhập học
+        // Với VHVL/PART_TIME: chỉ cho phép chuyển sau khi chủ đơn vị xác nhận SV nhập học
         // → ép trigger = student_enrolled và khởi tạo ở trạng thái pending
         if (in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
             $trigger = 'STUDENT_ENROLLED';

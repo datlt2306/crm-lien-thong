@@ -19,9 +19,9 @@ use Filament\Tables\Table;
 class UserResource extends Resource {
     protected static ?string $model = User::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý dữ liệu';
+    protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?string $navigationLabel = 'Người dùng';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 

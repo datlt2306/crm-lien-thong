@@ -12,7 +12,8 @@ class ViewAllMessages extends Page {
     protected string $view = 'filament.pages.view-all-messages';
     protected static ?string $title = 'Tất cả tin nhắn';
     protected static ?string $navigationLabel = 'Tin nhắn';
-    protected static ?int $navigationSort = 101;
+    protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
+    protected static ?int $navigationSort = 6;
 
     public function getHeaderActions(): array {
         return [
