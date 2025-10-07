@@ -56,7 +56,7 @@ class Dashboard extends BaseDashboard {
             ];
         }
 
-        if ($role === 'kế toán') {
+        if ($role === 'accountant') {
             return [
                 AccountantPendingReceipts::class,
                 AccountantFinancialSummary::class,

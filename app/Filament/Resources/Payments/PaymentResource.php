@@ -34,8 +34,8 @@ class PaymentResource extends Resource {
             return false;
         }
 
-        // Super admin, admin, chủ đơn vị và kế toán có thể xem payments
-        if (in_array($user->role, ['super_admin', 'admin', 'chủ đơn vị']) || self::isAccountant()) {
+        // Super admin, admin, organization_owner và accountant có thể xem payments
+        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner']) || self::isAccountant()) {
             return true;
         }
 
@@ -81,7 +81,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị']))
+                    ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin', 'organization_owner']))
                     ->formatStateUsing(function ($record) {
                         // Chủ đơn vị thấy CTV cấp 1 (không có upline)
                         $studentCtv = $record->student->collaborator;
@@ -312,7 +312,7 @@ class PaymentResource extends Resource {
                     ->visible(
                         fn(Payment $record): bool =>
                         $record->status === Payment::STATUS_SUBMITTED &&
-                            in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
+                            in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
                     )
                     ->action(function (Payment $record) {
                         $record->markAsVerified(\Illuminate\Support\Facades\Auth::id());
@@ -493,8 +493,8 @@ class PaymentResource extends Resource {
         }
 
         // Chủ đơn vị thấy payments của tổ chức mình
-        if ($user->role === 'chủ đơn vị') {
-            $org = Organization::where('owner_id', $user->id)->first();
+        if ($user->role === 'organization_owner') {
+            $org = Organization::where('organization_owner_id', $user->id)->first();
             if ($org) {
                 return $query
                     ->where('organization_id', $org->id)
@@ -606,12 +606,12 @@ class PaymentResource extends Resource {
     }
 
     /**
-     * Kiểm tra user hiện tại có Spatie role 'kế toán' không
+     * Kiểm tra user hiện tại có Spatie role 'accountant' không
      */
     private static function isAccountant(): bool {
         $user = Auth::user();
         if (!$user) return false;
         /** @var User $user */
-        return method_exists($user, 'hasRole') && $user->hasRole('kế toán');
+        return method_exists($user, 'hasRole') && $user->hasRole('accountant');
     }
 }

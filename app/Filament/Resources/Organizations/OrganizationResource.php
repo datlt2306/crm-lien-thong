@@ -31,9 +31,9 @@ class OrganizationResource extends Resource {
         $user = Auth::user();
 
         // Chủ đơn vị sẽ đi thẳng đến trang edit đơn vị của mình
-        if ($user?->role === 'chủ đơn vị') {
-            // Tìm đơn vị của chủ đơn vị
-            $organization = \App\Models\Organization::where('owner_id', $user->id)->first();
+        if ($user?->role === 'organization_owner') {
+            // Tìm đơn vị của organization_owner
+            $organization = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
             if ($organization) {
                 return static::getUrl('my-organization', ['record' => $organization->id]);
             }
@@ -50,8 +50,8 @@ class OrganizationResource extends Resource {
             return false;
         }
 
-        // Cả super admin và chủ đơn vị đều thấy menu "Đơn vị"
-        return in_array($user->role, ['super_admin', 'chủ đơn vị']);
+        // Cả super admin và organization_owner đều thấy menu "Đơn vị"
+        return in_array($user->role, ['super_admin', 'organization_owner']);
     }
 
     protected static ?string $recordTitleAttribute = 'name';
@@ -69,11 +69,11 @@ class OrganizationResource extends Resource {
     }
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
-        $query = parent::getEloquentQuery()->with('owner');
+        $query = parent::getEloquentQuery()->with('organization_owner');
 
-        // Nếu là chủ đơn vị, chỉ hiển thị đơn vị của họ
-        if (\Illuminate\Support\Facades\Auth::user()?->role === 'chủ đơn vị') {
-            $query->where('owner_id', \Illuminate\Support\Facades\Auth::id());
+        // Nếu là organization_owner, chỉ hiển thị đơn vị của họ
+        if (\Illuminate\Support\Facades\Auth::user()?->role === 'organization_owner') {
+            $query->where('organization_owner_id', \Illuminate\Support\Facades\Auth::id());
         }
 
         return $query;

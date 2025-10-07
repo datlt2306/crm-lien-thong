@@ -24,7 +24,7 @@ class ProgramResource extends Resource {
     public static function shouldRegisterNavigation(): bool {
         $user = Auth::user();
         if (!$user) return false;
-        return in_array($user->role, ['super_admin', 'chủ đơn vị']);
+        return in_array($user->role, ['super_admin', 'organization_owner']);
     }
 
     public static function form(Schema $schema): Schema {

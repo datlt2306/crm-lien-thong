@@ -11,7 +11,7 @@ class OrganizationPolicy {
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool {
-        return in_array($user->role, ['super_admin', 'chủ đơn vị']);
+        return in_array($user->role, ['super_admin', 'organization_owner']);
     }
 
     /**
@@ -24,8 +24,8 @@ class OrganizationPolicy {
         }
 
         // Chủ đơn vị chỉ có thể xem đơn vị của mình
-        if ($user->role === 'chủ đơn vị') {
-            return $organization->owner_id === $user->id;
+        if ($user->role === 'organization_owner') {
+            return $organization->organization_owner_id === $user->id;
         }
 
         return false;
@@ -48,8 +48,8 @@ class OrganizationPolicy {
         }
 
         // Chủ đơn vị chỉ có thể cập nhật đơn vị của mình
-        if ($user->role === 'chủ đơn vị') {
-            return $organization->owner_id === $user->id;
+        if ($user->role === 'organization_owner') {
+            return $organization->organization_owner_id === $user->id;
         }
 
         return false;

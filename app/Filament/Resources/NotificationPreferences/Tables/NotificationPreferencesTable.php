@@ -27,16 +27,16 @@ class NotificationPreferencesTable {
                     ->label('Vai trò')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'super_admin' => 'Super Admin',
-                        'chủ đơn vị' => 'Chủ đơn vị',
+                        'organization_owner' => 'Chủ đơn vị',
                         'ctv' => 'CTV',
-                        'kế toán' => 'Kế toán',
+                        'accountant' => 'Kế toán',
                         default => $state,
                     })
                     ->colors([
                         'danger' => 'super_admin',
-                        'warning' => 'chủ đơn vị',
+                        'warning' => 'organization_owner',
                         'success' => 'ctv',
-                        'info' => 'kế toán',
+                        'info' => 'accountant',
                     ]),
 
                 IconColumn::make('email_payment_verified')
@@ -62,9 +62,9 @@ class NotificationPreferencesTable {
                     ->relationship('user', 'role')
                     ->options([
                         'super_admin' => 'Super Admin',
-                        'chủ đơn vị' => 'Chủ đơn vị',
+                        'organization_owner' => 'Chủ đơn vị',
                         'ctv' => 'CTV',
-                        'kế toán' => 'Kế toán',
+                        'accountant' => 'Kế toán',
                     ]),
             ])
             ->recordActions([

@@ -116,7 +116,7 @@ class NotificationService {
         }
 
         // Add accountants
-        $accountants = User::where('role', 'kế toán')->get();
+        $accountants = User::where('role', 'accountant')->get();
         foreach ($accountants as $accountant) {
             $users[] = $accountant;
         }

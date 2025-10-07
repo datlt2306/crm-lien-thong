@@ -41,7 +41,7 @@ class CreateOrganization extends CreateRecord {
                 'name' => $data['name'] . ' - Chủ đơn vị',
                 'email' => $data['owner_email'],
                 'password' => Hash::make($password),
-                'role' => 'chủ đơn vị',
+                'role' => 'organization_owner',
                 'email_verified_at' => now(),
             ]);
 
@@ -50,7 +50,7 @@ class CreateOrganization extends CreateRecord {
         }
         // Nếu không có cả hai, hiển thị validation error
         else {
-            $this->addError('owner_id', '❌ Bắt buộc phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho chủ đơn vị');
+            $this->addError('owner_id', '❌ Bắt buộc phải chọn tài khoản có sẵn hoặc tạo tài khoản mới cho organization_owner');
             $this->halt();
         }
 

@@ -69,8 +69,8 @@ class StudentResource extends Resource {
             }
 
             // Chủ đơn vị chỉ đếm học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
-            if ($user->role === 'chủ đơn vị') {
-                $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+            if ($user->role === 'organization_owner') {
+                $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
                 if ($org) {
                     return (string) Student::where('organization_id', $org->id)
                         ->whereHas('payment', function ($query) {
@@ -114,8 +114,8 @@ class StudentResource extends Resource {
         }
 
         // Chủ đơn vị chỉ thấy học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
-        if ($user->role === 'chủ đơn vị') {
-            $org = \App\Models\Organization::where('owner_id', $user->id)->first();
+        if ($user->role === 'organization_owner') {
+            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
             if ($org) {
                 return $query->where('organization_id', $org->id)
                     ->whereHas('payment', function ($paymentQuery) {

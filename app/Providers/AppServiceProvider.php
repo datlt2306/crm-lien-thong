@@ -38,8 +38,8 @@ class AppServiceProvider extends ServiceProvider {
 
         // Define Gates for permissions
         Gate::define('view_finance', function ($user) {
-            // Super admin và chủ đơn vị có thể xem finance
-            if (in_array($user->role, ['super_admin', 'chủ đơn vị'])) {
+            // Super admin và organization_owner có thể xem finance
+            if (in_array($user->role, ['super_admin', 'organization_owner'])) {
                 return true;
             }
 

@@ -11,8 +11,8 @@ class AccountantSeeder extends Seeder {
      * Run the database seeds.
      */
     public function run(): void {
-        // Đảm bảo role 'kế toán' tồn tại
-        $role = Role::firstOrCreate(['name' => 'kế toán']);
+        // Đảm bảo role 'accountant' tồn tại
+        $role = Role::firstOrCreate(['name' => 'accountant']);
 
         // Tạo hoặc lấy user kế toán
         $user = User::firstOrCreate(
@@ -20,13 +20,13 @@ class AccountantSeeder extends Seeder {
             [
                 'name' => 'Kế toán',
                 'password' => bcrypt('ketoan@gmail.com'),
-                // Cột enum role của users không có 'kế toán', dùng 'ctv' làm mặc định
+                // Cột enum role của users không có 'accountant', dùng 'ctv' làm mặc định
                 'role' => 'ctv',
             ]
         );
 
-        // Gán role spatie 'kế toán'
-        if (!$user->hasRole('kế toán')) {
+        // Gán role spatie 'accountant'
+        if (!$user->hasRole('accountant')) {
             $user->assignRole($role);
         }
     }

@@ -19,13 +19,13 @@ class EditMyOrganization extends EditRecord {
     public function mount(int | string $record): void {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        // Chỉ chủ đơn vị được truy cập
-        if ($user?->role !== 'chủ đơn vị') {
+        // Chỉ organization_owner được truy cập
+        if ($user?->role !== 'organization_owner') {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 
-        // Tìm đơn vị của chủ đơn vị
-        $organization = Organization::where('owner_id', $user->id)->first();
+        // Tìm đơn vị của organization_owner
+        $organization = Organization::where('organization_owner_id', $user->id)->first();
 
         if (!$organization) {
             abort(404, 'Không tìm thấy đơn vị của bạn.');
@@ -40,7 +40,7 @@ class EditMyOrganization extends EditRecord {
         $this->pendingTrainingRows = $data['training_rows'] ?? [];
 
         // Loại bỏ các field không cần thiết
-        unset($data['owner_id']); // Chủ đơn vị không được thay đổi owner
+        unset($data['organization_owner_id']); // Chủ đơn vị không được thay đổi organization_owner
 
         return $data;
     }

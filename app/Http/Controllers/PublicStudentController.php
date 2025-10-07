@@ -375,6 +375,6 @@ class PublicStudentController extends Controller {
 
         // Quota sẽ được trừ khi payment được verify (trong PaymentObserver)
 
-        return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ chủ đơn vị xác nhận.');
+        return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ organization_owner xác nhận.');
     }
 }

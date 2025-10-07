@@ -21,7 +21,7 @@ class ListOrganizations extends ListRecords {
         $user = Auth::user();
 
         // Chủ đơn vị không được truy cập danh sách đơn vị
-        if ($user?->role === 'chủ đơn vị') {
+        if ($user?->role === 'organization_owner') {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 

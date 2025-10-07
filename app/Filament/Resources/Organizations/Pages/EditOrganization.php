@@ -26,17 +26,17 @@ class EditOrganization extends EditRecord {
         $this->pendingTrainingRows = $data['training_rows'] ?? [];
 
         // Cập nhật mật khẩu nếu có
-        if (!empty($data['owner_email']) && !empty($data['owner_password'])) {
-            $user = User::where('email', $data['owner_email'])->first();
+        if (!empty($data['organization_owner_email']) && !empty($data['organization_owner_password'])) {
+            $user = User::where('email', $data['organization_owner_email'])->first();
             if ($user) {
                 $user->update([
-                    'password' => Hash::make($data['owner_password'])
+                    'password' => Hash::make($data['organization_owner_password'])
                 ]);
             }
         }
 
         // Loại bỏ password khỏi data trước khi lưu Organization
-        unset($data['owner_password'], $data['owner_password_confirmation']);
+        unset($data['organization_owner_password'], $data['organization_owner_password_confirmation']);
 
         return $data;
     }
@@ -213,11 +213,11 @@ class EditOrganization extends EditRecord {
         $user = \Illuminate\Support\Facades\Auth::user();
 
         // Kiểm tra quyền truy cập
-        if ($user?->role === 'chủ đơn vị' && $this->record->owner_id !== $user->id) {
+        if ($user?->role === 'organization_owner' && $this->record->organization_owner_id !== $user->id) {
             abort(403, 'Bạn chỉ có thể chỉnh sửa đơn vị của mình.');
         }
 
-        if (!in_array($user?->role, ['super_admin', 'chủ đơn vị'])) {
+        if (!in_array($user?->role, ['super_admin', 'organization_owner'])) {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
     }

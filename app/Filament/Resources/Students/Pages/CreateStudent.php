@@ -15,7 +15,7 @@ class CreateStudent extends CreateRecord {
     protected function mutateFormDataBeforeCreate(array $data): array {
         $user = Auth::user();
 
-        if ($user && $user->role === 'chủ đơn vị') {
+        if ($user && $user->role === 'organization_owner') {
             // Tìm collaborator của user hiện tại
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
@@ -50,6 +50,6 @@ class CreateStudent extends CreateRecord {
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'chủ đơn vị']);
+        return $user && in_array($user->role, ['super_admin', 'organization_owner']);
     }
 }

@@ -16,8 +16,8 @@ class ListCommissions extends ListRecords {
             return false;
         }
 
-        // Super admin và chủ đơn vị có thể xem commissions
-        if (in_array($user->role, ['super_admin', 'chủ đơn vị'])) {
+        // Super admin và organization_owner có thể xem commissions
+        if (in_array($user->role, ['super_admin', 'organization_owner'])) {
             return true;
         }
 

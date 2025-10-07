@@ -28,8 +28,8 @@ class FileController extends Controller {
         }
 
         // Chủ đơn vị có thể xem payment của tổ chức mình
-        if ($user->role === 'chủ đơn vị') {
-            $org = Organization::where('owner_id', $user->id)->first();
+        if ($user->role === 'organization_owner') {
+            $org = Organization::where('organization_owner_id', $user->id)->first();
             if ($org && $payment->organization_id === $org->id) {
                 return $this->serveFile($payment->bill_path);
             }
@@ -63,14 +63,14 @@ class FileController extends Controller {
             abort(403, 'Không có quyền truy cập');
         }
 
-        // Super admin và kế toán (Spatie role) có thể xem tất cả phiếu thu
-        if ($user->role === 'super_admin' || ($user->hasRole('kế toán') ?? false)) {
+        // Super admin và accountant (Spatie role) có thể xem tất cả phiếu thu
+        if ($user->role === 'super_admin' || ($user->hasRole('accountant') ?? false)) {
             return $this->serveFile($payment->receipt_path);
         }
 
         // Chủ đơn vị có thể xem payment của tổ chức mình
-        if ($user->role === 'chủ đơn vị') {
-            $org = Organization::where('owner_id', $user->id)->first();
+        if ($user->role === 'organization_owner') {
+            $org = Organization::where('organization_owner_id', $user->id)->first();
             if ($org && $payment->organization_id === $org->id) {
                 return $this->serveFile($payment->receipt_path);
             }
@@ -96,8 +96,8 @@ class FileController extends Controller {
         }
 
         // Chủ đơn vị có thể xem commission bill của tổ chức mình
-        if ($user->role === 'chủ đơn vị') {
-            $org = Organization::where('owner_id', $user->id)->first();
+        if ($user->role === 'organization_owner') {
+            $org = Organization::where('organization_owner_id', $user->id)->first();
             if ($org && $commissionItem->recipient->organization_id === $org->id) {
                 return $this->serveFile($commissionItem->payment_bill_path);
             }

@@ -16,8 +16,8 @@ class ListPayments extends ListRecords {
             return false;
         }
 
-        // Super admin, admin và chủ đơn vị có thể xem payments
-        if (in_array($user->role, ['super_admin', 'admin', 'chủ đơn vị'])) {
+        // Super admin, admin và organization_owner có thể xem payments
+        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner'])) {
             return true;
         }
 
@@ -27,7 +27,7 @@ class ListPayments extends ListRecords {
         }
 
         // Kế toán có quyền xem để xử lý phiếu thu
-        if ($user->role === 'kế toán') {
+        if ($user->role === 'accountant') {
             return true;
         }
 

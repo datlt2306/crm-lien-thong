@@ -25,9 +25,11 @@ class UserForm {
                     ->label('Vai trò')
                     ->options([
                         'super_admin' => 'Super Admin',
-                        'chủ đơn vị' => 'Chủ đơn vị',
+                        'organization_owner' => 'Chủ đơn vị',
                         'ctv' => 'Cộng tác viên',
-                        'kế toán' => 'Kế toán',
+                        'accountant' => 'Kế toán',
+                        'admissions' => 'Cán bộ tuyển sinh',
+                        'document' => 'Cán bộ hồ sơ',
                     ])
                     ->required()
                     ->default('ctv')

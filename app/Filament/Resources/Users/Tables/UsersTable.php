@@ -52,7 +52,7 @@ class UsersTable {
                     ->formatStateUsing(function ($state) {
                         return match ($state) {
                             'super_admin' => 'Super Admin',
-                            'chủ đơn vị' => 'Chủ đơn vị',
+                            'organization_owner' => 'Chủ đơn vị',
                             'ctv' => 'Cộng tác viên',
                             default => $state
                         };
@@ -61,7 +61,7 @@ class UsersTable {
                     ->color(function ($state) {
                         return match ($state) {
                             'super_admin' => 'danger',
-                            'chủ đơn vị' => 'warning',
+                            'organization_owner' => 'warning',
                             'ctv' => 'info',
                             default => 'gray'
                         };

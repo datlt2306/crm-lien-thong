@@ -35,7 +35,7 @@ class OptimizedDashboardLoader extends Widget {
                 "ctv:wallet:{$user->id}",
                 "ctv:students:{$user->id}"
             ];
-        } elseif ($role === 'kế toán') {
+        } elseif ($role === 'accountant') {
             $cacheKeys = [
                 'accountant:pending_receipts',
                 'accountant:financial_summary',

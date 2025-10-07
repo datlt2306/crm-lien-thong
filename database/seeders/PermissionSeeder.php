@@ -35,15 +35,17 @@ class PermissionSeeder extends Seeder {
 
         // Tạo roles nếu chưa có
         $superAdmin = Role::firstOrCreate(['name' => 'super_admin']);
-        $owner = Role::firstOrCreate(['name' => 'chủ đơn vị']);
+        $organizationOwner = Role::firstOrCreate(['name' => 'organization_owner']);
         $ctv = Role::firstOrCreate(['name' => 'ctv']);
-        $accountant = Role::firstOrCreate(['name' => 'kế toán']);
+        $accountant = Role::firstOrCreate(['name' => 'accountant']);
+        $admissions = Role::firstOrCreate(['name' => 'admissions']);
+        $document = Role::firstOrCreate(['name' => 'document']);
 
         // Gán permissions cho super_admin (tất cả permissions)
         $superAdmin->syncPermissions(Permission::all());
 
-        // Gán permissions cho chủ đơn vị
-        $owner->syncPermissions([
+        // Gán permissions cho organization_owner
+        $organizationOwner->syncPermissions([
             'view_commission',
             'manage_commission',
             'verify_payment',
@@ -62,8 +64,24 @@ class PermissionSeeder extends Seeder {
             'view_student'
         ]);
 
-        // Gán permissions cho kế toán
+        // Gán permissions cho accountant
         $accountant->syncPermissions([
+            'view_payment',
+            'upload_receipt',
+        ]);
+
+        // Gán permissions cho admissions
+        $admissions->syncPermissions([
+            'view_student',
+            'manage_student',
+            'view_collaborator',
+            'view_payment',
+        ]);
+
+        // Gán permissions cho document
+        $document->syncPermissions([
+            'view_student',
+            'manage_student',
             'view_payment',
             'upload_receipt',
         ]);

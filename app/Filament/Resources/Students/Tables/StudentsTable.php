@@ -123,7 +123,7 @@ class StudentsTable {
                     ->label('Xem chi tiết'),
                 EditAction::make()
                     ->label('Chỉnh sửa')
-                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
+                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner'])),
                 Action::make('mark_enrolled')
                     ->label('Xác nhận SV nhập học')
                     ->icon('heroicon-o-academic-cap')
@@ -137,7 +137,7 @@ class StudentsTable {
                         fn(Student $record): bool =>
                         $record->status !== Student::STATUS_ENROLLED &&
                             ($record->payment?->status === Payment::STATUS_VERIFIED) &&
-                            in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
+                            in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
                     )
                     ->action(function (Student $record) {
                         $record->update(['status' => Student::STATUS_ENROLLED]);
@@ -166,7 +166,7 @@ class StudentsTable {
                         fn(Student $record): bool =>
                         $record->status !== Student::STATUS_ENROLLED &&
                             ($record->payment?->status === Payment::STATUS_VERIFIED) &&
-                            in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])
+                            in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
                     )
                     ->action(function (Student $record) {
                         $record->update([
@@ -191,7 +191,7 @@ class StudentsTable {
                         ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Hành động này không thể hoàn tác.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'chủ đơn vị'])),
+                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner'])),
                 ]),
             ]);
     }

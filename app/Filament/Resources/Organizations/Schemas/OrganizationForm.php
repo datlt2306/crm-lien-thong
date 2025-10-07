@@ -22,41 +22,41 @@ class OrganizationForm {
                     ->columns(1)
                     ->visible(fn($context) => Auth::user()?->role === 'super_admin')
                     ->schema([
-                        \Filament\Forms\Components\Select::make('owner_id')
+                        \Filament\Forms\Components\Select::make('organization_owner_id')
                             ->label('Chọn tài khoản có sẵn')
-                            ->relationship('owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'chủ đơn vị']))
+                            ->relationship('organization_owner', 'name', fn($query) => $query->whereIn('role', ['super_admin', 'organization_owner']))
                             ->searchable()
                             ->preload()
                             ->placeholder('Chọn tài khoản có sẵn...')
                             ->required(fn($context) => $context === 'create'),
                         // Ẩn các trường tạo tài khoản mới khi tạo mới đơn vị; chỉ hiển thị ở chế độ sửa
-                        \Filament\Forms\Components\TextInput::make('owner_email')
-                            ->label('Email chủ đơn vị (nếu tạo mới)')
+                        \Filament\Forms\Components\TextInput::make('organization_owner_email')
+                            ->label('Email organization_owner (nếu tạo mới)')
                             ->email()
                             ->helperText('Chỉ điền nếu muốn tạo tài khoản mới (chỉ trong chỉnh sửa)')
-                            ->visible(fn($get, $context) => $context === 'edit' && !$get('owner_id')),
-                        \Filament\Forms\Components\TextInput::make('owner_password')
+                            ->visible(fn($get, $context) => $context === 'edit' && !$get('organization_owner_id')),
+                        \Filament\Forms\Components\TextInput::make('organization_owner_password')
                             ->label('Mật khẩu (nếu tạo mới)')
                             ->password()
                             ->default('123456')
                             ->helperText('Mặc định: 123456')
                             ->minLength(6)
                             ->confirmed()
-                            ->visible(fn($get, $context) => $context === 'edit' && !$get('owner_id')),
-                        \Filament\Forms\Components\TextInput::make('owner_password_confirmation')
+                            ->visible(fn($get, $context) => $context === 'edit' && !$get('organization_owner_id')),
+                        \Filament\Forms\Components\TextInput::make('organization_owner_password_confirmation')
                             ->label('Xác nhận mật khẩu')
                             ->password()
                             ->default('123456')
-                            ->same('owner_password')
-                            ->visible(fn($get, $context) => $context === 'edit' && !$get('owner_id')),
+                            ->same('organization_owner_password')
+                            ->visible(fn($get, $context) => $context === 'edit' && !$get('organization_owner_id')),
                     ]),
                 Section::make('Đào tạo')
                     ->description('Chọn ngành, chỉ tiêu và hệ đào tạo')
                     ->columns(1)
                     ->visible(
                         fn($context) =>
-                        // Chỉ chủ đơn vị được phép cấu hình phần đào tạo
-                        $context === 'edit' && Auth::user()?->role === 'chủ đơn vị'
+                        // Chỉ organization_owner được phép cấu hình phần đào tạo
+                        $context === 'edit' && Auth::user()?->role === 'organization_owner'
                     )
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('training_rows')
