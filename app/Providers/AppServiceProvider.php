@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Payment;
 use App\Observers\PaymentObserver;
+use App\Observers\UserObserver;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -87,5 +88,8 @@ class AppServiceProvider extends ServiceProvider {
 
         // Bust cache khi Payment thay đổi
         Payment::observe(PaymentObserver::class);
+
+        // Tự động tạo mối quan hệ khi User thay đổi
+        User::observe(UserObserver::class);
     }
 }

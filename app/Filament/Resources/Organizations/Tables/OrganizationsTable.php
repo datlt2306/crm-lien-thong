@@ -22,7 +22,10 @@ class OrganizationsTable {
                 TextColumn::make('organization_owner.name')
                     ->label('Chủ đơn vị')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->placeholder('Chưa có chủ đơn vị')
+                    ->badge()
+                    ->color(fn($state) => $state ? 'success' : 'warning'),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
