@@ -68,9 +68,21 @@ class UserObserver {
             $organization = $this->getUserOrganization($user);
 
             if ($organization) {
+                // Xử lý phone NULL - tạo phone từ email hoặc sử dụng default
+                $phone = $user->phone;
+                if (empty($phone)) {
+                    // Tạo phone từ email hoặc sử dụng ID
+                    $phone = '0000000000'; // Default phone
+                    if (!empty($user->email)) {
+                        $phone = '000' . substr(preg_replace('/[^0-9]/', '', $user->email), 0, 7);
+                    }
+                }
+
                 // Kiểm tra phone trùng lặp
-                $existingPhone = Collaborator::where('phone', $user->phone)->first();
-                $phone = $existingPhone ? ($user->phone . '_' . time()) : $user->phone;
+                $existingPhone = Collaborator::where('phone', $phone)->first();
+                if ($existingPhone) {
+                    $phone = $phone . '_' . time();
+                }
 
                 Collaborator::create([
                     'full_name' => $user->name,

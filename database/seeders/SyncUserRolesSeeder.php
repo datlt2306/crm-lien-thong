@@ -36,10 +36,19 @@ class SyncUserRolesSeeder extends Seeder {
             $existingCollaborator = Collaborator::where('email', $user->email)->first();
 
             if (!$existingCollaborator) {
+                // Xử lý phone NULL
+                $phone = $user->phone;
+                if (empty($phone)) {
+                    $phone = '0000000000'; // Default phone
+                    if (!empty($user->email)) {
+                        $phone = '000' . substr(preg_replace('/[^0-9]/', '', $user->email), 0, 7);
+                    }
+                }
+
                 $collaborator = Collaborator::create([
                     'full_name' => $user->name,
                     'email' => $user->email,
-                    'phone' => $user->phone,
+                    'phone' => $phone,
                     'organization_id' => $organization?->id,
                     'upline_id' => null, // CTV cấp 1
                     'status' => 'active'

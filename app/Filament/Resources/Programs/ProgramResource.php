@@ -19,7 +19,7 @@ class ProgramResource extends Resource {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
     protected static ?string $navigationLabel = 'Hệ liên thông';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     public static function shouldRegisterNavigation(): bool {
         $user = Auth::user();

@@ -14,6 +14,8 @@ class Student extends Model {
         'email',
         'organization_id',
         'collaborator_id',
+        'major_id',
+        'intake_id',
         'target_university',
         'major',
         'intake_month',
@@ -89,6 +91,14 @@ class Student extends Model {
 
     public function collaborator() {
         return $this->belongsTo(Collaborator::class, 'collaborator_id');
+    }
+
+    public function major() {
+        return $this->belongsTo(Major::class, 'major_id');
+    }
+
+    public function intake() {
+        return $this->belongsTo(Intake::class, 'intake_id');
     }
 
     public function payment() {

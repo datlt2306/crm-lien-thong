@@ -27,6 +27,22 @@ class CollaboratorRegistrationResource extends Resource {
 
     protected static ?string $pluralModelLabel = 'Đăng ký Cộng tác viên';
 
+    public static function shouldRegisterNavigation(): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        // Super admin và organization_owner được phép xem
+        if (in_array($user->role, ['super_admin', 'organization_owner'])) {
+            return true;
+        }
+
+        // CTV và các role khác không được phép xem
+        return false;
+    }
+
     public static function form(Schema $schema): Schema {
         return CollaboratorRegistrationForm::configure($schema);
     }
@@ -39,6 +55,32 @@ class CollaboratorRegistrationResource extends Resource {
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
+        $query = parent::getEloquentQuery();
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        if (!$user) {
+            return $query->whereNull('id');
+        }
+
+        // Super admin thấy tất cả
+        if ($user->role === 'super_admin') {
+            return $query;
+        }
+
+        // Organization owner thấy đăng ký của tổ chức mình
+        if ($user->role === 'organization_owner') {
+            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+            if ($org) {
+                return $query->where('organization_id', $org->id);
+            }
+            return $query->whereNull('id');
+        }
+
+        // CTV và các role khác không thấy gì
+        return $query->whereNull('id');
     }
 
     public static function getPages(): array {

@@ -44,15 +44,8 @@ class CollaboratorResource extends Resource {
         }
 
         if ($user->role === 'ctv') {
-            // Kiểm tra xem user có phải là CTV và có tuyến dưới không
-            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-
-            if (!$collaborator) {
-                return false;
-            }
-
-            // Chỉ hiển thị nếu có tuyến dưới (downlines)
-            return $collaborator->downlines()->exists();
+            // CTV không được phép xem danh sách cộng tác viên
+            return false;
         }
 
         return false;
@@ -142,11 +135,8 @@ class CollaboratorResource extends Resource {
             }
 
             if ($user->role === 'ctv') {
-                // CTV thấy số tuyến dưới của mình
-                $collaborator = Collaborator::where('email', $user->email)->first();
-                if ($collaborator) {
-                    return (string) $collaborator->downlines()->count();
-                }
+                // CTV không thấy badge vì không thấy menu
+                return null;
             }
 
             return null;
@@ -168,7 +158,7 @@ class CollaboratorResource extends Resource {
         }
 
         if ($user->role === 'ctv') {
-            return 'Số tuyến dưới';
+            return null; // CTV không thấy menu nên không cần tooltip
         }
 
         return null;

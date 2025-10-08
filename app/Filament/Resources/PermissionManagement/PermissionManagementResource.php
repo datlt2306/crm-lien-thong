@@ -7,7 +7,6 @@ use App\Filament\Resources\PermissionManagement\Pages\EditPermissionManagement;
 use App\Filament\Resources\PermissionManagement\Pages\ListPermissionManagement;
 use App\Filament\Resources\PermissionManagement\Schemas\PermissionManagementForm;
 use App\Filament\Resources\PermissionManagement\Tables\PermissionManagementTable;
-use App\Models\PermissionManagement;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;

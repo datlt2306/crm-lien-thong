@@ -32,17 +32,12 @@ class WalletResource extends Resource {
     public static function shouldRegisterNavigation(): bool {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        if ($user->role === 'super_admin') {
-            // Super admin luôn thấy menu này
-            return true;
-        }
-
         if ($user->role === 'ctv') {
-            // CTV thấy menu ví tiền để xem số dư của mình
+            // Chỉ CTV thấy menu ví tiền để xem số dư của mình
             return true;
         }
 
-        // Chủ đơn vị không cần chức năng ví
+        // Admin và chủ đơn vị không cần chức năng ví
         return false;
     }
 
@@ -95,7 +90,9 @@ class WalletResource extends Resource {
                 Tables\Columns\TextColumn::make('collaborator.organization.name')
                     ->label('Tổ chức')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
+                        !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
 
                 Tables\Columns\TextColumn::make('balance')
                     ->label('Số dư')
@@ -141,7 +138,9 @@ class WalletResource extends Resource {
                             return \App\Models\Organization::pluck('name', 'id');
                         }
                         return [];
-                    }),
+                    })
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
+                        !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
             ])
             ->actions([
                 ViewAction::make(),
@@ -154,10 +153,6 @@ class WalletResource extends Resource {
             ])
             ->modifyQueryUsing(function (Builder $query) {
                 $user = \Illuminate\Support\Facades\Auth::user();
-                if ($user->role === 'super_admin') {
-                    // Super admin thấy tất cả
-                    return;
-                }
 
                 if ($user->role === 'ctv') {
                     // CTV chỉ thấy ví của mình
@@ -167,6 +162,9 @@ class WalletResource extends Resource {
                     } else {
                         $query->whereNull('id'); // Không trả về gì nếu không tìm thấy collaborator
                     }
+                } else {
+                    // Admin và chủ đơn vị không thấy gì
+                    $query->whereNull('id');
                 }
             });
     }
@@ -180,9 +178,16 @@ class WalletResource extends Resource {
 
 
     public static function getPages(): array {
-        return [
-            'index' => Pages\ListWallets::route('/'),
-            'view' => Pages\ViewWallet::route('/{record}'),
-        ];
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        // Chỉ CTV mới có thể truy cập các trang ví tiền
+        if ($user && $user->role === 'ctv') {
+            return [
+                'index' => Pages\ListWallets::route('/'),
+                'view' => Pages\ViewWallet::route('/{record}'),
+            ];
+        }
+
+        return [];
     }
 }

@@ -24,7 +24,7 @@ class StudentResource extends Resource {
     protected static ?string $model = Student::class;
 
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
-    protected static ?string $navigationLabel = 'Học viên';
+    protected static ?string $navigationLabel = 'Học viên (pipeline)';
     protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
