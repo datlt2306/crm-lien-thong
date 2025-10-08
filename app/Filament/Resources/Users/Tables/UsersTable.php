@@ -87,7 +87,8 @@ class UsersTable {
                                 ->orWhereIn('id', \App\Models\Organization::where('name', 'like', "%$search%")->pluck('organization_owner_id'));
                         });
                     })
-                    ->toggleable(isToggledHiddenByDefault: false),
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->role === 'super_admin'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')
