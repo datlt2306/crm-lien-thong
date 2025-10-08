@@ -4,13 +4,24 @@ namespace App\Filament\Resources\Collaborators\Pages;
 
 use App\Filament\Resources\Collaborators\CollaboratorResource;
 use App\Models\User;
+use App\Models\Collaborator;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Gate;
 use App\Models\Organization;
 
 class CreateCollaborator extends CreateRecord {
     protected static string $resource = CollaboratorResource::class;
+
+    public function mount(): void {
+        parent::mount();
+
+        // Kiểm tra quyền create
+        if (!Gate::allows('create', Collaborator::class)) {
+            abort(403, 'Bạn không có quyền tạo cộng tác viên mới.');
+        }
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array {
         $user = Auth::user();

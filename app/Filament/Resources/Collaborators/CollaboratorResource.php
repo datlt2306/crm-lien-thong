@@ -17,6 +17,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Action;
 use App\Models\User;
@@ -31,24 +32,7 @@ class CollaboratorResource extends Resource {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        if ($user->role === 'super_admin') {
-            // Super admin luôn thấy menu này
-            return true;
-        }
-
-        if ($user->role === 'organization_owner') {
-            // Chủ đơn vị luôn thấy menu CTV để xem CTV cấp 1
-            return true;
-        }
-
-        if ($user->role === 'ctv') {
-            // CTV không được phép xem danh sách cộng tác viên
-            return false;
-        }
-
-        return false;
+        return Gate::allows('viewAny', Collaborator::class);
     }
 
     public static function form(Schema $schema): Schema {
@@ -90,12 +74,11 @@ class CollaboratorResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị: thấy CTV cấp 1 trong tổ chức của mình (upline_id = null)
+        // Chủ đơn vị: thấy TẤT CẢ CTV trong tổ chức của mình
         if ($user->role === 'organization_owner') {
             $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
             if ($org) {
-                return $query->where('organization_id', $org->id)
-                    ->whereNull('upline_id');
+                return $query->where('organization_id', $org->id);
             }
             // Không có tổ chức -> không trả về gì
             return $query->whereNull('id');

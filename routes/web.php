@@ -40,6 +40,10 @@ Route::get('/collaborator/register', [CollaboratorRegistrationController::class,
 Route::post('/collaborator/register', [CollaboratorRegistrationController::class, 'store'])->name('collaborator.register.submit');
 Route::post('/collaborator/check-status', [CollaboratorRegistrationController::class, 'checkStatus'])->name('collaborator.check.status');
 
+// Đăng ký cộng tác viên (route mới)
+Route::get('/collaborators/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('collaborators.register.form');
+Route::post('/collaborators/register', [CollaboratorRegistrationController::class, 'store'])->name('collaborators.register.submit');
+
 // Đăng ký tài khoản Cộng tác viên (public)
 Route::get('/ctv/register', [PublicCollaboratorController::class, 'showRegisterForm'])->name('public.ctv.register.form');
 Route::post('/ctv/register', [PublicCollaboratorController::class, 'submitRegister'])->name('public.ctv.register.submit');

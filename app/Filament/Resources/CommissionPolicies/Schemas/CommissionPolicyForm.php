@@ -20,7 +20,8 @@ class CommissionPolicyForm {
                     ->searchable()
                     ->preload()
                     ->helperText('Để trống để áp dụng cho tất cả tổ chức')
-                    ->nullable(),
+                    ->nullable()
+                    ->visible(fn() => Auth::user()->role === 'super_admin'),
                 Select::make('collaborator_id')
                     ->label('Cộng tác viên')
                     ->relationship('collaborator', 'full_name')

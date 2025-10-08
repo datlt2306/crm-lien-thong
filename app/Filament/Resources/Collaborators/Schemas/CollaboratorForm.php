@@ -73,25 +73,17 @@ class CollaboratorForm {
                 \Filament\Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')
                     ->columnSpanFull(),
-                \Filament\Forms\Components\Toggle::make('status')
-                    ->label('Kích hoạt')
-                    ->onColor('success')
-                    ->offColor('danger')
-                    ->inline(false)
+                \Filament\Forms\Components\Select::make('status')
+                    ->label('Trạng thái')
+                    ->options([
+                        'active' => 'Kích hoạt',
+                        'pending' => 'Chờ duyệt',
+                        'inactive' => 'Vô hiệu',
+                    ])
                     ->required()
-                    ->default(true)
-                    ->helperText('Bật để kích hoạt, tắt để vô hiệu')
-                    ->formatStateUsing(function ($state) {
-                        // Chuyển đổi từ string sang boolean cho UI
-                        if (is_string($state)) {
-                            return $state === 'active';
-                        }
-                        return (bool) $state;
-                    })
-                    ->dehydrateStateUsing(function ($state) {
-                        // Chuyển đổi từ boolean sang string cho database
-                        return $state ? 'active' : 'inactive';
-                    }),
+                    ->default('active')
+                    ->helperText('Chọn trạng thái cho cộng tác viên')
+                    ->native(false),
             ]);
     }
 }

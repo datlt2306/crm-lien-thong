@@ -38,7 +38,7 @@
             @endif
 
             <!-- Registration Form -->
-            <form class="mt-8 space-y-6" method="POST" action="{{ route('collaborator.register.submit') }}">
+            <form class="mt-8 space-y-6" method="POST" action="{{ route('collaborators.register.submit') }}">
                 @csrf
                 <div class="bg-white shadow-md rounded-lg p-6 space-y-6">
                     <!-- Full Name -->
@@ -116,29 +116,6 @@
                         @enderror
                     </div>
 
-                    <!-- Upline -->
-                    <div>
-                        <label for="upline_id" class="block text-sm font-medium text-gray-700">
-                            <i class="fas fa-users text-gray-400"></i>
-                            Cộng tác viên giới thiệu
-                        </label>
-                        <select id="upline_id"
-                            name="upline_id"
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('upline_id') border-red-500 @enderror">
-                            <option value="">-- Không có (CTV cấp 1) --</option>
-                            @foreach($collaborators as $collaborator)
-                            <option value="{{ $collaborator->id }}" {{ old('upline_id') == $collaborator->id ? 'selected' : '' }}>
-                                {{ $collaborator->full_name }} ({{ $collaborator->ref_id }})
-                            </option>
-                            @endforeach
-                        </select>
-                        @error('upline_id')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-1 text-xs text-gray-500">
-                            Nếu bạn được giới thiệu bởi một cộng tác viên khác, hãy chọn họ ở đây
-                        </p>
-                    </div>
 
                     <!-- Note -->
                     <div>

@@ -4,13 +4,24 @@ namespace App\Filament\Resources\Collaborators\Pages;
 
 use App\Filament\Resources\Collaborators\CollaboratorResource;
 use App\Models\User;
+use App\Models\Collaborator;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Gate;
 
 class EditCollaborator extends EditRecord {
     protected static string $resource = CollaboratorResource::class;
+
+    public function mount(int | string $record): void {
+        parent::mount($record);
+
+        // Kiểm tra quyền update
+        if (!Gate::allows('update', $this->record)) {
+            abort(403, 'Bạn không có quyền chỉnh sửa cộng tác viên này.');
+        }
+    }
 
     protected function mutateFormDataBeforeFill(array $data): array {
         // Debug: Log data khi load form
@@ -53,6 +64,16 @@ class EditCollaborator extends EditRecord {
     protected function mutateFormDataBeforeSave(array $data): array {
         // Debug: Log data trước khi xử lý
         \Illuminate\Support\Facades\Log::info('EditCollaborator - Data before save:', $data);
+
+        // Nếu là organization_owner, đảm bảo không thay đổi organization_id
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user && $user->role === 'organization_owner') {
+            // Lấy organization_id của owner
+            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
+            if ($org) {
+                $data['organization_id'] = $org->id;
+            }
+        }
 
         // Cập nhật mật khẩu nếu có
         if (!empty($data['email'])) {

@@ -28,18 +28,7 @@ class OrganizationResource extends Resource {
     protected static ?int $navigationSort = 1;
 
     public static function getNavigationUrl(): string {
-        $user = Auth::user();
-
-        // Chủ đơn vị sẽ đi thẳng đến trang edit đơn vị của mình
-        if ($user?->role === 'organization_owner') {
-            // Tìm đơn vị của organization_owner
-            $organization = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($organization) {
-                return static::getUrl('my-organization', ['record' => $organization->id]);
-            }
-        }
-
-        // Super admin đi đến danh sách
+        // Super admin đi đến danh sách đơn vị
         return static::getUrl('index');
     }
 
@@ -50,8 +39,8 @@ class OrganizationResource extends Resource {
             return false;
         }
 
-        // Cả super admin và organization_owner đều thấy menu "Đơn vị"
-        return in_array($user->role, ['super_admin', 'organization_owner']);
+        // Chỉ super admin mới thấy menu "Đơn vị"
+        return $user->role === 'super_admin';
     }
 
     protected static ?string $recordTitleAttribute = 'name';

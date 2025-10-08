@@ -5,9 +5,9 @@ namespace App\Filament\Resources\CollaboratorRegistrations\Schemas;
 use App\Models\Collaborator;
 use App\Models\Organization;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Select;
-use Filament\Schemas\Components\Textarea;
-use Filament\Schemas\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
 class CollaboratorRegistrationForm {
@@ -43,7 +43,8 @@ class CollaboratorRegistrationForm {
                             ->options(Organization::where('status', 'active')->pluck('name', 'id'))
                             ->required()
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->visible(fn() => \Illuminate\Support\Facades\Auth::user()->role === 'super_admin'),
 
                         Select::make('upline_id')
                             ->label('Cộng tác viên giới thiệu')

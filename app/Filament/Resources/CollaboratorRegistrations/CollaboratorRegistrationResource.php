@@ -28,18 +28,7 @@ class CollaboratorRegistrationResource extends Resource {
     protected static ?string $pluralModelLabel = 'Đăng ký Cộng tác viên';
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        if (!$user) {
-            return false;
-        }
-
-        // Super admin và organization_owner được phép xem
-        if (in_array($user->role, ['super_admin', 'organization_owner'])) {
-            return true;
-        }
-
-        // CTV và các role khác không được phép xem
+        // Ẩn hoàn toàn màn hình này vì đã có admin/collaborators/create
         return false;
     }
 
@@ -84,22 +73,17 @@ class CollaboratorRegistrationResource extends Resource {
     }
 
     public static function getPages(): array {
-        return [
-            'index' => ListCollaboratorRegistrations::route('/'),
-            'create' => CreateCollaboratorRegistration::route('/create'),
-            'edit' => EditCollaboratorRegistration::route('/{record}/edit'),
-        ];
+        // Không trả về pages nào vì đã ẩn resource này
+        return [];
     }
 
     public static function getNavigationBadge(): ?string {
-        return static::getModel()::status('pending')->count();
+        // Không hiển thị badge vì đã ẩn resource này
+        return null;
     }
 
     public static function getNavigationBadgeColor(): string|array|null {
-        $count = static::getModel()::status('pending')->count();
-        if ($count > 0) {
-            return 'warning';
-        }
+        // Không hiển thị badge color vì đã ẩn resource này
         return null;
     }
 }

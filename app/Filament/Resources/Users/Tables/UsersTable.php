@@ -9,6 +9,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Gate;
 
 class UsersTable {
     public static function configure(Table $table): Table {
@@ -67,6 +68,26 @@ class UsersTable {
                         };
                     })
                     ->searchable(),
+                TextColumn::make('organization')
+                    ->label('Tổ chức')
+                    ->state(function ($record) {
+                        // Lấy tổ chức từ quan hệ (owner -> ownedOrganization, ctv -> collaborator.organization)
+                        $org = $record->getOrganization();
+                        return $org?->name ?? '—';
+                    })
+                    ->sortable()
+                    ->searchable(query: function ($query, $search) {
+                        // Tìm theo tên tổ chức bằng cách join linh hoạt
+                        return $query->where(function ($q) use ($search) {
+                            // Tìm theo email CTV -> join sang collaborators -> organizations
+                            $q->orWhereIn('email', \App\Models\Collaborator::whereHas('organization', function ($oq) use ($search) {
+                                $oq->where('name', 'like', "%$search%");
+                            })->pluck('email'))
+                                // Tìm theo owner -> organizations.organization_owner_id
+                                ->orWhereIn('id', \App\Models\Organization::where('name', 'like', "%$search%")->pluck('organization_owner_id'));
+                        });
+                    })
+                    ->toggleable(isToggledHiddenByDefault: false),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')
@@ -85,7 +106,8 @@ class UsersTable {
                 ViewAction::make()
                     ->label('Xem chi tiết'),
                 EditAction::make()
-                    ->label('Chỉnh sửa'),
+                    ->label('Chỉnh sửa')
+                    ->visible(fn($record) => Gate::allows('update', $record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -94,7 +116,16 @@ class UsersTable {
                         ->modalHeading('Xóa người dùng đã chọn')
                         ->modalDescription('Bạn có chắc chắn muốn xóa các người dùng đã chọn? Hành động này không thể hoàn tác.')
                         ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy'),
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(fn() => Gate::allows('viewAny', \App\Models\User::class))
+                        ->before(function ($records) {
+                            // Kiểm tra quyền cho từng record
+                            foreach ($records as $record) {
+                                if (!Gate::allows('delete', $record)) {
+                                    throw new \Exception('Bạn không có quyền xóa người dùng này.');
+                                }
+                            }
+                        }),
                 ]),
             ]);
     }

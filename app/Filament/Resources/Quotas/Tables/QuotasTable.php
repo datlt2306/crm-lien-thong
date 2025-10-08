@@ -87,12 +87,6 @@ class QuotasTable {
                         'danger' => \App\Models\Quota::STATUS_FULL,
                     ]),
 
-                TextColumn::make('organization.name')
-                    ->label('Tổ chức')
-                    ->searchable()
-                    ->sortable()
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                        !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
 
                 TextColumn::make('tuition_fee')
                     ->label('Học phí')
@@ -129,13 +123,6 @@ class QuotasTable {
                     ->searchable()
                     ->preload(),
 
-                \Filament\Tables\Filters\SelectFilter::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                        !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
             ])
             ->recordActions([
                 ViewAction::make()

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CommissionPolicies\Pages;
 use App\Filament\Resources\CommissionPolicies\CommissionPolicyResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Auth;
 
 class EditCommissionPolicy extends EditRecord {
     protected static string $resource = CommissionPolicyResource::class;
@@ -35,5 +36,17 @@ class EditCommissionPolicy extends EditRecord {
 
     public function getBreadcrumb(): string {
         return 'Chỉnh sửa cấu hình hoa hồng';
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array {
+        // Đảm bảo organization_owner không thể thay đổi organization_id
+        if (Auth::user()->role === 'organization_owner') {
+            $organization = \App\Models\Organization::where('organization_owner_id', Auth::user()->id)->first();
+            if ($organization) {
+                $data['organization_id'] = $organization->id;
+            }
+        }
+
+        return $data;
     }
 }
