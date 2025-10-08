@@ -26,6 +26,11 @@ class ListCommissions extends ListRecords {
             return true;
         }
 
+        // Accountant có thể xem commissions (để đối soát)
+        if ($user->role === 'accountant') {
+            return true;
+        }
+
         return false;
     }
 

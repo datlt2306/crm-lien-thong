@@ -13,6 +13,21 @@ trait WithDashboardFilters {
         'group' => 'day', // day | month | year
     ];
 
+    public function mount(): void {
+        // Đảm bảo filters được khởi tạo đúng
+        if (empty($this->filters)) {
+            $this->filters = [
+                'range' => 'last_30_days',
+                'from' => null,
+                'to' => null,
+                'program_type' => null,
+                'organization_id' => null,
+                'major' => null,
+                'group' => 'day',
+            ];
+        }
+    }
+
     protected function getListeners(): array {
         return [
             'dashboardFiltersChanged' => 'setFilters',

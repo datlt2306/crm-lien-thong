@@ -66,8 +66,10 @@ class PermissionSeeder extends Seeder {
 
         // Gán permissions cho accountant
         $accountant->syncPermissions([
+            'view_commission',
             'view_payment',
             'upload_receipt',
+            'verify_payment',
         ]);
 
         // Gán permissions cho admissions

@@ -13,6 +13,8 @@ use App\Filament\Widgets\CtvStudentsWidget;
 use App\Filament\Widgets\AccountantPendingReceipts;
 use App\Filament\Widgets\AccountantCashFlow;
 use App\Filament\Widgets\AccountantFinancialSummary;
+use App\Filament\Widgets\SimpleAccountantStats;
+use App\Filament\Widgets\SimplePaymentsTable;
 use App\Filament\Widgets\KpiComparisonWidget;
 use App\Filament\Widgets\OptimizedDashboardLoader;
 use App\Filament\Widgets\SimpleRevenueChart;
@@ -58,10 +60,8 @@ class Dashboard extends BaseDashboard {
 
         if ($role === 'accountant') {
             return [
-                AccountantPendingReceipts::class,
-                AccountantFinancialSummary::class,
-                AccountantCashFlow::class,
-                RecentPayments::class,
+                SimpleAccountantStats::class,
+                SimplePaymentsTable::class,
             ];
         }
 

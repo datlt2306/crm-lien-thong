@@ -16,18 +16,25 @@ class AccountantFinancialSummary extends BaseWidget {
     protected ?string $pollingInterval = '60s';
 
     protected function getCards(): array {
-        $filters = $this->filters;
+        try {
+            $filters = $this->filters;
 
-        $stats = DashboardCacheService::remember('accountant:financial_summary', $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters) {
-            return $this->calculateFinancialSummary($filters);
-        });
+            $stats = DashboardCacheService::remember('accountant:financial_summary', $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters) {
+                return $this->calculateFinancialSummary($filters);
+            });
 
-        return [
-            Stat::make('Tổng doanh thu', $stats['total_revenue'])->description('VND')->color('success'),
-            Stat::make('Tổng hoa hồng đã chi', $stats['total_commission_paid'])->description('VND')->color('warning'),
-            Stat::make('Lợi nhuận ròng', $stats['net_profit'])->description('VND')->color('info'),
-            Stat::make('Tỷ lệ hoa hồng', $stats['commission_rate'])->description('Hoa hồng / Doanh thu')->color('gray'),
-        ];
+            return [
+                Stat::make('Tổng doanh thu', $stats['total_revenue'])->description('VND')->color('success'),
+                Stat::make('Tổng hoa hồng đã chi', $stats['total_commission_paid'])->description('VND')->color('warning'),
+                Stat::make('Lợi nhuận ròng', $stats['net_profit'])->description('VND')->color('info'),
+                Stat::make('Tỷ lệ hoa hồng', $stats['commission_rate'])->description('Hoa hồng / Doanh thu')->color('gray'),
+            ];
+        } catch (\Exception $e) {
+            // Fallback khi có lỗi
+            return [
+                Stat::make('Lỗi tải dữ liệu', 'Không thể tải thống kê tài chính')->description('Vui lòng thử lại sau')->color('danger'),
+            ];
+        }
     }
 
     protected function calculateFinancialSummary(array $filters): array {

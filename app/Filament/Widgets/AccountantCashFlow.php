@@ -15,11 +15,19 @@ class AccountantCashFlow extends ChartWidget {
     protected ?string $pollingInterval = '60s';
 
     protected function getData(): array {
-        $filters = $this->filters;
-        $data = DashboardCacheService::remember('accountant:cash_flow', $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters) {
-            return $this->buildCashFlowSeries($filters);
-        });
-        return $data;
+        try {
+            $filters = $this->filters;
+            $data = DashboardCacheService::remember('accountant:cash_flow', $filters, DashboardCacheService::DEFAULT_TTL_SECONDS, function () use ($filters) {
+                return $this->buildCashFlowSeries($filters);
+            });
+            return $data;
+        } catch (\Exception $e) {
+            // Fallback khi có lỗi
+            return [
+                'datasets' => [],
+                'labels' => ['Lỗi tải dữ liệu'],
+            ];
+        }
     }
 
     protected function getType(): string {

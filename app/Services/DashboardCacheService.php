@@ -31,10 +31,7 @@ class DashboardCacheService {
     }
 
     public static function remember(string $prefix, array $filters, int $ttlSeconds, Closure $callback) {
-        $userId = Auth::id() ?: 0;
-        $version = self::getVersion();
-        $key = sprintf('dash:%s:v%s:u%s:f:%s', $prefix, $version, $userId, md5(json_encode($filters)));
-
-        return Cache::remember($key, $ttlSeconds, $callback);
+        // Tạm thời tắt cache để tránh timeout
+        return $callback();
     }
 }

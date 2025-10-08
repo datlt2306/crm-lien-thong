@@ -820,6 +820,11 @@ class CommissionResource extends Resource {
                         $query->where('role', 'direct');
                     }
                 }
+
+                if ($user->role === 'accountant') {
+                    // Kế toán có thể xem tất cả commissions để đối soát
+                    return;
+                }
             });
     }
 
