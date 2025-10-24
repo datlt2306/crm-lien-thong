@@ -24,10 +24,10 @@ class AccountantPendingReceipts extends BaseWidget {
             });
 
             return [
-                Stat::make('Phiếu thu chờ xử lý', (string) $stats['pending_count'])->description('Cần upload phiếu thu')->color('warning'),
+                Stat::make('Thanh toán chờ xác minh', (string) $stats['pending_count'])->description('Cần xác minh')->color('warning'),
                 Stat::make('Tổng giá trị chờ', $stats['pending_amount'])->description('VND')->color('info'),
-                Stat::make('Phiếu thu đã xử lý', (string) $stats['processed_count'])->description('Trong khoảng thời gian')->color('success'),
-                Stat::make('Tỷ lệ xử lý', $stats['processing_rate'])->description('Phiếu thu đã xử lý / Tổng phiếu thu')->color('gray'),
+                Stat::make('Thanh toán đã xác minh', (string) $stats['processed_count'])->description('Trong khoảng thời gian')->color('success'),
+                Stat::make('Tỷ lệ xử lý', $stats['processing_rate'])->description('Đã xác minh / Tổng thanh toán')->color('gray'),
             ];
         } catch (\Exception $e) {
             // Fallback khi có lỗi
@@ -44,24 +44,21 @@ class AccountantPendingReceipts extends BaseWidget {
             // Giới hạn timeout cho query
             DB::statement('SET SESSION wait_timeout = 10');
 
-            // Phiếu thu chờ xử lý (verified nhưng chưa có receipt)
-            $pendingCount = Payment::where('status', 'verified')
-                ->whereNull('receipt_path')
+            // Thanh toán chờ xác minh (submitted)
+            $pendingCount = Payment::where('status', 'submitted')
                 ->count();
 
-            $pendingAmount = Payment::where('status', 'verified')
-                ->whereNull('receipt_path')
+            $pendingAmount = Payment::where('status', 'submitted')
                 ->sum('amount');
 
-            // Phiếu thu đã xử lý trong khoảng thời gian
+            // Thanh toán đã xác minh trong khoảng thời gian
             $processedCount = Payment::where('status', 'verified')
-                ->whereNotNull('receipt_path')
-                ->whereBetween('updated_at', [$from, $to])
+                ->whereBetween('verified_at', [$from, $to])
                 ->count();
 
-            // Tổng phiếu thu trong khoảng thời gian
-            $totalCount = Payment::where('status', 'verified')
-                ->whereBetween('updated_at', [$from, $to])
+            // Tổng thanh toán trong khoảng thời gian
+            $totalCount = Payment::whereIn('status', ['submitted', 'verified'])
+                ->whereBetween('created_at', [$from, $to])
                 ->count();
 
             // Tỷ lệ xử lý

@@ -49,12 +49,6 @@ class SimplePaymentsTable extends BaseWidget {
                             default => $state
                         };
                     }),
-                Tables\Columns\TextColumn::make('receipt_path')
-                    ->label('Có bill')
-                    ->formatStateUsing(function ($state) {
-                        return !empty($state) ? '✅ Có' : '❌ Chưa có';
-                    })
-                    ->color(fn($state) => !empty($state) ? 'success' : 'danger'),
                 Tables\Columns\TextColumn::make('student.full_name')
                     ->label('Học viên')
                     ->searchable()
@@ -74,10 +68,10 @@ class SimplePaymentsTable extends BaseWidget {
                     ->modalDescription('Bạn có chắc chắn muốn xác nhận thanh toán này?')
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn (Payment $record): bool => $record->status === Payment::STATUS_SUBMITTED)
+                    ->visible(fn(Payment $record): bool => $record->status === Payment::STATUS_SUBMITTED)
                     ->action(function (Payment $record): void {
                         $record->markAsVerified(Auth::id());
-                        
+
                         Notification::make()
                             ->title('Xác nhận thành công')
                             ->body('Thanh toán đã được xác nhận.')
@@ -93,10 +87,10 @@ class SimplePaymentsTable extends BaseWidget {
                     ->modalDescription('Bạn có chắc chắn muốn từ chối thanh toán này?')
                     ->modalSubmitActionLabel('Từ chối')
                     ->modalCancelActionLabel('Hủy')
-                    ->visible(fn (Payment $record): bool => $record->status === Payment::STATUS_SUBMITTED)
+                    ->visible(fn(Payment $record): bool => $record->status === Payment::STATUS_SUBMITTED)
                     ->action(function (Payment $record): void {
                         $record->update(['status' => Payment::STATUS_NOT_PAID]);
-                        
+
                         Notification::make()
                             ->title('Đã từ chối')
                             ->body('Thanh toán đã bị từ chối.')
@@ -132,11 +126,6 @@ class SimplePaymentsTable extends BaseWidget {
                         'submitted' => 'Chờ xác nhận',
                         'verified' => 'Đã xác nhận',
                     ]),
-                Tables\Filters\TernaryFilter::make('receipt_path')
-                    ->label('Có phiếu thu')
-                    ->placeholder('Tất cả')
-                    ->trueLabel('Có bill')
-                    ->falseLabel('Chưa có bill'),
             ]);
     }
 }
