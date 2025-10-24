@@ -6,6 +6,7 @@ use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Gate;
+use App\Services\CollaboratorValidationService;
 
 class CreateUser extends CreateRecord {
     protected static string $resource = UserResource::class;
@@ -107,17 +108,8 @@ class CreateUser extends CreateRecord {
         }
 
         if ($shouldCreateCollaborator && $orgId) {
-            // Validate phone: bắt buộc và unique ở tầng ứng dụng
-            if (empty($user->phone)) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'phone' => ['Số điện thoại là bắt buộc cho CTV.'],
-                ]);
-            }
-            if (\App\Models\Collaborator::where('phone', $user->phone)->exists()) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'phone' => ['Số điện thoại đã được sử dụng.'],
-                ]);
-            }
+            // Validate email and phone using service
+            CollaboratorValidationService::validateForCreation($user->email, $user->phone);
 
             \App\Models\Collaborator::create([
                 'full_name' => $user->name,

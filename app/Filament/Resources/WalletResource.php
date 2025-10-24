@@ -178,16 +178,9 @@ class WalletResource extends Resource {
 
 
     public static function getPages(): array {
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        // Chỉ CTV mới có thể truy cập các trang ví tiền
-        if ($user && $user->role === 'ctv') {
-            return [
-                'index' => Pages\ListWallets::route('/'),
-                'view' => Pages\ViewWallet::route('/{record}'),
-            ];
-        }
-
-        return [];
+        return [
+            'index' => Pages\ListWallets::route('/'),
+            'view' => Pages\ViewWallet::route('/{record}'),
+        ];
     }
 }

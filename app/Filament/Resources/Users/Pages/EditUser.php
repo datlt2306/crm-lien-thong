@@ -8,6 +8,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Gate;
+use App\Services\CollaboratorValidationService;
 
 class EditUser extends EditRecord {
     protected static string $resource = UserResource::class;
@@ -124,29 +125,23 @@ class EditUser extends EditRecord {
                     'organization_id' => $this->selectedOrganizationId,
                     'full_name' => $user->name,
                 ];
-                // Chỉ cập nhật phone khi có giá trị; nếu trùng -> báo lỗi validation
+                // Validate email and phone using service
+                CollaboratorValidationService::validateForUpdate($user->email, $user->phone, $collaborator->id);
+
+                // Update payload with validated data
                 if (!empty($user->phone)) {
-                    if (\App\Models\Collaborator::where('phone', $user->phone)->where('id', '!=', $collaborator->id)->exists()) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'phone' => ['Số điện thoại đã được sử dụng.'],
-                        ]);
-                    }
                     $updatePayload['phone'] = $user->phone;
+                }
+                if (!empty($user->email) && $user->email !== $collaborator->email) {
+                    $updatePayload['email'] = $user->email;
                 }
                 $collaborator->update($updatePayload);
             } else {
                 // Nếu chưa có Collaborator record, chỉ tạo mới khi user là CTV và có phone hợp lệ
                 if ($user->role === 'ctv') {
-                    if (empty($user->phone)) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'phone' => ['Số điện thoại là bắt buộc cho CTV.'],
-                        ]);
-                    }
-                    if (\App\Models\Collaborator::where('phone', $user->phone)->exists()) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'phone' => ['Số điện thoại đã được sử dụng.'],
-                        ]);
-                    }
+                    // Validate email and phone using service
+                    CollaboratorValidationService::validateForCreation($user->email, $user->phone);
+
                     \App\Models\Collaborator::create([
                         'full_name' => $user->name,
                         'email' => $user->email,
