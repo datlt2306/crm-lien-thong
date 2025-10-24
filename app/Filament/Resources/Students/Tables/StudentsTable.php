@@ -335,15 +335,15 @@ class StudentsTable {
                         }
                     }),
 
-                // Action cho kế toán từ chối thanh toán
-                Action::make('reject_payment')
-                    ->label('Từ chối thanh toán')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
+                // Action cho kế toán báo chưa nộp tiền
+                Action::make('mark_not_paid')
+                    ->label('Báo chưa nộp tiền')
+                    ->icon('heroicon-o-exclamation-triangle')
+                    ->color('warning')
                     ->requiresConfirmation()
-                    ->modalHeading('Từ chối thanh toán')
-                    ->modalDescription('Từ chối thanh toán của học viên. Hệ thống sẽ chuyển trạng thái thanh toán về "Chưa nộp tiền".')
-                    ->modalSubmitActionLabel('Từ chối')
+                    ->modalHeading('Báo chưa nộp tiền')
+                    ->modalDescription('Đánh dấu học viên chưa nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán về "Chưa nộp tiền".')
+                    ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(
                         fn(Student $record): bool =>
@@ -353,12 +353,12 @@ class StudentsTable {
                     ->action(function (Student $record) {
                         $payment = $record->payment;
                         if ($payment) {
-                            // Từ chối thanh toán
+                            // Đánh dấu chưa nộp tiền
                             $payment->update(['status' => Payment::STATUS_NOT_PAID]);
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Đã từ chối thanh toán')
-                                ->body('Thanh toán đã bị từ chối.')
+                                ->title('Đã cập nhật trạng thái')
+                                ->body('Học viên đã được đánh dấu chưa nộp tiền.')
                                 ->warning()
                                 ->send();
                         } else {
@@ -369,7 +369,6 @@ class StudentsTable {
                                 ->send();
                         }
                     }),
-
 
             ])
             ->toolbarActions([
