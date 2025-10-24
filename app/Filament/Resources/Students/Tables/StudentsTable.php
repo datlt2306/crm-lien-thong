@@ -308,7 +308,8 @@ class StudentsTable {
                     ->modalCancelActionLabel('Hủy')
                     ->visible(
                         fn(Student $record): bool =>
-                        $record->payment?->status === Payment::STATUS_SUBMITTED &&
+                        $record->payment && 
+                        $record->payment->status === Payment::STATUS_SUBMITTED &&
                             (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
                     )
                     ->action(function (Student $record) {
@@ -347,7 +348,8 @@ class StudentsTable {
                     ->modalCancelActionLabel('Hủy')
                     ->visible(
                         fn(Student $record): bool =>
-                        $record->payment?->status === Payment::STATUS_SUBMITTED &&
+                        $record->payment && 
+                        $record->payment->status === Payment::STATUS_SUBMITTED &&
                             (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
                     )
                     ->action(function (Student $record) {
