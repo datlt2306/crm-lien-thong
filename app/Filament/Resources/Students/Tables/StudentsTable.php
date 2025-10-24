@@ -43,31 +43,23 @@ class StudentsTable {
                                 ->orWhere('email', 'like', "%$search%");
                         });
                     }),
-                TextColumn::make('collaborator.full_name')
-                    ->label('Người giới thiệu')
-                    ->searchable()
-                    ->description(fn($record) => $record->collaborator?->email)
-                    ->badge()
-                    ->color('info')
-                    ->placeholder('Không có'),
-                TextColumn::make('target_university')
-                    ->label('Trường muốn học')
-                    ->searchable(),
-                TextColumn::make('major')
-                    ->label('Ngành học')
-                    ->searchable(),
                 TextColumn::make('dob')
                     ->label('Ngày sinh')
                     ->date('d/m/Y')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
+                TextColumn::make('major')
+                    ->label('Ngành học')
+                    ->searchable(),
+                TextColumn::make('address')
+                    ->label('Địa chỉ')
+                    ->limit(50)
+                    ->searchable(),
                 TextColumn::make('intake_month')
                     ->label('Đợt tuyển')
                     ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : '—')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
                 TextColumn::make('program_type')
-                    ->label('Hệ liên thông')
+                    ->label('Hệ tuyển sinh')
                     ->formatStateUsing(fn($state) => match ($state) {
                         'REGULAR' => 'Chính quy',
                         'PART_TIME' => 'Vừa học vừa làm',
@@ -79,11 +71,11 @@ class StudentsTable {
                         'PART_TIME' => 'warning',
                         default => 'gray'
                     })
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('address')
-                    ->label('Địa chỉ')
-                    ->limit(50)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->tooltip(fn($state) => match ($state) {
+                        'REGULAR' => 'Hệ đào tạo chính quy, học tập toàn thời gian',
+                        'PART_TIME' => 'Hệ vừa học vừa làm, linh hoạt thời gian',
+                        default => ''
+                    }),
                 TextColumn::make('source')
                     ->label('Nguồn')
                     ->searchable(),
@@ -98,10 +90,27 @@ class StudentsTable {
                             Student::STATUS_APPROVED => 'orange',
                             Student::STATUS_ENROLLED => 'success',
                             Student::STATUS_REJECTED => 'danger',
+                            Student::STATUS_DROPPED => 'warning',
                             default => 'gray',
                         };
                     })
-                    ->formatStateUsing(fn(string $state): string => Student::getStatusOptions()[$state] ?? $state)
+                    ->formatStateUsing(function (string $state): string {
+                        $statusOptions = Student::getStatusOptions();
+                        return $statusOptions[$state] ?? $state;
+                    })
+                    ->tooltip(function (string $state): string {
+                        $tooltips = [
+                            Student::STATUS_NEW => 'Học viên mới đăng ký, chưa được xử lý',
+                            Student::STATUS_CONTACTED => 'Đã liên hệ với học viên, đang tư vấn',
+                            Student::STATUS_SUBMITTED => 'Học viên đã nộp tiền, đang chờ admin xác minh thanh toán',
+                            Student::STATUS_APPROVED => 'Hồ sơ đã được duyệt, sẵn sàng nhập học',
+                            Student::STATUS_ENROLLED => 'Học viên đã nhập học thành công',
+                            Student::STATUS_REJECTED => 'Hồ sơ bị từ chối, không đủ điều kiện',
+                            Student::STATUS_DROPPED => 'Học viên bỏ học, không tiếp tục',
+                        ];
+
+                        return $tooltips[$state] ?? '';
+                    })
                     ->searchable(),
 
                 TextColumn::make('created_at')
@@ -119,11 +128,59 @@ class StudentsTable {
                 //
             ])
             ->recordActions([
-                ViewAction::make()
-                    ->label('Xem chi tiết'),
                 EditAction::make()
                     ->label('Chỉnh sửa')
-                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner'])),
+                    ->icon('heroicon-o-pencil')
+                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])),
+                Action::make('confirm_payment')
+                    ->label('Xác nhận đã nộp tiền')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Xác nhận đã nộp tiền')
+                    ->modalDescription('Xác nhận học viên đã nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã nộp (chờ xác minh)".')
+                    ->modalSubmitActionLabel('Xác nhận')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(
+                        fn(Student $record): bool =>
+                        $record->status !== Student::STATUS_ENROLLED &&
+                            $record->status !== Student::STATUS_SUBMITTED &&
+                            in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])
+                    )
+                    ->action(function (Student $record): void {
+                        // Cập nhật payment record nếu có
+                        $payment = $record->payment;
+                        if ($payment) {
+                            $payment->update([
+                                'status' => Payment::STATUS_SUBMITTED,
+                                'receipt_uploaded_by' => Auth::id(),
+                                'receipt_uploaded_at' => now(),
+                            ]);
+                        } else {
+                            // Tạo payment record mới
+                            \App\Models\Payment::create([
+                                'student_id' => $record->id,
+                                'primary_collaborator_id' => $record->collaborator_id,
+                                'organization_id' => $record->organization_id,
+                                'program_type' => $record->program_type ?? 'REGULAR',
+                                'amount' => 0, // Sẽ cập nhật sau
+                                'status' => Payment::STATUS_SUBMITTED,
+                                'receipt_uploaded_by' => Auth::id(),
+                                'receipt_uploaded_at' => now(),
+                            ]);
+                        }
+
+                        // Cập nhật trạng thái học viên sang "Đã nộp hồ sơ" (chờ xác minh)
+                        $record->update([
+                            'status' => Student::STATUS_SUBMITTED,
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Xác nhận thành công')
+                            ->body('Học viên đã được xác nhận nộp tiền. Trạng thái: Đã nộp hồ sơ (chờ xác minh).')
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('mark_enrolled')
                     ->label('Xác nhận SV nhập học')
                     ->icon('heroicon-o-academic-cap')
