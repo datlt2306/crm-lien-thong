@@ -502,9 +502,9 @@ class PaymentResource extends Resource {
             }
         }
 
-        // Kế toán thấy các payment đã xác nhận (để upload phiếu thu)
+        // Kế toán thấy các payment cần xác minh và đã xác nhận (để xác minh và upload phiếu thu)
         if (self::isAccountant()) {
-            return $query->where('status', Payment::STATUS_VERIFIED);
+            return $query->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]);
         }
 
         // CTV thấy payments của mình và downline

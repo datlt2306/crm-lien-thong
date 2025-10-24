@@ -6,6 +6,9 @@ use App\Models\Payment;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class SimplePaymentsTable extends BaseWidget {
     protected static ?string $heading = 'Thanh toán gần đây';
@@ -52,10 +55,74 @@ class SimplePaymentsTable extends BaseWidget {
                         return !empty($state) ? '✅ Có' : '❌ Chưa có';
                     })
                     ->color(fn($state) => !empty($state) ? 'success' : 'danger'),
+                Tables\Columns\TextColumn::make('student.full_name')
+                    ->label('Học viên')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Tạo lúc')
                     ->since()
                     ->sortable(),
+            ])
+            ->actions([
+                Action::make('verify')
+                    ->label('Xác nhận')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Xác nhận thanh toán')
+                    ->modalDescription('Bạn có chắc chắn muốn xác nhận thanh toán này?')
+                    ->modalSubmitActionLabel('Xác nhận')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(fn (Payment $record): bool => $record->status === Payment::STATUS_SUBMITTED)
+                    ->action(function (Payment $record): void {
+                        $record->markAsVerified(Auth::id());
+                        
+                        Notification::make()
+                            ->title('Xác nhận thành công')
+                            ->body('Thanh toán đã được xác nhận.')
+                            ->success()
+                            ->send();
+                    }),
+                Action::make('reject')
+                    ->label('Từ chối')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Từ chối thanh toán')
+                    ->modalDescription('Bạn có chắc chắn muốn từ chối thanh toán này?')
+                    ->modalSubmitActionLabel('Từ chối')
+                    ->modalCancelActionLabel('Hủy')
+                    ->visible(fn (Payment $record): bool => $record->status === Payment::STATUS_SUBMITTED)
+                    ->action(function (Payment $record): void {
+                        $record->update(['status' => Payment::STATUS_NOT_PAID]);
+                        
+                        Notification::make()
+                            ->title('Đã từ chối')
+                            ->body('Thanh toán đã bị từ chối.')
+                            ->warning()
+                            ->send();
+                    }),
+                Action::make('view')
+                    ->label('Xem chi tiết')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->modalHeading('Chi tiết thanh toán')
+                    ->modalWidth('2xl')
+                    ->modalContent(function (Payment $record) {
+                        $student = $record->student?->full_name ?? '—';
+                        $amount = number_format((float) $record->amount, 0, '.', ',') . ' ₫';
+                        $status = Payment::getStatusOptions()[$record->status] ?? $record->status;
+                        $created = optional($record->created_at)->format('d/m/Y H:i');
+
+                        return view('components.payment-detail-modal', [
+                            'student' => $student,
+                            'amount' => $amount,
+                            'status' => $status,
+                            'record' => $record,
+                            'created' => $created
+                        ]);
+                    }),
             ])
             ->defaultPaginationPageOption(10)
             ->filters([
