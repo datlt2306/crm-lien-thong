@@ -61,19 +61,19 @@ class StudentsTable {
                 TextColumn::make('program_type')
                     ->label('Hệ tuyển sinh')
                     ->formatStateUsing(fn($state) => match ($state) {
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'Vừa học vừa làm',
+                        'REGULAR' => '🎓 Chính quy',
+                        'PART_TIME' => '⏰ Vừa học vừa làm',
                         default => '—'
                     })
                     ->badge()
                     ->color(fn($state) => match ($state) {
-                        'REGULAR' => 'success',
-                        'PART_TIME' => 'warning',
+                        'REGULAR' => 'success',      // Xanh lá rõ ràng
+                        'PART_TIME' => 'info',       // Xanh dương rõ ràng
                         default => 'gray'
                     })
                     ->tooltip(fn($state) => match ($state) {
-                        'REGULAR' => 'Hệ đào tạo chính quy, học tập toàn thời gian',
-                        'PART_TIME' => 'Hệ vừa học vừa làm, linh hoạt thời gian',
+                        'REGULAR' => '🎓 Hệ đào tạo chính quy, học tập toàn thời gian',
+                        'PART_TIME' => '⏰ Hệ vừa học vừa làm, linh hoạt thời gian',
                         default => ''
                     }),
                 TextColumn::make('source')
@@ -84,29 +84,43 @@ class StudentsTable {
                     ->badge()
                     ->color(function (string $state): string {
                         return match ($state) {
-                            Student::STATUS_NEW => 'gray',
-                            Student::STATUS_CONTACTED => 'blue',
-                            Student::STATUS_SUBMITTED => 'yellow',
-                            Student::STATUS_APPROVED => 'orange',
-                            Student::STATUS_ENROLLED => 'success',
-                            Student::STATUS_REJECTED => 'danger',
-                            Student::STATUS_DROPPED => 'warning',
-                            default => 'gray',
+                            Student::STATUS_NEW => 'slate',           // Xám đậm cho mới
+                            Student::STATUS_CONTACTED => 'info',       // Xanh dương sáng
+                            Student::STATUS_SUBMITTED => 'warning',    // Vàng cam rõ ràng
+                            Student::STATUS_APPROVED => 'orange',      // Cam rõ ràng
+                            Student::STATUS_ENROLLED => 'success',     // Xanh lá thành công
+                            Student::STATUS_REJECTED => 'danger',      // Đỏ rõ ràng
+                            Student::STATUS_DROPPED => 'gray',          // Xám cho bỏ học
+                            default => 'slate',
                         };
                     })
                     ->formatStateUsing(function (string $state): string {
                         $statusOptions = Student::getStatusOptions();
-                        return $statusOptions[$state] ?? $state;
+                        $statusLabel = $statusOptions[$state] ?? $state;
+                        
+                        // Thêm icon cho từng trạng thái
+                        $icons = [
+                            Student::STATUS_NEW => '🆕',
+                            Student::STATUS_CONTACTED => '📞',
+                            Student::STATUS_SUBMITTED => '⏳',
+                            Student::STATUS_APPROVED => '✅',
+                            Student::STATUS_ENROLLED => '🎓',
+                            Student::STATUS_REJECTED => '❌',
+                            Student::STATUS_DROPPED => '🚫',
+                        ];
+                        
+                        $icon = $icons[$state] ?? '';
+                        return $icon ? "{$icon} {$statusLabel}" : $statusLabel;
                     })
                     ->tooltip(function (string $state): string {
                         $tooltips = [
-                            Student::STATUS_NEW => 'Học viên mới đăng ký, chưa được xử lý',
-                            Student::STATUS_CONTACTED => 'Đã liên hệ với học viên, đang tư vấn',
-                            Student::STATUS_SUBMITTED => 'Học viên đã nộp tiền, đang chờ admin xác minh thanh toán',
-                            Student::STATUS_APPROVED => 'Hồ sơ đã được duyệt, sẵn sàng nhập học',
-                            Student::STATUS_ENROLLED => 'Học viên đã nhập học thành công',
-                            Student::STATUS_REJECTED => 'Hồ sơ bị từ chối, không đủ điều kiện',
-                            Student::STATUS_DROPPED => 'Học viên bỏ học, không tiếp tục',
+                            Student::STATUS_NEW => '🆕 Học viên mới đăng ký, chưa được xử lý',
+                            Student::STATUS_CONTACTED => '📞 Đã liên hệ với học viên, đang tư vấn',
+                            Student::STATUS_SUBMITTED => '⏳ Học viên đã nộp tiền, đang chờ admin xác minh thanh toán',
+                            Student::STATUS_APPROVED => '✅ Hồ sơ đã được duyệt, sẵn sàng nhập học',
+                            Student::STATUS_ENROLLED => '🎓 Học viên đã nhập học thành công',
+                            Student::STATUS_REJECTED => '❌ Hồ sơ bị từ chối, không đủ điều kiện',
+                            Student::STATUS_DROPPED => '🚫 Học viên bỏ học, không tiếp tục',
                         ];
 
                         return $tooltips[$state] ?? '';
