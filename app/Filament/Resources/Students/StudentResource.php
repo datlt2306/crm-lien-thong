@@ -90,6 +90,11 @@ class StudentResource extends Resource {
                 }
             }
 
+            // Kế toán đếm tất cả học viên
+            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+                return (string) Student::count();
+            }
+
             return '0';
         } catch (\Throwable) {
             return null;
@@ -136,6 +141,11 @@ class StudentResource extends Resource {
 
                 return $query->whereIn('collaborator_id', $allCollaboratorIds);
             }
+        }
+
+        // Kế toán thấy tất cả học viên (để xác minh thanh toán)
+        if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+            return $query;
         }
 
         // Fallback: không thấy gì

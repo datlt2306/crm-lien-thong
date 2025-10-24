@@ -14,8 +14,8 @@ class ViewStudent extends ViewRecord {
     protected function getHeaderActions(): array {
         $actions = [];
 
-        // Chỉ super_admin và organization_owner mới có thể chỉnh sửa
-        if (in_array(Auth::user()?->role, ['super_admin', 'organization_owner'])) {
+        // Super_admin, organization_owner, CTV và kế toán đều có thể chỉnh sửa
+        if (in_array(Auth::user()?->role, ['super_admin', 'organization_owner', 'ctv', 'accountant'])) {
             $actions[] = EditAction::make()
                 ->label('Chỉnh sửa học viên');
         }

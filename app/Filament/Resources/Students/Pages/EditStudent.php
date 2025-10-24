@@ -39,6 +39,6 @@ class EditStudent extends EditRecord {
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'organization_owner']);
+        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv', 'accountant']);
     }
 }

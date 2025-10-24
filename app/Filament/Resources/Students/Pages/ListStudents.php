@@ -13,8 +13,8 @@ class ListStudents extends ListRecords {
     protected function getHeaderActions(): array {
         $actions = [];
 
-        // Chỉ super_admin và organization_owner mới có thể tạo mới
-        if (in_array(Auth::user()?->role, ['super_admin', 'organization_owner'])) {
+        // Super_admin, organization_owner, CTV và kế toán đều có thể tạo mới
+        if (in_array(Auth::user()?->role, ['super_admin', 'organization_owner', 'ctv', 'accountant'])) {
             $actions[] = CreateAction::make()
                 ->label('Thêm học viên mới');
         }
