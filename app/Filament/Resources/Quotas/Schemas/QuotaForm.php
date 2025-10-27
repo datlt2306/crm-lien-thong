@@ -59,6 +59,7 @@ class QuotaForm {
                             ->helperText('Tổ chức sẽ được tự động chọn theo đợt tuyển sinh'),
                     ])
                     ->columns(3)
+                    ->columnSpanFull()
                     ->collapsible(),
 
                 Section::make('🎓 Thông tin ngành học')
@@ -76,6 +77,7 @@ class QuotaForm {
                             ->getOptionLabelFromRecordUsing(fn(\App\Models\Major $record): string => $record->code . ' - ' . $record->name),
                     ])
                     ->columns(1)
+                    ->columnSpanFull()
                     ->collapsible(),
 
                 Section::make('📊 Chỉ tiêu tuyển sinh')
@@ -145,6 +147,7 @@ class QuotaForm {
                             ->helperText('Trạng thái hoạt động của chỉ tiêu này'),
                     ])
                     ->columns(3)
+                    ->columnSpanFull()
                     ->collapsible(),
 
                 Section::make('📝 Ghi chú bổ sung')
@@ -158,6 +161,7 @@ class QuotaForm {
                             ->helperText('Có thể ghi chú về điều kiện đặc biệt, yêu cầu bổ sung, hoặc lưu ý quan trọng')
                             ->columnSpanFull(),
                     ])
+                    ->columnSpanFull()
                     ->collapsible()
                     ->collapsed(),
             ]);

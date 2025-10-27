@@ -11,6 +11,7 @@ use Filament\Tables\Table;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ActionGroup;
 use Illuminate\Support\Facades\Auth;
 
 class MajorResource extends Resource {
@@ -59,8 +60,18 @@ class MajorResource extends Resource {
                 ->formatStateUsing(fn($state) => $state ? 'Kích hoạt' : 'Vô hiệu')
                 ->colors(['success' => fn($state) => $state === true, 'danger' => fn($state) => $state === false]),
         ])->recordActions([
-            EditAction::make(),
-            DeleteAction::make(),
+            ActionGroup::make([
+                EditAction::make()
+                    ->label('Chỉnh sửa'),
+                DeleteAction::make()
+                    ->label('Xóa'),
+            ])
+                ->label('Hành động')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->color('gray')
+                ->button()
+                ->size('sm')
+                ->tooltip('Các hành động khả dụng')
         ]);
     }
 

@@ -8,6 +8,7 @@ use App\Models\CollaboratorRegistration;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -89,11 +90,20 @@ class CollaboratorRegistrationsTable {
                     ->relationship('organization', 'name'),
             ])
             ->recordActions([
-                EditAction::make(),
-                ApproveRegistrationAction::make()
-                    ->visible(fn(CollaboratorRegistration $record): bool => $record->status === 'pending'),
-                RejectRegistrationAction::make()
-                    ->visible(fn(CollaboratorRegistration $record): bool => $record->status === 'pending'),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->label('Chỉnh sửa'),
+                    ApproveRegistrationAction::make()
+                        ->visible(fn(CollaboratorRegistration $record): bool => $record->status === 'pending'),
+                    RejectRegistrationAction::make()
+                        ->visible(fn(CollaboratorRegistration $record): bool => $record->status === 'pending'),
+                ])
+                    ->label('Hành động')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->color('gray')
+                    ->button()
+                    ->size('sm')
+                    ->tooltip('Các hành động khả dụng')
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

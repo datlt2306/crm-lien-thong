@@ -7,6 +7,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Models\Student;
@@ -179,161 +180,169 @@ class StudentsTable {
                     }),
             ])
             ->recordActions([
-                EditAction::make()
-                    ->label('Chỉnh sửa')
-                    ->icon('heroicon-o-pencil')
-                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])),
-                Action::make('confirm_payment')
-                    ->label('Xác nhận đã nộp tiền')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận đã nộp tiền')
-                    ->modalDescription('Xác nhận học viên đã nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã nộp (chờ xác minh)".')
-                    ->modalSubmitActionLabel('Xác nhận')
-                    ->modalCancelActionLabel('Hủy')
-                    ->visible(
-                        fn(Student $record): bool =>
-                        $record->status !== Student::STATUS_ENROLLED &&
-                            $record->status !== Student::STATUS_SUBMITTED &&
-                            in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])
-                    )
-                    ->action(function (Student $record): void {
-                        // Cập nhật payment record nếu có
-                        $payment = $record->payment;
-                        if ($payment) {
-                            $payment->update([
-                                'status' => Payment::STATUS_SUBMITTED,
-                                'receipt_uploaded_by' => Auth::id(),
-                                'receipt_uploaded_at' => now(),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->label('Chỉnh sửa')
+                        ->icon('heroicon-o-pencil')
+                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])),
+
+                    Action::make('confirm_payment')
+                        ->label('Xác nhận đã nộp tiền')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận đã nộp tiền')
+                        ->modalDescription('Xác nhận học viên đã nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã nộp (chờ xác minh)".')
+                        ->modalSubmitActionLabel('Xác nhận')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(
+                            fn(Student $record): bool =>
+                            $record->status !== Student::STATUS_ENROLLED &&
+                                $record->status !== Student::STATUS_SUBMITTED &&
+                                in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])
+                        )
+                        ->action(function (Student $record): void {
+                            // Cập nhật payment record nếu có
+                            $payment = $record->payment;
+                            if ($payment) {
+                                $payment->update([
+                                    'status' => Payment::STATUS_SUBMITTED,
+                                    'receipt_uploaded_by' => Auth::id(),
+                                    'receipt_uploaded_at' => now(),
+                                ]);
+                            } else {
+                                // Tạo payment record mới
+                                \App\Models\Payment::create([
+                                    'student_id' => $record->id,
+                                    'primary_collaborator_id' => $record->collaborator_id,
+                                    'organization_id' => $record->organization_id,
+                                    'program_type' => $record->program_type ?? 'REGULAR',
+                                    'amount' => 0, // Sẽ cập nhật sau
+                                    'status' => Payment::STATUS_SUBMITTED,
+                                    'receipt_uploaded_by' => Auth::id(),
+                                    'receipt_uploaded_at' => now(),
+                                ]);
+                            }
+
+                            // Cập nhật trạng thái học viên sang "Đã nộp hồ sơ" (chờ xác minh)
+                            $record->update([
+                                'status' => Student::STATUS_SUBMITTED,
                             ]);
-                        } else {
-                            // Tạo payment record mới
-                            \App\Models\Payment::create([
-                                'student_id' => $record->id,
-                                'primary_collaborator_id' => $record->collaborator_id,
-                                'organization_id' => $record->organization_id,
-                                'program_type' => $record->program_type ?? 'REGULAR',
-                                'amount' => 0, // Sẽ cập nhật sau
-                                'status' => Payment::STATUS_SUBMITTED,
-                                'receipt_uploaded_by' => Auth::id(),
-                                'receipt_uploaded_at' => now(),
-                            ]);
-                        }
-
-                        // Cập nhật trạng thái học viên sang "Đã nộp hồ sơ" (chờ xác minh)
-                        $record->update([
-                            'status' => Student::STATUS_SUBMITTED,
-                        ]);
-
-                        \Filament\Notifications\Notification::make()
-                            ->title('Xác nhận thành công')
-                            ->body('Học viên đã được xác nhận nộp tiền. Trạng thái: Đã nộp hồ sơ (chờ xác minh).')
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('mark_enrolled')
-                    ->label('Xác nhận SV nhập học')
-                    ->icon('heroicon-o-academic-cap')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận sinh viên nhập học')
-                    ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
-                    ->modalSubmitActionLabel('Xác nhận')
-                    ->modalCancelActionLabel('Hủy')
-                    ->visible(
-                        fn(Student $record): bool =>
-                        $record->status !== Student::STATUS_ENROLLED &&
-                            ($record->payment?->status === Payment::STATUS_VERIFIED) &&
-                            in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
-                    )
-                    ->action(function (Student $record) {
-                        $record->update(['status' => Student::STATUS_ENROLLED]);
-
-                        // Cập nhật commission khi student nhập học
-                        $commissionService = new \App\Services\CommissionService();
-                        $commissionService->updateCommissionsOnEnrollment($record);
-
-                        \Filament\Notifications\Notification::make()
-                            ->title('Đã xác nhận sinh viên nhập học')
-                            ->body('Commission đã được cập nhật tự động.')
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('mark_left_unit')
-                    ->label('Sinh viên hủy đăng ký')
-                    ->icon('heroicon-o-user-minus')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận sinh viên hủy đăng ký')
-                    ->modalDescription('Xác nhận sinh viên này đã hủy đăng ký. Hệ thống sẽ cập nhật trạng thái và bỏ liên kết CTV giới thiệu.')
-                    ->modalSubmitActionLabel('Xác nhận')
-                    ->modalCancelActionLabel('Hủy')
-                    ->visible(
-                        fn(Student $record): bool =>
-                        $record->status !== Student::STATUS_ENROLLED &&
-                            ($record->payment?->status === Payment::STATUS_VERIFIED) &&
-                            in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
-                    )
-                    ->action(function (Student $record) {
-                        $record->update([
-                            'status' => Student::STATUS_REJECTED,
-                            'collaborator_id' => null,
-                        ]);
-
-                        \Filament\Notifications\Notification::make()
-                            ->title('Hủy đăng ký')
-                            ->body('Sinh viên đã được cập nhật trạng thái hủy đăng ký và bỏ liên kết CTV.')
-                            ->success()
-                            ->send();
-                    }),
-
-                // Action cho kế toán xác nhận
-                Action::make('verify_payment')
-                    ->label('Xác nhận')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận')
-                    ->modalDescription('Xác nhận đã nhận tiền từ học viên. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã xác nhận" và tạo commission.')
-                    ->modalSubmitActionLabel('Xác nhận')
-                    ->modalCancelActionLabel('Hủy')
-                    ->tooltip('Xác nhận đã nhận tiền từ học viên và chuyển trạng thái thanh toán sang "Đã xác nhận"')
-                    ->visible(
-                        fn(Student $record): bool =>
-                        // Chỉ hiển thị cho kế toán
-                        (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
-                            // Sinh viên phải có payment record
-                            $record->payment &&
-                            // Payment phải ở trạng thái chờ xác minh
-                            $record->payment->status === Payment::STATUS_SUBMITTED
-                    )
-                    ->action(function (Student $record) {
-                        $payment = $record->payment;
-                        if ($payment) {
-                            // Xác minh thanh toán
-                            $payment->markAsVerified(Auth::id());
-
-                            // Tạo commission
-                            $commissionService = new \App\Services\CommissionService();
-                            $commissionService->createCommissionFromPayment($payment);
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Xác minh thành công')
-                                ->body('Thanh toán đã được xác minh và commission đã được tạo tự động.')
+                                ->title('Xác nhận thành công')
+                                ->body('Học viên đã được xác nhận nộp tiền. Trạng thái: Đã nộp hồ sơ (chờ xác minh).')
                                 ->success()
                                 ->send();
-                        } else {
+                        }),
+
+                    Action::make('mark_enrolled')
+                        ->label('Xác nhận SV nhập học')
+                        ->icon('heroicon-o-academic-cap')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận sinh viên nhập học')
+                        ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
+                        ->modalSubmitActionLabel('Xác nhận')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(
+                            fn(Student $record): bool =>
+                            $record->status !== Student::STATUS_ENROLLED &&
+                                ($record->payment?->status === Payment::STATUS_VERIFIED) &&
+                                in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
+                        )
+                        ->action(function (Student $record) {
+                            $record->update(['status' => Student::STATUS_ENROLLED]);
+
+                            // Cập nhật commission khi student nhập học
+                            $commissionService = new \App\Services\CommissionService();
+                            $commissionService->updateCommissionsOnEnrollment($record);
+
                             \Filament\Notifications\Notification::make()
-                                ->title('Lỗi')
-                                ->body('Không tìm thấy thông tin thanh toán.')
-                                ->danger()
+                                ->title('Đã xác nhận sinh viên nhập học')
+                                ->body('Commission đã được cập nhật tự động.')
+                                ->success()
                                 ->send();
-                        }
-                    }),
+                        }),
 
+                    Action::make('mark_left_unit')
+                        ->label('Sinh viên hủy đăng ký')
+                        ->icon('heroicon-o-user-minus')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận sinh viên hủy đăng ký')
+                        ->modalDescription('Xác nhận sinh viên này đã hủy đăng ký. Hệ thống sẽ cập nhật trạng thái và bỏ liên kết CTV giới thiệu.')
+                        ->modalSubmitActionLabel('Xác nhận')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(
+                            fn(Student $record): bool =>
+                            $record->status !== Student::STATUS_ENROLLED &&
+                                ($record->payment?->status === Payment::STATUS_VERIFIED) &&
+                                in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
+                        )
+                        ->action(function (Student $record) {
+                            $record->update([
+                                'status' => Student::STATUS_REJECTED,
+                                'collaborator_id' => null,
+                            ]);
 
+                            \Filament\Notifications\Notification::make()
+                                ->title('Hủy đăng ký')
+                                ->body('Sinh viên đã được cập nhật trạng thái hủy đăng ký và bỏ liên kết CTV.')
+                                ->success()
+                                ->send();
+                        }),
+
+                    // Action cho kế toán xác nhận
+                    Action::make('verify_payment')
+                        ->label('Xác nhận')
+                        ->icon('heroicon-o-check-badge')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận')
+                        ->modalDescription('Xác nhận đã nhận tiền từ học viên. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã xác nhận" và tạo commission.')
+                        ->modalSubmitActionLabel('Xác nhận')
+                        ->modalCancelActionLabel('Hủy')
+                        ->tooltip('Xác nhận đã nhận tiền từ học viên và chuyển trạng thái thanh toán sang "Đã xác nhận"')
+                        ->visible(
+                            fn(Student $record): bool =>
+                            // Chỉ hiển thị cho kế toán
+                            (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                                // Sinh viên phải có payment record
+                                $record->payment &&
+                                // Payment phải ở trạng thái chờ xác minh
+                                $record->payment->status === Payment::STATUS_SUBMITTED
+                        )
+                        ->action(function (Student $record) {
+                            $payment = $record->payment;
+                            if ($payment) {
+                                // Xác minh thanh toán
+                                $payment->markAsVerified(Auth::id());
+
+                                // Tạo commission
+                                $commissionService = new \App\Services\CommissionService();
+                                $commissionService->createCommissionFromPayment($payment);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Xác minh thành công')
+                                    ->body('Thanh toán đã được xác minh và commission đã được tạo tự động.')
+                                    ->success()
+                                    ->send();
+                            } else {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Lỗi')
+                                    ->body('Không tìm thấy thông tin thanh toán.')
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ])
+                    ->label('Hành động')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->color('gray')
+                    ->button()
+                    ->size('sm')
+                    ->tooltip('Các hành động khả dụng')
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
