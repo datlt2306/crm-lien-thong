@@ -395,6 +395,101 @@ class StudentsTable {
                                     ->send();
                             }
                         }),
+
+                    // Action cho CTV upload bill
+                    Action::make('upload_bill')
+                        ->label('Upload Bill')
+                        ->icon('heroicon-o-document-arrow-up')
+                        ->color('info')
+                        ->form([
+                            \Filament\Forms\Components\FileUpload::make('bill')
+                                ->label('Bill thanh toán')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(5120) // 5MB
+                                ->disk('local')
+                                ->directory('bills')
+                                ->required()
+                                ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
+                            \Filament\Forms\Components\TextInput::make('amount')
+                                ->label('Số tiền')
+                                ->numeric()
+                                ->required()
+                                ->helperText('Nhập số tiền đã thanh toán'),
+                            \Filament\Forms\Components\Select::make('program_type')
+                                ->label('Hệ liên thông')
+                                ->options([
+                                    'REGULAR' => 'Chính quy',
+                                    'PART_TIME' => 'Vừa học vừa làm',
+                                ])
+                                ->required()
+                                ->helperText('Chọn hệ liên thông của sinh viên'),
+                        ])
+                        ->visible(function (Student $record): bool {
+                            $user = Auth::user();
+                            
+                            // Chỉ CTV mới được upload bill
+                            if ($user->role !== 'ctv') {
+                                return false;
+                            }
+
+                            // Lấy collaborator của user
+                            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                            if (!$collaborator) {
+                                return false;
+                            }
+
+                            // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được upload bill
+                            $canUpload = $record->collaborator_id === $collaborator->id;
+
+                            // Kiểm tra payment status
+                            if (!$record->payment) {
+                                // Nếu chưa có payment, có thể upload (trạng thái NOT_PAID)
+                                return $canUpload;
+                            }
+
+                            // Chỉ được upload khi payment ở trạng thái NOT_PAID
+                            return $canUpload && $record->payment->status === Payment::STATUS_NOT_PAID;
+                        })
+                        ->action(function (array $data, Student $record) {
+                            // Tìm collaborator của user hiện tại
+                            $collaborator = \App\Models\Collaborator::where('email', Auth::user()->email)->first();
+
+                            if (!$collaborator) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Lỗi')
+                                    ->body('Không tìm thấy thông tin cộng tác viên.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            // Tạo hoặc cập nhật payment record
+                            $payment = $record->payment;
+                            if (!$payment) {
+                                $payment = \App\Models\Payment::create([
+                                    'student_id' => $record->id,
+                                    'primary_collaborator_id' => $record->collaborator_id,
+                                    'organization_id' => $record->organization_id,
+                                    'amount' => $data['amount'],
+                                    'program_type' => $data['program_type'],
+                                    'bill_path' => $data['bill'],
+                                    'status' => Payment::STATUS_SUBMITTED,
+                                ]);
+                            } else {
+                                $payment->update([
+                                    'bill_path' => $data['bill'],
+                                    'amount' => $data['amount'],
+                                    'program_type' => $data['program_type'],
+                                    'status' => Payment::STATUS_SUBMITTED,
+                                ]);
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Đã upload bill thành công')
+                                ->body('Bill đã được gửi để xác minh.')
+                                ->success()
+                                ->send();
+                        }),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')

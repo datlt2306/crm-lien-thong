@@ -28,22 +28,7 @@ class PaymentResource extends Resource {
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = Auth::user();
-
-        if (!$user) {
-            return false;
-        }
-
-        // Super admin, admin, organization_owner và accountant có thể xem payments
-        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner']) || self::isAccountant()) {
-            return true;
-        }
-
-        // CTV có thể xem payments của mình
-        if ($user->role === 'ctv') {
-            return true;
-        }
-
+        // Ẩn Payments khỏi navigation - chỉ giữ backend logic
         return false;
     }
 
