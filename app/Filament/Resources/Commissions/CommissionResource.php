@@ -707,8 +707,37 @@ class CommissionResource extends Resource {
                             ->send();
                     }),
 
-                Action::make('view_bill')
-                    ->label('Xem Bill')
+                // Action xem Bill từ CTV (SV upload) - Payment.bill_path
+                Action::make('view_bill_student')
+                    ->label('Xem Bill từ SV')
+                    ->icon('heroicon-o-document-text')
+                    ->color('info')
+                    ->modalHeading('Bill thanh toán từ sinh viên (CTV upload)')
+                    ->modalContent(function (CommissionItem $record) {
+                        $payment = $record->commission->payment;
+                        if (!$payment || !$payment->bill_path) {
+                            return view('components.no-content', [
+                                'message' => 'Chưa có bill thanh toán từ sinh viên.'
+                            ]);
+                        }
+
+                        $fileUrl = route('files.bill.view', $payment->id);
+                        return view('components.bill-viewer', [
+                            'fileUrl' => $fileUrl,
+                            'fileName' => basename($payment->bill_path),
+                            'payment' => $payment
+                        ]);
+                    })
+                    ->modalWidth('4xl')
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        // Tất cả role đều được xem bill từ SV
+                        $payment = $record->commission->payment;
+                        return $payment && !empty($payment->bill_path);
+                    }),
+
+                // Action xem Bill chuyển tiền (CTV1 upload) - CommissionItem.payment_bill_path
+                Action::make('view_bill_transfer')
+                    ->label('Xem Bill chuyển tiền')
                     ->icon('heroicon-o-document-text')
                     ->color('gray')
                     ->modalContent(function (CommissionItem $record) {
@@ -718,6 +747,7 @@ class CommissionResource extends Resource {
                     })
                     ->modalWidth('4xl')
                     ->visible(function (CommissionItem $record) use ($user): bool {
+                        // Chỉ hiển thị khi có payment_bill_path (bill CTV1 chuyển tiền)
                         return $record->payment_bill_path && in_array($user->role, ['organization_owner', 'ctv']);
                     }),
 
@@ -772,10 +802,10 @@ class CommissionResource extends Resource {
                     }),
 
                 Action::make('view_receipt')
-                    ->label('Xem phiếu thu')
+                    ->label('Xem phiếu thu Helen')
                     ->icon('heroicon-o-receipt-refund')
                     ->color('gray')
-                    ->modalHeading('Phiếu thu Helen')
+                    ->modalHeading('Phiếu thu từ Helen')
                     ->modalContent(function (CommissionItem $record) {
                         $payment = $record->commission->payment;
                         if (!$payment || !$payment->receipt_path) {
