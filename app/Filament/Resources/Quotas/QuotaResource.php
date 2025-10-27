@@ -94,6 +94,38 @@ class QuotaResource extends Resource {
         ];
     }
 
+    public static function canViewAny(): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user) {
+            return false;
+        }
+        return in_array($user->role, ['super_admin', 'organization_owner', 'ctv']);
+    }
+
+    public static function canCreate(): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user) {
+            return false;
+        }
+        return in_array($user->role, ['super_admin', 'organization_owner']);
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user) {
+            return false;
+        }
+        return in_array($user->role, ['super_admin', 'organization_owner']);
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user) {
+            return false;
+        }
+        return in_array($user->role, ['super_admin', 'organization_owner']);
+    }
+
     public static function getModalWidth(): string {
         return '6xl'; // Làm modal rộng hơn
     }

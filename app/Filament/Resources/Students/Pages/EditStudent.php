@@ -39,6 +39,40 @@ class EditStudent extends EditRecord {
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv', 'accountant']);
+        if (!$user) {
+            return false;
+        }
+
+        // Nếu là super_admin, organization_owner, admissions, document thì luôn được phép
+        if (in_array($user->role, ['super_admin', 'organization_owner', 'admissions', 'document'])) {
+            return true;
+        }
+
+        // Nếu là accountant thì luôn được phép
+        if ($user->role === 'accountant') {
+            return true;
+        }
+
+        // Nếu là CTV, cần kiểm tra payment đã được verified chưa
+        if ($user->role === 'ctv') {
+            // Lấy record ID từ parameters
+            if (isset($parameters['record'])) {
+                $student = Student::find($parameters['record']);
+                if ($student) {
+                    // Kiểm tra xem student có payment nào đã được verified không
+                    $hasVerifiedPayment = \App\Models\Payment::where('student_id', $student->id)
+                        ->where('status', \App\Models\Payment::STATUS_VERIFIED)
+                        ->exists();
+
+                    // Nếu có payment đã verified, CTV không được phép edit
+                    if ($hasVerifiedPayment) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        return false;
     }
 }

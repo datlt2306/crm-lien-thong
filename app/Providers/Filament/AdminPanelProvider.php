@@ -44,11 +44,15 @@ class AdminPanelProvider extends PanelProvider {
             ->maxContentWidth('full')
             ->renderHook(
                 'panels::topbar.end',
-                fn(): string => view('components.notification-bell')->render()
+                fn(): string => view('components.user-name-display')->render() . view('components.notification-bell')->render()
             )
             ->renderHook(
                 'panels::head.end',
                 fn(): string => view('filament.theme.styles')->render()
+            )
+            ->renderHook(
+                'panels::user-menu.start',
+                fn(): string => view('components.user-profile')->render()
             )
             ->middleware([
                 EncryptCookies::class,
@@ -63,6 +67,13 @@ class AdminPanelProvider extends PanelProvider {
             ])
             ->authMiddleware([
                 Authenticate::class,
+            ])
+            ->userMenuItems([
+                'profile' => \Filament\Navigation\MenuItem::make()
+                    ->label('Hồ sơ cá nhân')
+                    ->icon('heroicon-o-user-circle')
+                    ->url('/admin/profile-page')
+                    ->sort(1),
             ]);
     }
 }

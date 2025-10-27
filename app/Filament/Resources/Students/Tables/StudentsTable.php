@@ -19,6 +19,29 @@ use Illuminate\Database\Eloquent\Builder;
 class StudentsTable {
     public static function configure(Table $table): Table {
         return $table
+            ->recordUrl(function (Student $record) {
+                $user = Auth::user();
+
+                // Super admin, organization_owner, admissions, document luôn được phép
+                if (in_array($user->role, ['super_admin', 'organization_owner', 'admissions', 'document'])) {
+                    return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
+                }
+
+                // CTV chỉ được phép nếu payment chưa verified
+                if ($user->role === 'ctv') {
+                    // Kiểm tra xem có payment nào đã verified không
+                    $hasVerifiedPayment = Payment::where('student_id', $record->id)
+                        ->where('status', Payment::STATUS_VERIFIED)
+                        ->exists();
+
+                    // Nếu có payment verified, CTV không được phép edit
+                    if (!$hasVerifiedPayment) {
+                        return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
+                    }
+                }
+
+                return null;
+            })
             ->columns([
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
@@ -184,7 +207,27 @@ class StudentsTable {
                     EditAction::make()
                         ->label('Chỉnh sửa')
                         ->icon('heroicon-o-pencil')
-                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])),
+                        ->visible(function (Student $record) {
+                            $user = Auth::user();
+
+                            // Super admin, organization_owner, admissions, document luôn được phép
+                            if (in_array($user->role, ['super_admin', 'organization_owner', 'admissions', 'document'])) {
+                                return true;
+                            }
+
+                            // CTV chỉ được phép nếu payment chưa verified
+                            if ($user->role === 'ctv') {
+                                // Kiểm tra xem có payment nào đã verified không
+                                $hasVerifiedPayment = Payment::where('student_id', $record->id)
+                                    ->where('status', Payment::STATUS_VERIFIED)
+                                    ->exists();
+
+                                // Nếu có payment verified, CTV không được phép edit
+                                return !$hasVerifiedPayment;
+                            }
+
+                            return false;
+                        }),
 
                     Action::make('confirm_payment')
                         ->label('Xác nhận đã nộp tiền')
@@ -195,12 +238,28 @@ class StudentsTable {
                         ->modalDescription('Xác nhận học viên đã nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã nộp (chờ xác minh)".')
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(
-                            fn(Student $record): bool =>
-                            $record->status !== Student::STATUS_ENROLLED &&
-                                $record->status !== Student::STATUS_SUBMITTED &&
-                                in_array(Auth::user()->role, ['super_admin', 'organization_owner', 'ctv'])
-                        )
+                        ->visible(function (Student $record): bool {
+                            $user = Auth::user();
+
+                            if ($record->status === Student::STATUS_ENROLLED || $record->status === Student::STATUS_SUBMITTED) {
+                                return false;
+                            }
+
+                            if (!in_array($user->role, ['super_admin', 'organization_owner', 'ctv'])) {
+                                return false;
+                            }
+
+                            // CTV không được phép confirm nếu payment đã verified
+                            if ($user->role === 'ctv') {
+                                $hasVerifiedPayment = Payment::where('student_id', $record->id)
+                                    ->where('status', Payment::STATUS_VERIFIED)
+                                    ->exists();
+
+                                return !$hasVerifiedPayment;
+                            }
+
+                            return true;
+                        })
                         ->action(function (Student $record): void {
                             // Cập nhật payment record nếu có
                             $payment = $record->payment;

@@ -24,6 +24,20 @@ class CreateCollaborator extends CreateRecord {
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array {
+        // Kiểm tra xem collaborator với email này đã tồn tại chưa
+        $existingCollaborator = Collaborator::where('email', $data['email'])->first();
+        if ($existingCollaborator) {
+            \Filament\Notifications\Notification::make()
+                ->title('Email đã tồn tại')
+                ->body('Email này đã được sử dụng bởi CTV khác. Vui lòng sử dụng email khác.')
+                ->danger()
+                ->send();
+
+            throw new \Illuminate\Validation\ValidationException(
+                \Illuminate\Support\Facades\Validator::make([], ['email' => 'unique:collaborators,email']),
+            );
+        }
+
         $user = Auth::user();
         if ($user->role === 'super_admin') {
             // Nếu là super_admin, cho phép chọn organization_id và upline_id (không làm gì)
@@ -45,22 +59,29 @@ class CreateCollaborator extends CreateRecord {
 
         // Tạo User account cho collaborator
         if (!empty($data['email'])) {
-            $password = !empty($data['password']) ? $data['password'] : '123456';
+            // Kiểm tra xem email đã tồn tại chưa
+            $existingUser = User::where('email', $data['email'])->first();
 
-            $userAccount = User::create([
-                'name' => $data['full_name'],
-                'email' => $data['email'],
-                'password' => Hash::make($password),
-                'role' => 'ctv',
-            ]);
+            if (!$existingUser) {
+                $password = !empty($data['password']) ? $data['password'] : '123456';
 
-            // Gán role 'ctv' cho collaborator
-            $userAccount->assignRole('ctv');
+                $userAccount = User::create([
+                    'name' => $data['full_name'],
+                    'email' => $data['email'],
+                    'password' => Hash::make($password),
+                    'role' => 'ctv',
+                ]);
+
+                // Gán role 'ctv' cho collaborator
+                $userAccount->assignRole('ctv');
+            } else {
+                $userAccount = $existingUser;
+            }
 
             // Cập nhật organization organization_owner_id nếu chưa có
             if (isset($data['organization_id'])) {
                 $org = Organization::find($data['organization_id']);
-                if ($org && !$org->organization_owner_id) {
+                if ($org && !$org->organization_owner_id && $existingUser) {
                     $org->update(['organization_owner_id' => $userAccount->id]);
                 }
             }

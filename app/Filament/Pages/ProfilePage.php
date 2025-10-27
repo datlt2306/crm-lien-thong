@@ -61,9 +61,12 @@ class ProfilePage extends Page {
                             '1:1',
                         ])
                         ->maxSize(2048)
+                        ->disk('public')
                         ->directory('avatars')
                         ->visibility('public')
-                        ->helperText('Tải lên ảnh đại diện của bạn (tối đa 2MB)'),
+                        ->helperText('Tải lên ảnh đại diện của bạn (tối đa 2MB)')
+                        ->dehydrateStateUsing(fn($state) => is_array($state) ? ($state[0] ?? null) : $state)
+                        ->dehydrated(true),
 
                     TextInput::make('name')
                         ->label('Họ và tên')
@@ -162,8 +165,8 @@ class ProfilePage extends Page {
             'name' => $data['name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'avatar' => is_array($data['avatar']) && !empty($data['avatar']) ? $data['avatar'][0] : ($data['avatar'] ?? null),
-            'bio' => $data['bio'],
+            'avatar' => $data['avatar'],
+            'bio' => $data['bio'] ?? '',
         ];
 
         // Cập nhật mật khẩu nếu có
@@ -174,13 +177,16 @@ class ProfilePage extends Page {
         /** @var User $user */
         $user->update($updateData);
 
+        // Refresh user để lấy dữ liệu mới từ database
+        $user->refresh();
+
         // Reset form
         $this->data = [
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
             'avatar' => $user->avatar ? [$user->avatar] : [],
-            'bio' => $user->bio,
+            'bio' => $user->bio ?? '',
             'current_password' => '',
             'password' => '',
             'password_confirmation' => '',
@@ -194,6 +200,6 @@ class ProfilePage extends Page {
     }
 
     public static function shouldRegisterNavigation(): bool {
-        return Auth::check();
+        return false; // Ẩn khỏi navigation sidebar
     }
 }

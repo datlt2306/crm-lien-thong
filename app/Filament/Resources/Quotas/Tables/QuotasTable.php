@@ -10,10 +10,15 @@ use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Table;
+use App\Filament\Resources\Quotas\QuotaResource;
 
 class QuotasTable {
     public static function configure(Table $table): Table {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
+
         return $table
+            ->recordUrl(fn($record) => $canEdit ? QuotaResource::getUrl('edit', ['record' => $record]) : null)
             ->columns([
                 TextColumn::make('intake.name')
                     ->label('Đợt tuyển sinh')
@@ -128,7 +133,9 @@ class QuotasTable {
             ->recordActions([
                 ActionGroup::make([
                     ViewAction::make()
-                        ->label('Xem chi tiết'),
+                        ->label('Xem chi tiết')
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
+                            !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
                     EditAction::make()
                         ->label('Chỉnh sửa')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&

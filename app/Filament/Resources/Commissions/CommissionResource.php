@@ -58,28 +58,79 @@ class CommissionResource extends Resource {
             ->query(CommissionItem::query())
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('commission.student.full_name')
-                    ->label('Sinh viên')
+                    ->label('Họ và tên')
                     ->searchable()
                     ->sortable()
-                    ->action(
-                        \Filament\Actions\Action::make('view_student')
-                            ->label('Xem thông tin sinh viên')
-                            ->icon('heroicon-o-eye')
-                            ->modalContent(function (CommissionItem $record) {
-                                $student = $record->commission->student;
-                                if (!$student) {
-                                    return view('components.student-info', [
-                                        'student' => null,
-                                        'error' => 'Không tìm thấy thông tin sinh viên'
-                                    ]);
-                                }
+                    ->description(function (CommissionItem $record) {
+                        $student = $record->commission->student;
+                        if (!$student) return '';
 
-                                return view('components.student-info-modal', [
-                                    'student' => $student,
-                                ]);
-                            })
-                            ->modalWidth('4xl')
-                    ),
+                        $lines = [];
+                        if ($student->phone) {
+                            $lines[] = '📞 ' . e($student->phone);
+                        }
+                        if ($student->email) {
+                            $lines[] = '✉️ ' . e($student->email);
+                        }
+                        return implode(' | ', $lines);
+                    }),
+
+                \Filament\Tables\Columns\TextColumn::make('commission.student.dob')
+                    ->label('Ngày sinh')
+                    ->date('d/m/Y')
+                    ->sortable(),
+
+                \Filament\Tables\Columns\TextColumn::make('commission.student.major')
+                    ->label('Ngành học')
+                    ->searchable(),
+
+                \Filament\Tables\Columns\TextColumn::make('commission.student.address')
+                    ->label('Địa chỉ')
+                    ->limit(50)
+                    ->searchable(),
+
+                \Filament\Tables\Columns\TextColumn::make('commission.student.intake_month')
+                    ->label('Đợt tuyển')
+                    ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : '—')
+                    ->sortable(),
+
+                \Filament\Tables\Columns\TextColumn::make('commission.student.program_type')
+                    ->label('Hệ tuyển sinh')
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'REGULAR' => '🎓 Chính quy',
+                        'PART_TIME' => '⏰ Vừa học vừa làm',
+                        default => '—'
+                    })
+                    ->badge()
+                    ->color(fn($state) => match ($state) {
+                        'REGULAR' => 'success',
+                        'PART_TIME' => 'info',
+                        default => 'gray'
+                    }),
+
+                \Filament\Tables\Columns\TextColumn::make('commission.student.collaborator.full_name')
+                    ->label('Người giới thiệu')
+                    ->searchable()
+                    ->sortable()
+                    ->visible(function (?CommissionItem $record) {
+                        if (!$record) return false;
+
+                        // Chỉ hiển thị khi là commission downline (sinh viên được CTV cấp dưới giới thiệu)
+                        // Không hiển thị khi là commission direct (sinh viên do CTV đó trực tiếp giới thiệu)
+                        return $record->role === 'downline';
+                    })
+                    ->formatStateUsing(function ($state, ?CommissionItem $record) {
+                        if (!$record || !$record->commission || !$record->commission->student) return '—';
+
+                        $student = $record->commission->student;
+
+                        // Chỉ hiển thị khi là downline commission và có collaborator
+                        if ($record->role === 'downline' && $student->collaborator) {
+                            return $student->collaborator->full_name;
+                        }
+
+                        return '—';
+                    }),
 
                 \Filament\Tables\Columns\TextColumn::make('recipient.full_name')
                     ->label('CTV nhận hoa hồng')
@@ -607,9 +658,14 @@ class CommissionResource extends Resource {
                         if ($downlineItem && $downlineItem->status === \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return false;
                         }
-                        // Với hệ VHVL/PART_TIME: chỉ hiển thị khi SV đã được chủ đơn vị xác nhận nhập học
+                        // Kiểm tra xem có CTV cấp dưới không
                         $commission = $record->commission;
                         $payment = $commission?->payment;
+                        // Nếu payment không có sub_collaborator_id, không hiển thị button
+                        if (!$payment || !$payment->sub_collaborator_id) {
+                            return false;
+                        }
+                        // Với hệ VHVL/PART_TIME: chỉ hiển thị khi SV đã được chủ đơn vị xác nhận nhập học
                         $student = $commission?->student;
                         $programType = strtoupper($payment->program_type ?? $student?->program_type ?? '');
                         if (in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
