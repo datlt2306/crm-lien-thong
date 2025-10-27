@@ -794,8 +794,10 @@ class CommissionResource extends Resource {
                     ->modalWidth('4xl')
                     ->visible(function (CommissionItem $record) use ($user): bool {
                         // Chỉ hiển thị cho accountant, organization_owner
-                        if (!in_array($user->role, ['accountant', 'organization_owner']) && 
-                            !($user->roles && $user->roles->contains('name', 'accountant'))) {
+                        if (
+                            !in_array($user->role, ['accountant', 'organization_owner']) &&
+                            !($user->roles && $user->roles->contains('name', 'accountant'))
+                        ) {
                             return false;
                         }
 

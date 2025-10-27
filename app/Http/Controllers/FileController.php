@@ -103,8 +103,10 @@ class FileController extends Controller {
         }
 
         // Super admin, accountant, organization_owner có thể xem receipt
-        if (in_array($user->role, ['super_admin', 'accountant', 'organization_owner']) || 
-            ($user->roles && $user->roles->contains('name', 'accountant'))) {
+        if (
+            in_array($user->role, ['super_admin', 'accountant', 'organization_owner']) ||
+            ($user->roles && $user->roles->contains('name', 'accountant'))
+        ) {
             return $this->serveFile($payment->receipt_path);
         }
 
