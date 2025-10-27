@@ -91,6 +91,26 @@ class FileController extends Controller {
         abort(403, 'Không có quyền truy cập file này');
     }
 
+    public function viewReceipt($paymentId) {
+        // Tìm payment
+        $payment = Payment::findOrFail($paymentId);
+
+        // Kiểm tra quyền truy cập
+        $user = Auth::user();
+
+        if (!$user) {
+            abort(403, 'Không có quyền truy cập');
+        }
+
+        // Super admin, accountant, organization_owner có thể xem receipt
+        if (in_array($user->role, ['super_admin', 'accountant', 'organization_owner']) || 
+            ($user->roles && $user->roles->contains('name', 'accountant'))) {
+            return $this->serveFile($payment->receipt_path);
+        }
+
+        abort(403, 'Không có quyền truy cập file này');
+    }
+
     private function serveFile($filePath) {
         if (!$filePath || !Storage::disk('local')->exists($filePath)) {
             abort(404, 'File không tồn tại');
