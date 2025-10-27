@@ -32,7 +32,7 @@ class ProfilePage extends Page {
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
-            'avatar' => $user->avatar,
+            'avatar' => $user->avatar ? [$user->avatar] : [],
             'bio' => $user->bio,
             'current_password' => '',
             'password' => '',
@@ -162,7 +162,7 @@ class ProfilePage extends Page {
             'name' => $data['name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'avatar' => $data['avatar'],
+            'avatar' => is_array($data['avatar']) && !empty($data['avatar']) ? $data['avatar'][0] : ($data['avatar'] ?? null),
             'bio' => $data['bio'],
         ];
 
@@ -179,7 +179,7 @@ class ProfilePage extends Page {
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
-            'avatar' => $user->avatar,
+            'avatar' => $user->avatar ? [$user->avatar] : [],
             'bio' => $user->bio,
             'current_password' => '',
             'password' => '',
