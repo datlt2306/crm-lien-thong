@@ -80,52 +80,46 @@ class StudentsTable {
                 TextColumn::make('source')
                     ->label('Nguồn')
                     ->searchable(),
-                TextColumn::make('payment.status')
-                    ->label('Trạng thái thanh toán')
-                    ->badge()
-                    ->color(function ($state): string {
-                        return match ($state) {
-                            Payment::STATUS_NOT_PAID => 'gray',
-                            Payment::STATUS_SUBMITTED => 'warning',
-                            Payment::STATUS_VERIFIED => 'success',
-                            default => 'gray',
-                        };
-                    })
-                    ->formatStateUsing(function ($state): string {
-                        return match ($state) {
-                            Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
-                            Payment::STATUS_SUBMITTED => 'Chờ xác minh',
-                            Payment::STATUS_VERIFIED => 'Đã xác nhận',
-                            default => '—',
-                        };
-                    })
-                    ->tooltip(function ($state): string {
-                        return match ($state) {
-                            Payment::STATUS_NOT_PAID => 'Học viên chưa nộp tiền',
-                            Payment::STATUS_SUBMITTED => 'Đã nộp tiền, chờ kế toán xác minh',
-                            Payment::STATUS_VERIFIED => 'Đã xác minh và tạo commission',
-                            default => '',
-                        };
-                    })
-                    ->visible(fn() => Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))),
                 TextColumn::make('status')
                     ->label('Tình trạng')
                     ->badge()
-                    ->color(function (string $state): string {
-                        return match ($state) {
-                            Student::STATUS_NEW => 'slate',           // Xám đậm cho mới
-                            Student::STATUS_CONTACTED => 'info',       // Xanh dương sáng
-                            Student::STATUS_SUBMITTED => 'warning',    // Vàng cam rõ ràng
-                            Student::STATUS_APPROVED => 'orange',      // Cam rõ ràng
-                            Student::STATUS_ENROLLED => 'success',     // Xanh lá thành công
-                            Student::STATUS_REJECTED => 'danger',      // Đỏ rõ ràng
-                            Student::STATUS_DROPPED => 'gray',          // Xám cho bỏ học
+                    ->color(function (Student $record): string {
+                        // Ưu tiên hiển thị trạng thái thanh toán nếu có payment
+                        if ($record->payment) {
+                            return match ($record->payment->status) {
+                                Payment::STATUS_NOT_PAID => 'gray',
+                                Payment::STATUS_SUBMITTED => 'warning',
+                                Payment::STATUS_VERIFIED => 'success',
+                                default => 'gray',
+                            };
+                        }
+
+                        // Nếu không có payment, hiển thị trạng thái sinh viên
+                        return match ($record->status) {
+                            Student::STATUS_NEW => 'slate',
+                            Student::STATUS_CONTACTED => 'info',
+                            Student::STATUS_SUBMITTED => 'warning',
+                            Student::STATUS_APPROVED => 'orange',
+                            Student::STATUS_ENROLLED => 'success',
+                            Student::STATUS_REJECTED => 'danger',
+                            Student::STATUS_DROPPED => 'gray',
                             default => 'slate',
                         };
                     })
-                    ->formatStateUsing(function (string $state): string {
+                    ->formatStateUsing(function (Student $record): string {
+                        // Ưu tiên hiển thị trạng thái thanh toán nếu có payment
+                        if ($record->payment) {
+                            return match ($record->payment->status) {
+                                Payment::STATUS_NOT_PAID => '💳 Chưa nộp tiền',
+                                Payment::STATUS_SUBMITTED => '⏳ Chờ xác minh',
+                                Payment::STATUS_VERIFIED => '✅ Đã xác nhận',
+                                default => '—',
+                            };
+                        }
+
+                        // Nếu không có payment, hiển thị trạng thái sinh viên
                         $statusOptions = Student::getStatusOptions();
-                        $statusLabel = $statusOptions[$state] ?? $state;
+                        $statusLabel = $statusOptions[$record->status] ?? $record->status;
 
                         // Thêm icon cho từng trạng thái
                         $icons = [
@@ -138,21 +132,20 @@ class StudentsTable {
                             Student::STATUS_DROPPED => '🚫',
                         ];
 
-                        $icon = $icons[$state] ?? '';
+                        $icon = $icons[$record->status] ?? '';
                         return $icon ? "{$icon} {$statusLabel}" : $statusLabel;
                     })
-                    ->tooltip(function (string $state): string {
-                        $tooltips = [
-                            Student::STATUS_NEW => '🆕 Học viên mới đăng ký, chưa được xử lý',
-                            Student::STATUS_CONTACTED => '📞 Đã liên hệ với học viên, đang tư vấn',
-                            Student::STATUS_SUBMITTED => '⏳ Học viên đã nộp tiền, đang chờ admin xác minh thanh toán',
-                            Student::STATUS_APPROVED => '✅ Hồ sơ đã được duyệt, sẵn sàng nhập học',
-                            Student::STATUS_ENROLLED => '🎓 Học viên đã nhập học thành công',
-                            Student::STATUS_REJECTED => '❌ Hồ sơ bị từ chối, không đủ điều kiện',
-                            Student::STATUS_DROPPED => '🚫 Học viên bỏ học, không tiếp tục',
-                        ];
+                    ->tooltip(function (Student $record): string {
+                        if ($record->payment) {
+                            return match ($record->payment->status) {
+                                Payment::STATUS_NOT_PAID => 'Học viên chưa nộp tiền',
+                                Payment::STATUS_SUBMITTED => 'Đã nộp tiền, chờ kế toán xác minh',
+                                Payment::STATUS_VERIFIED => 'Đã xác minh và tạo commission',
+                                default => '',
+                            };
+                        }
 
-                        return $tooltips[$state] ?? '';
+                        return 'Trạng thái: ' . (Student::getStatusOptions()[$record->status] ?? $record->status);
                     })
                     ->searchable(),
 
@@ -296,21 +289,25 @@ class StudentsTable {
                             ->send();
                     }),
 
-                // Action cho kế toán xác minh thanh toán
+                // Action cho kế toán xác nhận
                 Action::make('verify_payment')
-                    ->label('Xác minh thanh toán')
+                    ->label('Xác nhận')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Xác minh thanh toán')
+                    ->modalHeading('Xác nhận')
                     ->modalDescription('Xác nhận đã nhận tiền từ học viên. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã xác nhận" và tạo commission.')
-                    ->modalSubmitActionLabel('Xác minh')
+                    ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
+                    ->tooltip('Xác nhận đã nhận tiền từ học viên và chuyển trạng thái thanh toán sang "Đã xác nhận"')
                     ->visible(
                         fn(Student $record): bool =>
-                        $record->payment && 
-                        $record->payment->status === Payment::STATUS_SUBMITTED &&
-                            (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
+                        // Chỉ hiển thị cho kế toán
+                        (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                            // Sinh viên phải có payment record
+                            $record->payment &&
+                            // Payment phải ở trạng thái chờ xác minh
+                            $record->payment->status === Payment::STATUS_SUBMITTED
                     )
                     ->action(function (Student $record) {
                         $payment = $record->payment;
@@ -336,41 +333,6 @@ class StudentsTable {
                         }
                     }),
 
-                // Action cho kế toán báo chưa nộp tiền
-                Action::make('mark_not_paid')
-                    ->label('Báo chưa nộp tiền')
-                    ->icon('heroicon-o-exclamation-triangle')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->modalHeading('Báo chưa nộp tiền')
-                    ->modalDescription('Đánh dấu học viên chưa nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán về "Chưa nộp tiền".')
-                    ->modalSubmitActionLabel('Xác nhận')
-                    ->modalCancelActionLabel('Hủy')
-                    ->visible(
-                        fn(Student $record): bool =>
-                        $record->payment && 
-                        $record->payment->status === Payment::STATUS_SUBMITTED &&
-                            (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
-                    )
-                    ->action(function (Student $record) {
-                        $payment = $record->payment;
-                        if ($payment) {
-                            // Đánh dấu chưa nộp tiền
-                            $payment->update(['status' => Payment::STATUS_NOT_PAID]);
-
-                            \Filament\Notifications\Notification::make()
-                                ->title('Đã cập nhật trạng thái')
-                                ->body('Học viên đã được đánh dấu chưa nộp tiền.')
-                                ->warning()
-                                ->send();
-                        } else {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Lỗi')
-                                ->body('Không tìm thấy thông tin thanh toán.')
-                                ->danger()
-                                ->send();
-                        }
-                    }),
 
             ])
             ->toolbarActions([

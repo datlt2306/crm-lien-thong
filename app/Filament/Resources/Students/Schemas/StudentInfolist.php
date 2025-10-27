@@ -15,6 +15,8 @@ class StudentInfolist {
                     ->label('Số điện thoại'),
                 TextEntry::make('email')
                     ->label('Địa chỉ email'),
+                TextEntry::make('identity_card')
+                    ->label('Căn cước công dân'),
                 // Ẩn tổ chức theo yêu cầu
                 // TextEntry::make('organization.name')
                 //     ->label('Tổ chức'),

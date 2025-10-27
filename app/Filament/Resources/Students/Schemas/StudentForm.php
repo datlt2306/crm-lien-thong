@@ -18,42 +18,26 @@ class StudentForm {
                 TextInput::make('phone')
                     ->label('Số điện thoại')
                     ->tel()
-                    ->required(),
+                    ->required()
+                    ->unique(ignoreRecord: true)
+                    ->validationMessages([
+                        'unique' => 'Số điện thoại đã được sử dụng bởi học viên khác.',
+                    ]),
                 TextInput::make('email')
                     ->label('Email')
                     ->email(),
-                \Filament\Forms\Components\Select::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name')
-                    ->required()
-                    ->helperText('Chọn tổ chức cho sinh viên'),
-                \Filament\Forms\Components\Select::make('collaborator_id')
-                    ->label('CTV giới thiệu')
-                    ->relationship('collaborator', 'full_name')
-                    // ->searchable()
-                    ->helperText('Chọn người giới thiệu cho sinh viên này'),
-                \Filament\Forms\Components\TextInput::make('target_university')
-                    ->label('Trường muốn học')
-                    ->disabled()
-                    ->dehydrateStateUsing(function ($state, callable $get) {
-                        // Tự động set theo tên tổ chức
-                        $organizationId = $get('organization_id');
-                        if (!$organizationId) return $state;
-                        $org = \App\Models\Organization::find($organizationId);
-                        return $org?->name;
-                    })
-                    ->helperText('Tự động theo tên đơn vị'),
+                TextInput::make('identity_card')
+                    ->label('Căn cước công dân')
+                    ->helperText('Nhập số căn cước công dân của học viên')
+                    ->unique(ignoreRecord: true)
+                    ->validationMessages([
+                        'unique' => 'Số căn cước công dân đã được sử dụng bởi học viên khác.',
+                    ]),
                 \Filament\Forms\Components\Select::make('major')
-                    ->label('Ngành học')
-                    ->options(function (callable $get) {
-                        $orgId = $get('organization_id');
-                        if (!$orgId) {
-                            return \App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray();
-                        }
-                        $org = \App\Models\Organization::with('majors')->find($orgId);
-                        return $org?->majors()->where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray() ?? [];
-                    })
-                    ->searchable(),
+                    ->label('Ngành đăng ký học')
+                    ->options(\App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray())
+                    ->searchable()
+                    ->required(),
                 \Filament\Forms\Components\Select::make('program_type')
                     ->label('Hệ liên thông')
                     ->options([
@@ -102,12 +86,6 @@ class StudentForm {
                     ])
                     ->required()
                     ->default('form'),
-                \Filament\Forms\Components\Select::make('status')
-                    ->label('Tình trạng')
-                    ->options(Student::getStatusOptions())
-                    ->required()
-                    ->default(Student::STATUS_NEW)
-                    ->helperText('Quản lý hành trình nhập học của sinh viên'),
                 Textarea::make('notes')
                     ->label('Ghi chú')
                     ->columnSpanFull(),

@@ -61,7 +61,8 @@ class PermissionSeeder extends Seeder {
         $ctv->syncPermissions([
             'view_commission',
             'view_payment',
-            'view_student'
+            'view_student',
+            'manage_student'
         ]);
 
         // Gán permissions cho accountant
