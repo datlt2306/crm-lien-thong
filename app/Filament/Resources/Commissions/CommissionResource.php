@@ -774,28 +774,65 @@ class CommissionResource extends Resource {
                                 ($user->roles && $user->roles->contains('name', 'accountant'));
                         }),
 
-                    Action::make('upload_receipt')
-                        ->label('Upload phiếu thu')
-                        ->icon('heroicon-o-document-plus')
+                    Action::make('manage_receipt')
+                        ->label(function (CommissionItem $record): string {
+                            $payment = $record->commission->payment;
+                            return $payment && $payment->receipt_path ? 'Chỉnh sửa phiếu thu' : 'Upload phiếu thu';
+                        })
+                        ->icon(function (CommissionItem $record): string {
+                            $payment = $record->commission->payment;
+                            return $payment && $payment->receipt_path ? 'heroicon-o-pencil-square' : 'heroicon-o-document-plus';
+                        })
                         ->color('primary')
-                        ->form([
-                            \Filament\Forms\Components\TextInput::make('receipt_number')
-                                ->label('Mã số phiếu thu')
-                                ->maxLength(255)
-                                ->helperText('Nhập mã số phiếu thu từ Helen'),
+                        ->form(function (CommissionItem $record): array {
+                            $payment = $record->commission->payment;
+                            $hasReceipt = $payment && $payment->receipt_path;
                             
-                            \Filament\Forms\Components\FileUpload::make('receipt')
-                                ->label('File phiếu thu')
+                            $form = [
+                                \Filament\Forms\Components\TextInput::make('receipt_number')
+                                    ->label('Mã số phiếu thu')
+                                    ->maxLength(255)
+                                    ->default($payment ? $payment->receipt_number : '')
+                                    ->helperText('Nhập mã số phiếu thu từ Helen'),
+                            ];
+                            
+                            if ($hasReceipt) {
+                                // Hiển thị phiếu thu hiện tại
+                                $form[] = \Filament\Forms\Components\ViewField::make('current_receipt')
+                                    ->label('Phiếu thu hiện tại')
+                                    ->view('components.commission-bill-viewer')
+                                    ->viewData([
+                                        'payment' => $payment,
+                                        'fileUrl' => route('files.receipt.view', $payment->id),
+                                        'fileName' => basename($payment->receipt_path),
+                                    ]);
+                            }
+                            
+                            $form[] = \Filament\Forms\Components\FileUpload::make('receipt')
+                                ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'File phiếu thu')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120) // 5MB
                                 ->disk('local')
                                 ->directory('receipts')
-                                ->required()
-                                ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
-                        ])
-                        ->modalHeading('Upload phiếu thu')
-                        ->modalDescription('Upload phiếu thu sau khi xác nhận đã thanh toán hoa hồng cho CTV.')
-                        ->modalSubmitActionLabel('Upload')
+                                ->required(!$hasReceipt)
+                                ->helperText($hasReceipt ? 'Chọn file mới để thay thế phiếu thu hiện tại' : 'Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)');
+                            
+                            return $form;
+                        })
+                        ->modalHeading(function (CommissionItem $record): string {
+                            $payment = $record->commission->payment;
+                            return $payment && $payment->receipt_path ? 'Chỉnh sửa phiếu thu' : 'Upload phiếu thu';
+                        })
+                        ->modalDescription(function (CommissionItem $record): string {
+                            $payment = $record->commission->payment;
+                            return $payment && $payment->receipt_path 
+                                ? 'Chỉnh sửa thông tin phiếu thu đã upload.'
+                                : 'Upload phiếu thu sau khi xác nhận đã thanh toán hoa hồng cho CTV.';
+                        })
+                        ->modalSubmitActionLabel(function (CommissionItem $record): string {
+                            $payment = $record->commission->payment;
+                            return $payment && $payment->receipt_path ? 'Cập nhật' : 'Upload';
+                        })
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (CommissionItem $record) use ($user): bool {
                             // Chỉ hiển thị cho accountant
@@ -815,21 +852,26 @@ class CommissionResource extends Resource {
                             $payment = $record->commission->payment;
                             if ($payment) {
                                 $updateData = [
-                                    'receipt_path' => $data['receipt'],
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
                                 ];
                                 
-                                // Thêm receipt_number nếu có
-                                if (!empty($data['receipt_number'])) {
+                                // Cập nhật receipt_number
+                                if (isset($data['receipt_number'])) {
                                     $updateData['receipt_number'] = $data['receipt_number'];
+                                }
+                                
+                                // Cập nhật file nếu có file mới
+                                if (!empty($data['receipt'])) {
+                                    $updateData['receipt_path'] = $data['receipt'];
                                 }
                                 
                                 $payment->update($updateData);
 
+                                $action = $payment->receipt_path ? 'cập nhật' : 'upload';
                                 \Filament\Notifications\Notification::make()
-                                    ->title('Đã upload phiếu thu thành công')
-                                    ->body('Phiếu thu đã được lưu vào hệ thống.')
+                                    ->title("Đã {$action} phiếu thu thành công")
+                                    ->body('Thông tin phiếu thu đã được lưu vào hệ thống.')
                                     ->success()
                                     ->send();
                             }
