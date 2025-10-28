@@ -725,7 +725,7 @@ class CommissionResource extends Resource {
                 // ActionGroup: Bill & Receipt
                 ActionGroup::make([
                     Action::make('view_bill_transfer')
-                        ->label('Xem Bill chuyển tiền')
+                        ->label('Xem Bill CTV')
                         ->icon('heroicon-o-document-arrow-up')
                         ->modalHeading('Bill chuyển tiền từ CTV')
                         ->modalContent(function (CommissionItem $record) {
@@ -825,7 +825,7 @@ class CommissionResource extends Resource {
                             }
                         }),
                 ])
-                    ->label('Bill & Receipt')
+                    ->label('Files')
                     ->icon('heroicon-o-document-text')
                     ->color('gray')
                     ->button()
