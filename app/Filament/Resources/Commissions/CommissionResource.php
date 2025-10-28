@@ -566,8 +566,8 @@ class CommissionResource extends Resource {
                     ])
                     ->default('ALL')
                     ->native(false)
-                    ->query(function ($query, $state) {
-                        $value = strtoupper((string) $state);
+                    ->query(function ($query, array $data) {
+                        $value = strtoupper((string) ($data['value'] ?? 'ALL'));
                         if ($value === 'ENROLLED') {
                             $query->whereHas('commission.student', function ($q) {
                                 $q->where('status', \App\Models\Student::STATUS_ENROLLED);
