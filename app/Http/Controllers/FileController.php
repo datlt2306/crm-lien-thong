@@ -102,9 +102,9 @@ class FileController extends Controller {
             abort(403, 'Không có quyền truy cập');
         }
 
-        // Super admin, accountant, organization_owner có thể xem receipt
+        // Super admin, accountant, organization_owner, ctv có thể xem receipt
         if (
-            in_array($user->role, ['super_admin', 'accountant', 'organization_owner']) ||
+            in_array($user->role, ['super_admin', 'accountant', 'organization_owner', 'ctv']) ||
             ($user->roles && $user->roles->contains('name', 'accountant'))
         ) {
             return $this->serveFile($payment->receipt_path);
