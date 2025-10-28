@@ -519,7 +519,7 @@ class CommissionResource extends Resource {
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
-                    ->label('Trạng thái')
+                    ->label('Trạng thái hoa hồng')
                     ->options(CommissionItem::getStatusOptions()),
 
                 // Tabs (segmented) Phân loại: Tất cả / Cấp 1 / Cấp 2
@@ -553,6 +553,29 @@ class CommissionResource extends Resource {
                             $query->where('role', 'direct');
                         } elseif ($value === 'DOWNLINE') {
                             $query->where('role', 'downline');
+                        }
+                    }),
+
+                // Filter Trạng thái SV: Tất cả / Đã nhập học / Chưa nhập học
+                \Filament\Tables\Filters\SelectFilter::make('student_status')
+                    ->label('Trạng thái SV')
+                    ->options([
+                        'ALL' => 'Tất cả',
+                        'ENROLLED' => 'Đã nhập học',
+                        'NOT_ENROLLED' => 'Chưa nhập học',
+                    ])
+                    ->default('ALL')
+                    ->native(false)
+                    ->query(function ($query, $state) {
+                        $value = strtoupper((string) $state);
+                        if ($value === 'ENROLLED') {
+                            $query->whereHas('commission.student', function ($q) {
+                                $q->where('status', \App\Models\Student::STATUS_ENROLLED);
+                            });
+                        } elseif ($value === 'NOT_ENROLLED') {
+                            $query->whereHas('commission.student', function ($q) {
+                                $q->where('status', '!=', \App\Models\Student::STATUS_ENROLLED);
+                            });
                         }
                     }),
 
