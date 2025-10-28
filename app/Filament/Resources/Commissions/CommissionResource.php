@@ -506,12 +506,24 @@ class CommissionResource extends Resource {
                     ->label('Trạng thái')
                     ->options(CommissionItem::getStatusOptions()),
 
-                \Filament\Tables\Filters\SelectFilter::make('role')
-                    ->label('Vai trò')
+                // Filter phân loại: Tất cả / Cấp 1 / Cấp 2
+                \Filament\Tables\Filters\SelectFilter::make('role_tab')
+                    ->label('Phân loại')
                     ->options([
-                        'DIRECT' => 'CTV cấp 1',
-                        'DOWNLINE' => 'CTV cấp 2',
-                    ]),
+                        'ALL' => 'Tất cả',
+                        'DIRECT' => 'Cấp 1',
+                        'DOWNLINE' => 'Cấp 2',
+                    ])
+                    ->default('ALL')
+                    ->native(false)
+                    ->query(function ($query, $state) {
+                        $value = strtoupper((string) $state);
+                        if ($value === 'DIRECT') {
+                            $query->where('role', 'direct');
+                        } elseif ($value === 'DOWNLINE') {
+                            $query->where('role', 'downline');
+                        }
+                    }),
 
                 \Filament\Tables\Filters\SelectFilter::make('trigger')
                     ->label('Điều kiện kích hoạt')
