@@ -518,42 +518,41 @@ class CommissionResource extends Resource {
                     ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho chủ đơn vị và super admin
 
                 // Cột: Bill chuyển tiền (CTV upload) - CommissionItem.payment_bill_path
-                \Filament\Tables\Columns\TextColumn::make('bill_transfer')
+                \Filament\Tables\Columns\TextColumn::make('payment_bill_path')
                     ->label('Bill chuyển tiền')
+                    ->default('—')
+                    ->badge()
+                    ->color('blue')
                     ->formatStateUsing(function (?CommissionItem $record) {
                         if (!$record || !$record->payment_bill_path) {
                             return '—';
                         }
                         return 'Có bill';
                     })
-                    ->badge()
-                    ->color(fn($state) => $state !== '—' ? 'blue' : 'gray')
                     ->action(
                         \Filament\Actions\Action::make('view_bill_transfer')
                             ->label('Xem Bill chuyển tiền')
                             ->modalContent(function (CommissionItem $record) {
+                                if (!$record->payment_bill_path) {
+                                    return view('components.no-content', [
+                                        'message' => 'Chưa có bill chuyển tiền.'
+                                    ]);
+                                }
                                 return view('components.commission-bill-viewer', [
                                     'commissionItem' => $record,
                                 ]);
                             })
                             ->modalWidth('4xl')
+                            ->modalHeading('Bill chuyển tiền từ CTV')
                     )
-                    ->visible(function (?CommissionItem $record) use ($user): bool {
-                        if (!$record) return false;
-                        if (!$record->payment_bill_path) return false;
-                        // Tất cả role ngoài CTV cấp 2
-                        if ($user->role === 'ctv') {
-                            $collab = Collaborator::where('email', $user->email)->first();
-                            if ($collab && $collab->upline_id !== null) {
-                                return false; // CTV cấp 2 không thấy
-                            }
-                        }
-                        return true;
-                    }),
+                    ->visible(fn(): bool => $user->role !== 'ctv' || $isPrimaryCtv),
 
                 // Cột: Bill thu tiền (Accountant upload) - Payment.receipt_path  
-                \Filament\Tables\Columns\TextColumn::make('bill_receipt')
+                \Filament\Tables\Columns\TextColumn::make('commission.payment.receipt_path')
                     ->label('Bill thu tiền')
+                    ->default('—')
+                    ->badge()
+                    ->color('green')
                     ->formatStateUsing(function (?CommissionItem $record) {
                         if (!$record) return '—';
                         $payment = $record->commission->payment;
@@ -562,8 +561,6 @@ class CommissionResource extends Resource {
                         }
                         return 'Có bill';
                     })
-                    ->badge()
-                    ->color(fn($state) => $state !== '—' ? 'green' : 'gray')
                     ->action(
                         \Filament\Actions\Action::make('view_bill_receipt')
                             ->label('Xem Bill thu tiền')
@@ -583,15 +580,9 @@ class CommissionResource extends Resource {
                                 ]);
                             })
                             ->modalWidth('4xl')
+                            ->modalHeading('Phiếu thu từ Helen')
                     )
-                    ->visible(function (?CommissionItem $record) use ($user): bool {
-                        if (!$record) return false;
-                        $payment = $record->commission->payment;
-                        if (!$payment || !$payment->receipt_path) return false;
-                        // Chỉ hiển thị cho accountant, organization_owner, super_admin
-                        return in_array($user->role, ['accountant', 'organization_owner', 'super_admin']) || 
-                               ($user->roles && $user->roles->contains('name', 'accountant'));
-                    }),
+                    ->visible(fn(): bool => in_array($user->role, ['accountant', 'organization_owner', 'super_admin']) || ($user->roles && $user->roles->contains('name', 'accountant'))),
 
             ])
             ->filters([
