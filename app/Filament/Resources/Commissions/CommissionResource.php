@@ -779,8 +779,13 @@ class CommissionResource extends Resource {
                         ->icon('heroicon-o-document-plus')
                         ->color('primary')
                         ->form([
+                            \Filament\Forms\Components\TextInput::make('receipt_number')
+                                ->label('Mã số phiếu thu')
+                                ->maxLength(255)
+                                ->helperText('Nhập mã số phiếu thu từ Helen'),
+                            
                             \Filament\Forms\Components\FileUpload::make('receipt')
-                                ->label('Phiếu thu Helen')
+                                ->label('File phiếu thu')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120) // 5MB
                                 ->disk('local')
@@ -809,11 +814,18 @@ class CommissionResource extends Resource {
                             // Cập nhật receipt vào payment
                             $payment = $record->commission->payment;
                             if ($payment) {
-                                $payment->update([
+                                $updateData = [
                                     'receipt_path' => $data['receipt'],
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
-                                ]);
+                                ];
+                                
+                                // Thêm receipt_number nếu có
+                                if (!empty($data['receipt_number'])) {
+                                    $updateData['receipt_number'] = $data['receipt_number'];
+                                }
+                                
+                                $payment->update($updateData);
 
                                 \Filament\Notifications\Notification::make()
                                     ->title('Đã upload phiếu thu thành công')

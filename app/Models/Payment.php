@@ -18,6 +18,7 @@ class Payment extends Model {
         'amount',
         'bill_path',
         'receipt_path',
+        'receipt_number',
         'status',
         'verified_by',
         'verified_at',
