@@ -520,8 +520,8 @@ class CommissionResource extends Resource {
                 // Cột: Bill chuyển tiền (CTV upload) - CommissionItem.payment_bill_path
                 \Filament\Tables\Columns\TextColumn::make('bill_transfer')
                     ->label('Bill chuyển tiền')
-                    ->formatStateUsing(function (CommissionItem $record) {
-                        if (!$record->payment_bill_path) {
+                    ->formatStateUsing(function (?CommissionItem $record) {
+                        if (!$record || !$record->payment_bill_path) {
                             return '—';
                         }
                         return 'Có bill';
@@ -538,7 +538,8 @@ class CommissionResource extends Resource {
                             })
                             ->modalWidth('4xl')
                     )
-                    ->visible(function (CommissionItem $record) use ($user): bool {
+                    ->visible(function (?CommissionItem $record) use ($user): bool {
+                        if (!$record) return false;
                         if (!$record->payment_bill_path) return false;
                         // Tất cả role ngoài CTV cấp 2
                         if ($user->role === 'ctv') {
@@ -553,7 +554,8 @@ class CommissionResource extends Resource {
                 // Cột: Bill thu tiền (Accountant upload) - Payment.receipt_path  
                 \Filament\Tables\Columns\TextColumn::make('bill_receipt')
                     ->label('Bill thu tiền')
-                    ->formatStateUsing(function (CommissionItem $record) {
+                    ->formatStateUsing(function (?CommissionItem $record) {
+                        if (!$record) return '—';
                         $payment = $record->commission->payment;
                         if (!$payment || !$payment->receipt_path) {
                             return '—';
@@ -582,7 +584,8 @@ class CommissionResource extends Resource {
                             })
                             ->modalWidth('4xl')
                     )
-                    ->visible(function (CommissionItem $record) use ($user): bool {
+                    ->visible(function (?CommissionItem $record) use ($user): bool {
+                        if (!$record) return false;
                         $payment = $record->commission->payment;
                         if (!$payment || !$payment->receipt_path) return false;
                         // Chỉ hiển thị cho accountant, organization_owner, super_admin
