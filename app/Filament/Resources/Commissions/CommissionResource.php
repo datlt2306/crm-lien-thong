@@ -495,23 +495,6 @@ class CommissionResource extends Resource {
                         return $record->role === 'downline' && $record->recipient_collaborator_id === $collab->id;
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('trigger')
-                    ->label('Điều kiện kích hoạt')
-                    ->badge()
-                    ->color(fn(string $state): string => match (strtoupper($state)) {
-                        'PAYMENT_VERIFIED' => 'blue',
-                        'STUDENT_ENROLLED' => 'green',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
-                        'PAYMENT_VERIFIED' => 'Khi xác nhận thanh toán',
-                        'STUDENT_ENROLLED' => 'Khi nhập học',
-                        default => $state,
-                    })
-                    ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
-
-
-
                 \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
                     ->label('Đã thanh toán lúc')
                     ->dateTime('d/m/Y H:i')
