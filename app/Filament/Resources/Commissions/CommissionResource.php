@@ -768,9 +768,8 @@ class CommissionResource extends Resource {
                         ->visible(function (CommissionItem $record) use ($user): bool {
                             $payment = $record->commission->payment;
                             if (!$payment || !$payment->receipt_path) return false;
-                            // Tất cả role: accountant, organization_owner, super_admin, ctv
-                            return in_array($user->role, ['accountant', 'organization_owner', 'super_admin', 'ctv']) ||
-                                ($user->roles && $user->roles->contains('name', 'accountant'));
+                            // Chỉ hiển thị cho organization_owner, super_admin, ctv (không hiển thị cho accountant)
+                            return in_array($user->role, ['organization_owner', 'super_admin', 'ctv']);
                         }),
 
                     Action::make('manage_receipt')
