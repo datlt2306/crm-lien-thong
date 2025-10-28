@@ -162,21 +162,6 @@ class CommissionResource extends Resource {
                         return $state;
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('role')
-                    ->label('Vai trò')
-                    ->badge()
-                    ->color(fn(string $state): string => match (strtoupper($state)) {
-                        'DIRECT' => 'success',
-                        'DOWNLINE' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
-                        'DIRECT' => 'CTV cấp 1',
-                        'DOWNLINE' => 'CTV cấp 2',
-                        default => $state,
-                    })
-                    ->visible(fn(): bool => !$isCtv && !$isOwner), // Chỉ hiển thị cho Super Admin
-
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
                     ->money('VND')
@@ -787,8 +772,8 @@ class CommissionResource extends Resource {
                             $payment = $record->commission->payment;
                             if (!$payment || !$payment->receipt_path) return false;
                             // Tất cả role: accountant, organization_owner, super_admin, ctv
-                            return in_array($user->role, ['accountant', 'organization_owner', 'super_admin', 'ctv']) || 
-                                   ($user->roles && $user->roles->contains('name', 'accountant'));
+                            return in_array($user->role, ['accountant', 'organization_owner', 'super_admin', 'ctv']) ||
+                                ($user->roles && $user->roles->contains('name', 'accountant'));
                         }),
 
                     Action::make('upload_receipt')
