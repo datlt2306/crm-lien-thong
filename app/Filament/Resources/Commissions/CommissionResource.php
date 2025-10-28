@@ -57,6 +57,8 @@ class CommissionResource extends Resource {
 
         return $table
             ->query(CommissionItem::query())
+            // Hiển thị filter như segmented control phía trên bảng
+            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContent)
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('commission.student.full_name')
                     ->label('Họ và tên')
@@ -506,18 +508,33 @@ class CommissionResource extends Resource {
                     ->label('Trạng thái')
                     ->options(CommissionItem::getStatusOptions()),
 
-                // Filter phân loại: Tất cả / Cấp 1 / Cấp 2
-                \Filament\Tables\Filters\SelectFilter::make('role_tab')
+                // Tabs (segmented) Phân loại: Tất cả / Cấp 1 / Cấp 2
+                \Filament\Tables\Filters\Filter::make('role_tab')
                     ->label('Phân loại')
-                    ->options([
-                        'ALL' => 'Tất cả',
-                        'DIRECT' => 'Cấp 1',
-                        'DOWNLINE' => 'Cấp 2',
+                    ->form([
+                        \Filament\Forms\Components\ToggleButtons::make('role_tab')
+                            ->label('')
+                            ->options([
+                                'ALL' => 'Tất cả',
+                                'DIRECT' => 'Cấp 1',
+                                'DOWNLINE' => 'Cấp 2',
+                            ])
+                            ->default('ALL')
+                            ->inline()
+                            ->colors([
+                                'ALL' => 'gray',
+                                'DIRECT' => 'success',
+                                'DOWNLINE' => 'info',
+                            ])
+                            ->icons([
+                                'ALL' => 'heroicon-o-view-columns',
+                                'DIRECT' => 'heroicon-o-user',
+                                'DOWNLINE' => 'heroicon-o-user-group',
+                            ])
+                            ->required()
                     ])
-                    ->default('ALL')
-                    ->native(false)
-                    ->query(function ($query, $state) {
-                        $value = strtoupper((string) $state);
+                    ->query(function ($query, array $data) {
+                        $value = strtoupper((string) ($data['role_tab'] ?? 'ALL'));
                         if ($value === 'DIRECT') {
                             $query->where('role', 'direct');
                         } elseif ($value === 'DOWNLINE') {
