@@ -725,9 +725,9 @@ class CommissionResource extends Resource {
                 // ActionGroup: Bill & Receipt
                 ActionGroup::make([
                     Action::make('view_bill_transfer')
-                        ->label('Xem Bill CTV')
+                        ->label('Minh chứng chuyển khoản')
                         ->icon('heroicon-o-document-arrow-up')
-                        ->modalHeading('Bill chuyển tiền từ CTV')
+                        ->modalHeading('Minh chứng chuyển khoản từ CTV')
                         ->modalContent(function (CommissionItem $record) {
                             if (!$record->payment_bill_path) {
                                 return view('components.no-content', [
