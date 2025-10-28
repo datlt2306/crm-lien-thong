@@ -167,6 +167,21 @@ class CommissionResource extends Resource {
                     ->money('VND')
                     ->sortable(),
 
+                // Cột số phiếu thu (receipt amount)
+                \Filament\Tables\Columns\TextColumn::make('commission.payment.amount')
+                    ->label('Số phiếu thu')
+                    ->money('VND')
+                    ->sortable()
+                    ->formatStateUsing(function (?CommissionItem $record) {
+                        if (!$record) return '—';
+                        $payment = $record->commission->payment;
+                        if (!$payment || !$payment->receipt_path) {
+                            return '—';
+                        }
+                        return $payment->amount;
+                    })
+                    ->visible(fn(): bool => in_array(Auth::user()->role, ['accountant', 'organization_owner', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))),
+
                 \Filament\Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
                     ->color(function (string $state): string {
