@@ -787,7 +787,7 @@ class CommissionResource extends Resource {
                         ->form(function (CommissionItem $record): array {
                             $payment = $record->commission->payment;
                             $hasReceipt = $payment && $payment->receipt_path;
-                            
+
                             $form = [
                                 \Filament\Forms\Components\TextInput::make('receipt_number')
                                     ->label('Mã số phiếu thu')
@@ -795,19 +795,19 @@ class CommissionResource extends Resource {
                                     ->default($payment ? $payment->receipt_number : '')
                                     ->helperText('Nhập mã số phiếu thu từ Helen'),
                             ];
-                            
+
                             if ($hasReceipt) {
                                 // Hiển thị phiếu thu hiện tại
                                 $form[] = \Filament\Forms\Components\ViewField::make('current_receipt')
                                     ->label('Phiếu thu hiện tại')
-                                    ->view('components.commission-bill-viewer')
+                                    ->view('components.bill-viewer')
                                     ->viewData([
                                         'payment' => $payment,
                                         'fileUrl' => route('files.receipt.view', $payment->id),
                                         'fileName' => basename($payment->receipt_path),
                                     ]);
                             }
-                            
+
                             $form[] = \Filament\Forms\Components\FileUpload::make('receipt')
                                 ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'File phiếu thu')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
@@ -816,7 +816,7 @@ class CommissionResource extends Resource {
                                 ->directory('receipts')
                                 ->required(!$hasReceipt)
                                 ->helperText($hasReceipt ? 'Chọn file mới để thay thế phiếu thu hiện tại' : 'Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)');
-                            
+
                             return $form;
                         })
                         ->modalHeading(function (CommissionItem $record): string {
@@ -825,7 +825,7 @@ class CommissionResource extends Resource {
                         })
                         ->modalDescription(function (CommissionItem $record): string {
                             $payment = $record->commission->payment;
-                            return $payment && $payment->receipt_path 
+                            return $payment && $payment->receipt_path
                                 ? 'Chỉnh sửa thông tin phiếu thu đã upload.'
                                 : 'Upload phiếu thu sau khi xác nhận đã thanh toán hoa hồng cho CTV.';
                         })
@@ -855,17 +855,17 @@ class CommissionResource extends Resource {
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
                                 ];
-                                
+
                                 // Cập nhật receipt_number
                                 if (isset($data['receipt_number'])) {
                                     $updateData['receipt_number'] = $data['receipt_number'];
                                 }
-                                
+
                                 // Cập nhật file nếu có file mới
                                 if (!empty($data['receipt'])) {
                                     $updateData['receipt_path'] = $data['receipt'];
                                 }
-                                
+
                                 $payment->update($updateData);
 
                                 $action = $payment->receipt_path ? 'cập nhật' : 'upload';
