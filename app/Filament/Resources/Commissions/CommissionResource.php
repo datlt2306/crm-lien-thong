@@ -853,40 +853,6 @@ class CommissionResource extends Resource {
                         }
                     }),
 
-                Action::make('view_receipt')
-                    ->label('Xem phiếu thu Helen')
-                    ->icon('heroicon-o-receipt-refund')
-                    ->color('gray')
-                    ->modalHeading('Phiếu thu từ Helen')
-                    ->modalContent(function (CommissionItem $record) {
-                        $payment = $record->commission->payment;
-                        if (!$payment || !$payment->receipt_path) {
-                            return view('components.no-content', [
-                                'message' => 'Chưa có phiếu thu nào được upload.'
-                            ]);
-                        }
-
-                        $fileUrl = route('files.receipt.view', $payment->id);
-                        return view('components.bill-viewer', [
-                            'fileUrl' => $fileUrl,
-                            'fileName' => basename($payment->receipt_path),
-                            'payment' => $payment
-                        ]);
-                    })
-                    ->modalWidth('4xl')
-                    ->visible(function (CommissionItem $record) use ($user): bool {
-                        // Chỉ hiển thị cho accountant, organization_owner
-                        if (
-                            !in_array($user->role, ['accountant', 'organization_owner']) &&
-                            !($user->roles && $user->roles->contains('name', 'accountant'))
-                        ) {
-                            return false;
-                        }
-
-                        $payment = $record->commission->payment;
-                        return $payment && !empty($payment->receipt_path);
-                    }),
-
                 // CTV cấp 2 xác nhận đã nhận tiền (tiền chuyển từ ví CTV1 sang CTV2)
                 Action::make('transfer_to_downline')
                     ->label('CTV cấp 2 xác nhận đã nhận tiền')
