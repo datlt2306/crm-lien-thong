@@ -8,6 +8,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use App\Models\Commission;
@@ -517,73 +518,6 @@ class CommissionResource extends Resource {
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho chủ đơn vị và super admin
 
-                // Cột: Bill chuyển tiền (CTV upload) - CommissionItem.payment_bill_path
-                \Filament\Tables\Columns\TextColumn::make('payment_bill_path')
-                    ->label('Bill chuyển tiền')
-                    ->default('—')
-                    ->badge()
-                    ->color('blue')
-                    ->formatStateUsing(function (?CommissionItem $record) {
-                        if (!$record || !$record->payment_bill_path) {
-                            return '—';
-                        }
-                        return 'Có bill';
-                    })
-                    ->action(
-                        \Filament\Actions\Action::make('view_bill_transfer')
-                            ->label('Xem Bill chuyển tiền')
-                            ->modalContent(function (CommissionItem $record) {
-                                if (!$record->payment_bill_path) {
-                                    return view('components.no-content', [
-                                        'message' => 'Chưa có bill chuyển tiền.'
-                                    ]);
-                                }
-                                return view('components.commission-bill-viewer', [
-                                    'commissionItem' => $record,
-                                ]);
-                            })
-                            ->modalWidth('4xl')
-                            ->modalHeading('Bill chuyển tiền từ CTV')
-                    )
-                    ->visible(fn(): bool => $user->role !== 'ctv' || $isPrimaryCtv),
-
-                // Cột: Bill thu tiền (Accountant upload) - Payment.receipt_path  
-                \Filament\Tables\Columns\TextColumn::make('commission.payment.receipt_path')
-                    ->label('Bill thu tiền')
-                    ->default('—')
-                    ->badge()
-                    ->color('green')
-                    ->formatStateUsing(function (?CommissionItem $record) {
-                        if (!$record) return '—';
-                        $payment = $record->commission->payment;
-                        if (!$payment || !$payment->receipt_path) {
-                            return '—';
-                        }
-                        return 'Có bill';
-                    })
-                    ->action(
-                        \Filament\Actions\Action::make('view_bill_receipt')
-                            ->label('Xem Bill thu tiền')
-                            ->modalContent(function (CommissionItem $record) {
-                                $payment = $record->commission->payment;
-                                if (!$payment || !$payment->receipt_path) {
-                                    return view('components.no-content', [
-                                        'message' => 'Chưa có phiếu thu từ Helen.'
-                                    ]);
-                                }
-
-                                $fileUrl = route('files.receipt.view', $payment->id);
-                                return view('components.bill-viewer', [
-                                    'fileUrl' => $fileUrl,
-                                    'fileName' => basename($payment->receipt_path),
-                                    'payment' => $payment
-                                ]);
-                            })
-                            ->modalWidth('4xl')
-                            ->modalHeading('Phiếu thu từ Helen')
-                    )
-                    ->visible(fn(): bool => in_array($user->role, ['accountant', 'organization_owner', 'super_admin']) || ($user->roles && $user->roles->contains('name', 'accountant'))),
-
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
@@ -803,55 +737,113 @@ class CommissionResource extends Resource {
                         return $payment && !empty($payment->bill_path);
                     }),
 
-                // Action cho accountant upload phiếu thu
-                Action::make('upload_receipt')
-                    ->label('Upload phiếu thu')
-                    ->icon('heroicon-o-document-plus')
-                    ->color('primary')
-                    ->form([
-                        \Filament\Forms\Components\FileUpload::make('receipt')
-                            ->label('Phiếu thu Helen')
-                            ->acceptedFileTypes(['image/*', 'application/pdf'])
-                            ->maxSize(5120) // 5MB
-                            ->disk('local')
-                            ->directory('receipts')
-                            ->required()
-                            ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
-                    ])
-                    ->modalHeading('Upload phiếu thu')
-                    ->modalDescription('Upload phiếu thu sau khi xác nhận đã thanh toán hoa hồng cho CTV.')
-                    ->modalSubmitActionLabel('Upload')
-                    ->modalCancelActionLabel('Hủy')
-                    ->visible(function (CommissionItem $record) use ($user): bool {
-                        // Chỉ hiển thị cho accountant
-                        if ($user->role !== 'accountant' && !($user->roles && $user->roles->contains('name', 'accountant'))) {
-                            return false;
-                        }
-
-                        // Chỉ hiển thị cho commission ở trạng thái PAYABLE hoặc PAYMENT_CONFIRMED hoặc RECEIVED_CONFIRMED
-                        return in_array($record->status, [
-                            CommissionItem::STATUS_PAYABLE,
-                            CommissionItem::STATUS_PAYMENT_CONFIRMED,
-                            CommissionItem::STATUS_RECEIVED_CONFIRMED
-                        ]) && $record->role === 'direct';
-                    })
-                    ->action(function (array $data, CommissionItem $record) {
-                        // Cập nhật receipt vào payment
-                        $payment = $record->commission->payment;
-                        if ($payment) {
-                            $payment->update([
-                                'receipt_path' => $data['receipt'],
-                                'receipt_uploaded_by' => Auth::id(),
-                                'receipt_uploaded_at' => now(),
+                // ActionGroup: Bill & Receipt
+                ActionGroup::make([
+                    Action::make('view_bill_transfer')
+                        ->label('Xem Bill chuyển tiền')
+                        ->icon('heroicon-o-document-arrow-up')
+                        ->modalHeading('Bill chuyển tiền từ CTV')
+                        ->modalContent(function (CommissionItem $record) {
+                            if (!$record->payment_bill_path) {
+                                return view('components.no-content', [
+                                    'message' => 'Chưa có bill chuyển tiền.'
+                                ]);
+                            }
+                            return view('components.commission-bill-viewer', [
+                                'commissionItem' => $record,
                             ]);
+                        })
+                        ->modalWidth('4xl')
+                        ->visible(function (CommissionItem $record) use ($user): bool {
+                            if (!$record->payment_bill_path) return false;
+                            if ($user->role === 'ctv') {
+                                $collab = Collaborator::where('email', $user->email)->first();
+                                return $collab && $collab->upline_id === null;
+                            }
+                            return in_array($user->role, ['organization_owner', 'super_admin', 'accountant']);
+                        }),
 
-                            \Filament\Notifications\Notification::make()
-                                ->title('Đã upload phiếu thu thành công')
-                                ->body('Phiếu thu đã được lưu vào hệ thống.')
-                                ->success()
-                                ->send();
-                        }
-                    }),
+                    Action::make('view_bill_receipt')
+                        ->label('Xem Bill thu tiền')
+                        ->icon('heroicon-o-receipt-percent')
+                        ->modalHeading('Phiếu thu từ Helen')
+                        ->modalContent(function (CommissionItem $record) {
+                            $payment = $record->commission->payment;
+                            if (!$payment || !$payment->receipt_path) {
+                                return view('components.no-content', [
+                                    'message' => 'Chưa có phiếu thu từ Helen.'
+                                ]);
+                            }
+
+                            $fileUrl = route('files.receipt.view', $payment->id);
+                            return view('components.bill-viewer', [
+                                'fileUrl' => $fileUrl,
+                                'fileName' => basename($payment->receipt_path),
+                                'payment' => $payment
+                            ]);
+                        })
+                        ->modalWidth('4xl')
+                        ->visible(function (CommissionItem $record) use ($user): bool {
+                            $payment = $record->commission->payment;
+                            if (!$payment || !$payment->receipt_path) return false;
+                            return in_array($user->role, ['accountant', 'organization_owner', 'super_admin']) || 
+                                   ($user->roles && $user->roles->contains('name', 'accountant'));
+                        }),
+
+                    Action::make('upload_receipt')
+                        ->label('Upload phiếu thu')
+                        ->icon('heroicon-o-document-plus')
+                        ->color('primary')
+                        ->form([
+                            \Filament\Forms\Components\FileUpload::make('receipt')
+                                ->label('Phiếu thu Helen')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(5120) // 5MB
+                                ->disk('local')
+                                ->directory('receipts')
+                                ->required()
+                                ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
+                        ])
+                        ->modalHeading('Upload phiếu thu')
+                        ->modalDescription('Upload phiếu thu sau khi xác nhận đã thanh toán hoa hồng cho CTV.')
+                        ->modalSubmitActionLabel('Upload')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(function (CommissionItem $record) use ($user): bool {
+                            // Chỉ hiển thị cho accountant
+                            if ($user->role !== 'accountant' && !($user->roles && $user->roles->contains('name', 'accountant'))) {
+                                return false;
+                            }
+
+                            // Chỉ hiển thị cho commission ở trạng thái PAYABLE hoặc PAYMENT_CONFIRMED hoặc RECEIVED_CONFIRMED
+                            return in_array($record->status, [
+                                CommissionItem::STATUS_PAYABLE,
+                                CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                CommissionItem::STATUS_RECEIVED_CONFIRMED
+                            ]) && $record->role === 'direct';
+                        })
+                        ->action(function (array $data, CommissionItem $record) {
+                            // Cập nhật receipt vào payment
+                            $payment = $record->commission->payment;
+                            if ($payment) {
+                                $payment->update([
+                                    'receipt_path' => $data['receipt'],
+                                    'receipt_uploaded_by' => Auth::id(),
+                                    'receipt_uploaded_at' => now(),
+                                ]);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Đã upload phiếu thu thành công')
+                                    ->body('Phiếu thu đã được lưu vào hệ thống.')
+                                    ->success()
+                                    ->send();
+                            }
+                        }),
+                ])
+                    ->label('Bill & Receipt')
+                    ->icon('heroicon-o-document-text')
+                    ->color('gray')
+                    ->button()
+                    ->size('sm'),
 
                 // CTV cấp 2 xác nhận đã nhận tiền (tiền chuyển từ ví CTV1 sang CTV2)
                 Action::make('transfer_to_downline')
