@@ -111,6 +111,20 @@ class CommissionResource extends Resource {
                         default => 'gray'
                     }),
 
+                // Trạng thái sinh viên: hiển thị "Đã nhập học" nếu đã ENROLLED
+                \Filament\Tables\Columns\BadgeColumn::make('student_status')
+                    ->label('Trạng thái SV')
+                    ->state(function ($record) {
+                        /** @var CommissionItem|null $record */
+                        if (!$record) return null;
+                        $student = $record->commission?->student;
+                        if (!$student) return null;
+                        return $student->status === \App\Models\Student::STATUS_ENROLLED ? 'Đã nhập học' : null;
+                    })
+                    ->color(function ($state) {
+                        return $state ? 'success' : 'gray';
+                    }),
+
                 \Filament\Tables\Columns\TextColumn::make('commission.student.collaborator.full_name')
                     ->label('Người giới thiệu')
                     ->searchable()
@@ -542,12 +556,7 @@ class CommissionResource extends Resource {
                         }
                     }),
 
-                \Filament\Tables\Filters\SelectFilter::make('trigger')
-                    ->label('Điều kiện kích hoạt')
-                    ->options([
-                        'PAYMENT_VERIFIED' => 'Khi xác nhận thanh toán',
-                        'STUDENT_ENROLLED' => 'Khi nhập học',
-                    ]),
+                // Bỏ filter "Điều kiện kích hoạt"
             ])
             ->actions([
                 Action::make('mark_payable')
