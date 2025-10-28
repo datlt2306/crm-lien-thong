@@ -516,6 +516,80 @@ class CommissionResource extends Resource {
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho chủ đơn vị và super admin
+
+                // Cột: Bill chuyển tiền (CTV upload) - CommissionItem.payment_bill_path
+                \Filament\Tables\Columns\TextColumn::make('bill_transfer')
+                    ->label('Bill chuyển tiền')
+                    ->formatStateUsing(function (CommissionItem $record) {
+                        if (!$record->payment_bill_path) {
+                            return '—';
+                        }
+                        return 'Có bill';
+                    })
+                    ->badge()
+                    ->color(fn($state) => $state !== '—' ? 'blue' : 'gray')
+                    ->action(
+                        \Filament\Actions\Action::make('view_bill_transfer')
+                            ->label('Xem Bill chuyển tiền')
+                            ->modalContent(function (CommissionItem $record) {
+                                return view('components.commission-bill-viewer', [
+                                    'commissionItem' => $record,
+                                ]);
+                            })
+                            ->modalWidth('4xl')
+                    )
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        if (!$record->payment_bill_path) return false;
+                        // Tất cả role ngoài CTV cấp 2
+                        if ($user->role === 'ctv') {
+                            $collab = Collaborator::where('email', $user->email)->first();
+                            if ($collab && $collab->upline_id !== null) {
+                                return false; // CTV cấp 2 không thấy
+                            }
+                        }
+                        return true;
+                    }),
+
+                // Cột: Bill thu tiền (Accountant upload) - Payment.receipt_path  
+                \Filament\Tables\Columns\TextColumn::make('bill_receipt')
+                    ->label('Bill thu tiền')
+                    ->formatStateUsing(function (CommissionItem $record) {
+                        $payment = $record->commission->payment;
+                        if (!$payment || !$payment->receipt_path) {
+                            return '—';
+                        }
+                        return 'Có bill';
+                    })
+                    ->badge()
+                    ->color(fn($state) => $state !== '—' ? 'green' : 'gray')
+                    ->action(
+                        \Filament\Actions\Action::make('view_bill_receipt')
+                            ->label('Xem Bill thu tiền')
+                            ->modalContent(function (CommissionItem $record) {
+                                $payment = $record->commission->payment;
+                                if (!$payment || !$payment->receipt_path) {
+                                    return view('components.no-content', [
+                                        'message' => 'Chưa có phiếu thu từ Helen.'
+                                    ]);
+                                }
+
+                                $fileUrl = route('files.receipt.view', $payment->id);
+                                return view('components.bill-viewer', [
+                                    'fileUrl' => $fileUrl,
+                                    'fileName' => basename($payment->receipt_path),
+                                    'payment' => $payment
+                                ]);
+                            })
+                            ->modalWidth('4xl')
+                    )
+                    ->visible(function (CommissionItem $record) use ($user): bool {
+                        $payment = $record->commission->payment;
+                        if (!$payment || !$payment->receipt_path) return false;
+                        // Chỉ hiển thị cho accountant, organization_owner, super_admin
+                        return in_array($user->role, ['accountant', 'organization_owner', 'super_admin']) || 
+                               ($user->roles && $user->roles->contains('name', 'accountant'));
+                    }),
+
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
