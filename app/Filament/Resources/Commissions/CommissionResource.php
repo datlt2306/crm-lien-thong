@@ -749,7 +749,7 @@ class CommissionResource extends Resource {
                         }),
 
                     Action::make('view_bill_receipt')
-                        ->label('Xem Bill thu tiền')
+                        ->label('Xem phiếu thu')
                         ->icon('heroicon-o-receipt-percent')
                         ->modalHeading('Phiếu thu từ Helen')
                         ->modalContent(function (CommissionItem $record) {
