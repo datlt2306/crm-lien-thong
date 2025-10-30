@@ -18,7 +18,7 @@ use App\Http\Controllers\CollaboratorRegistrationController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/admin/login');
 });
 
 // Notification demo page (removed)
