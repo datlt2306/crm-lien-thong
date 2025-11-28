@@ -301,7 +301,7 @@ class StudentsTable {
                         ->color('success')
                         ->requiresConfirmation()
                         ->modalHeading('Xác nhận sinh viên nhập học')
-                        ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học? Hệ thống sẽ tự động cập nhật commission cho CTV cấp 2.')
+                        ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học?')
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(
@@ -311,15 +311,52 @@ class StudentsTable {
                                 in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
                         )
                         ->action(function (Student $record) {
-                            $record->update(['status' => Student::STATUS_ENROLLED]);
+                            // Kiểm tra checklist hồ sơ
+                            $requiredDocuments = [
+                                'phieu_tuyen_sinh',
+                                'phieu_xet_tuyen',
+                                'bang_cao_dang',
+                                'bang_thpt',
+                                'bang_diem',
+                                'giay_khai_sinh',
+                                'cccd',
+                                'giay_kham_suc_khoe',
+                                'anh_4x6',
+                            ];
 
-                            // Cập nhật commission khi student nhập học
-                            $commissionService = new \App\Services\CommissionService();
-                            $commissionService->updateCommissionsOnEnrollment($record);
+                            $checklist = $record->document_checklist ?? [];
+                            $missingDocs = array_diff($requiredDocuments, $checklist);
+
+                            if (!empty($missingDocs)) {
+                                $docLabels = [
+                                    'phieu_tuyen_sinh' => 'Phiếu tuyển sinh hệ CQ hoặc VHVL',
+                                    'phieu_xet_tuyen' => 'Phiếu xét tuyển hệ đào tạo từ xa',
+                                    'bang_cao_dang' => 'Bản sao công chứng bằng Cao đẳng',
+                                    'bang_thpt' => 'Bản sao công chứng bằng THPT',
+                                    'bang_diem' => 'Bản công chứng bảng điểm',
+                                    'giay_khai_sinh' => 'Bản sao công chứng giấy khai sinh',
+                                    'cccd' => 'Bản sao công chứng CCCD',
+                                    'giay_kham_suc_khoe' => 'Giấy khám sức khỏe',
+                                    'anh_4x6' => '04 ảnh 4x6cm',
+                                ];
+
+                                $missingList = array_map(fn($doc) => '• ' . ($docLabels[$doc] ?? $doc), $missingDocs);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Chưa đủ hồ sơ')
+                                    ->body('Sinh viên chưa nộp đủ hồ sơ. Còn thiếu:' . "\n" . implode("\n", $missingList))
+                                    ->warning()
+                                    ->duration(10000)
+                                    ->send();
+
+                                return;
+                            }
+
+                            $record->update(['status' => Student::STATUS_ENROLLED]);
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã xác nhận sinh viên nhập học')
-                                ->body('Commission đã được cập nhật tự động.')
+                                ->body('Sinh viên đã hoàn thành đầy đủ hồ sơ và được xác nhận nhập học.')
                                 ->success()
                                 ->send();
                         }),
