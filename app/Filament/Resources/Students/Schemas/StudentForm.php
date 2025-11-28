@@ -91,29 +91,23 @@ class StudentForm {
                     ->columnSpanFull(),
 
                 // Checklist hồ sơ nhập học
-                \Filament\Forms\Components\Section::make('Checklist hồ sơ nhập học')
-                    ->description('Đánh dấu các giấy tờ đã hoàn thành')
-                    ->schema([
-                        \Filament\Forms\Components\CheckboxList::make('document_checklist')
-                            ->label('')
-                            ->options([
-                                'phieu_tuyen_sinh' => '📄 Phiếu tuyển sinh hệ CQ hoặc VHVL',
-                                'phieu_xet_tuyen' => '📄 Phiếu xét tuyển hệ đào tạo từ xa (Xã phường hoặc cơ quan đang làm việc đóng dấu)',
-                                'bang_cao_dang' => '📄 01 Bản sao công chứng hợp lệ bằng tốt nghiệp Cao đẳng',
-                                'bang_thpt' => '📄 01 Bản sao công chứng bằng tốt nghiệp THPT',
-                                'bang_diem' => '📄 01 Bản công chứng giấy chứng nhận kết quả học tập (Bảng điểm)',
-                                'giay_khai_sinh' => '📄 01 Bản sao công chứng hợp lệ giấy khai sinh',
-                                'cccd' => '📄 01 Bản sao công chứng căn cước công dân',
-                                'giay_kham_suc_khoe' => '📷 Giấy khám đủ sức khỏe (cấp bởi Bệnh viện hoặc TTYT công lập cấp quận/huyện trở lên) - Giấy A3, bản gốc',
-                                'anh_4x6' => '📷 04 ảnh chân dung 4x6 cm (Chụp trong vòng 6 tháng trở lại)',
-                            ])
-                            ->columns(1)
-                            ->gridDirection('row')
-                            ->bulkToggleable()
-                            ->helperText('Chọn các giấy tờ mà học viên đã nộp đầy đủ')
+                \Filament\Forms\Components\CheckboxList::make('document_checklist')
+                    ->label('✅ Checklist hồ sơ nhập học')
+                    ->options([
+                        'phieu_tuyen_sinh' => '📄 Phiếu tuyển sinh hệ CQ hoặc VHVL',
+                        'phieu_xet_tuyen' => '📄 Phiếu xét tuyển hệ đào tạo từ xa (Xã phường hoặc cơ quan đang làm việc đóng dấu)',
+                        'bang_cao_dang' => '📄 01 Bản sao công chứng hợp lệ bằng tốt nghiệp Cao đẳng',
+                        'bang_thpt' => '📄 01 Bản sao công chứng bằng tốt nghiệp THPT',
+                        'bang_diem' => '📄 01 Bản công chứng giấy chứng nhận kết quả học tập (Bảng điểm)',
+                        'giay_khai_sinh' => '📄 01 Bản sao công chứng hợp lệ giấy khai sinh',
+                        'cccd' => '📄 01 Bản sao công chứng căn cước công dân',
+                        'giay_kham_suc_khoe' => '📷 Giấy khám đủ sức khỏe (cấp bởi Bệnh viện hoặc TTYT công lập cấp quận/huyện trở lên) - Giấy A3, bản gốc',
+                        'anh_4x6' => '📷 04 ảnh chân dung 4x6 cm (Chụp trong vòng 6 tháng trở lại)',
                     ])
-                    ->collapsible()
-                    ->collapsed(fn($record) => !$record || empty($record->document_checklist))
+                    ->columns(1)
+                    ->gridDirection('row')
+                    ->bulkToggleable()
+                    ->helperText('Đánh dấu các giấy tờ mà học viên đã nộp đầy đủ')
                     ->columnSpanFull(),
             ]);
     }
