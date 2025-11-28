@@ -47,9 +47,9 @@ Route::post('/collaborators/register', [CollaboratorRegistrationController::clas
 // Đăng ký tài khoản Cộng tác viên (public)
 Route::get('/ctv/register', [PublicCollaboratorController::class, 'showRegisterForm'])->name('public.ctv.register.form');
 Route::post('/ctv/register', [PublicCollaboratorController::class, 'submitRegister'])->name('public.ctv.register.submit');
-// Link ref dành cho tuyển CTV tuyến dưới
-Route::get('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'showRefRegister'])->name('public.ref.ctv.form');
-Route::post('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'submitRefRegister'])->name('public.ref.ctv.submit');
+// Đã loại bỏ route tuyển CTV tuyến dưới - hệ thống chỉ còn 1 cấp
+// Route::get('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'showRefRegister'])->name('public.ref.ctv.form');
+// Route::post('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'submitRefRegister'])->name('public.ref.ctv.submit');
 
 // Route để xem bill (cần authentication)
 Route::middleware(['auth'])->group(function () {

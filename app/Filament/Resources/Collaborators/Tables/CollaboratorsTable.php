@@ -48,28 +48,10 @@ class CollaboratorsTable {
                         });
                     })
                     ->sortable(),
-                TextColumn::make('upline.full_name')
-                    ->label('CTV cấp trên')
-                    ->searchable()
-                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
-                TextColumn::make('downlines_count')
-                    ->label('Số CTV con')
-                    ->counts('downlines')
-                    ->badge()
-                    ->color('info')
-                    ->visible(function ($record) {
-                        return $record && $record->downlines()->count() > 0;
-                    }),
+                // Đã loại bỏ cột CTV cấp trên và số CTV con - hệ thống chỉ còn 1 cấp
                 TextColumn::make('organization.name')
                     ->label('Tổ chức')
                     ->searchable(),
-                TextColumn::make('ref_id')
-                    ->label('Mã giới thiệu')
-                    ->badge()
-                    ->color('warning')
-                    ->copyable(fn($record) => 'https://lienthongdaihoc.com/ref/' . $record->ref_id)
-                    ->copyMessage('Đã copy link giới thiệu!')
-                    ->copyMessageDuration(2000),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()

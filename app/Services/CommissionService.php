@@ -37,8 +37,7 @@ class CommissionService {
             // sau đó CTV cấp 1 mới xác nhận đã nhận để nạp ví.
             $this->createDirectCommission($commission, $payment, CommissionItem::STATUS_PAYABLE);
 
-            // Tạo commission cho CTV cấp 2 (nếu có)
-            $this->createDownlineCommission($commission, $payment);
+            // Không còn CTV cấp 2 - đã loại bỏ logic downline commission
 
             return $commission;
         });
@@ -78,145 +77,12 @@ class CommissionService {
         // Không nạp tiền ví ngay ở bước SUBMITTED/CONFIRMED. Chờ CTV cấp 1 xác nhận nhận tiền.
     }
 
-    /**
-     * Tạo commission cho CTV cấp 2
-     */
-    public function createDownlineCommission(Commission $commission, Payment $payment): ?CommissionItem {
-        // Kiểm tra xem student có ref_id của CTV cấp 2 không
-        $student = $payment->student;
-        if (!$student || !$student->collaborator_id) {
-            return null;
-        }
+    // ===== LOẠI BỎ LOGIC CTV CẤP 2 - HỆ THỐNG CHỈ CÒN 1 CẤP =====
+    // createDownlineCommission() đã bị xóa
 
-        // Tìm CTV cấp 2 (ref trực tiếp của sinh viên)
-        $downlineCollaborator = $student->collaborator;
-        if (!$downlineCollaborator || !$downlineCollaborator->upline_id) {
-            return null;
-        }
+    // ===== LOẠI BỎ LOGIC CTV CẤP 2 - updateCommissionsOnEnrollment() đã bị xóa =====
 
-        // Kiểm tra xem CTV cấp 2 có phải con của CTV cấp 1 không
-        if ($downlineCollaborator->upline_id !== $payment->primary_collaborator_id) {
-            return null;
-        }
-
-        // Lấy chính sách hoa hồng (CommissionPolicy) dành cho CTV phụ
-        $programType = strtoupper($payment->program_type);
-        $policy = CommissionPolicy::whereIn('role', ['DOWNLINE', 'SECONDARY', 'CTV_PHU'])
-            ->where('active', true)
-            ->where(function ($q) use ($programType) {
-                $q->whereNull('program_type')
-                    ->orWhere('program_type', $programType)
-                    ->orWhereRaw('upper(program_type) = ?', [$programType]);
-            })
-            ->orderBy('priority', 'desc')
-            ->first();
-
-        // Tính số tiền theo chính sách; nếu không có policy thì fallback 700,000 VND
-        $amount = 0;
-        $trigger = 'PAYMENT_VERIFIED';
-        $policyId = null;
-        if ($policy) {
-            if (strtoupper($policy->type) === 'PASS_THROUGH') {
-                $amount = (float) $payment->amount; // chuyển tiếp toàn bộ
-            } elseif (strtoupper($policy->type) === 'FIXED') {
-                $amount = (float) ($policy->amount_vnd ?? 0);
-            }
-            $trigger = strtoupper($policy->trigger ?? 'PAYMENT_VERIFIED');
-            $policyId = $policy->id;
-        }
-        if ($amount <= 0) {
-            $amount = 700000; // Fallback tạm thời theo yêu cầu
-            $trigger = 'PAYMENT_VERIFIED';
-        }
-
-        // Với VHVL/PART_TIME: chỉ cho phép chuyển sau khi chủ đơn vị xác nhận SV nhập học
-        // → ép trigger = student_enrolled và khởi tạo ở trạng thái pending
-        if (in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
-            $trigger = 'STUDENT_ENROLLED';
-        }
-
-        // Trạng thái khởi tạo theo trigger (case-insensitive)
-        $status = (strtoupper($trigger) === 'PAYMENT_VERIFIED') ? CommissionItem::STATUS_PAYABLE : CommissionItem::STATUS_PENDING;
-
-        $item = CommissionItem::create([
-            'commission_id' => $commission->id,
-            'recipient_collaborator_id' => $downlineCollaborator->id,
-            'role' => 'downline',
-            'amount' => $amount,
-            'status' => $status,
-            'trigger' => (strtoupper($trigger) === 'PAYMENT_VERIFIED') ? 'payment_verified' : 'student_enrolled',
-            'payable_at' => (strtoupper($trigger) === 'PAYMENT_VERIFIED') ? now() : null,
-            'visibility' => 'visible',
-            'meta' => [
-                'program_type' => $payment->program_type,
-                'payment_id' => $payment->id,
-                'upline_collaborator_id' => $payment->primary_collaborator_id,
-                'policy_id' => $policyId,
-                'fallback_fixed' => $policy ? false : true,
-            ],
-        ]);
-        return $item;
-    }
-
-    /**
-     * Cập nhật commission khi student nhập học
-     */
-    public function updateCommissionsOnEnrollment(Student $student): void {
-        DB::transaction(function () use ($student) {
-            // Lấy các commission của student
-            $commissionIds = Commission::where('student_id', $student->id)->pluck('id');
-            if ($commissionIds->isEmpty()) {
-                return;
-            }
-
-            // Tìm tất cả commission items pending của CTV cấp 2 cần kích hoạt khi SV nhập học
-            $pendingItems = CommissionItem::whereIn('commission_id', $commissionIds)
-                ->where('role', 'downline')
-                ->where('status', CommissionItem::STATUS_PENDING)
-                ->where('trigger', 'student_enrolled')
-                ->get();
-
-            foreach ($pendingItems as $item) {
-                $item->update([
-                    'status' => CommissionItem::STATUS_PAYABLE,
-                    'payable_at' => now(),
-                ]);
-                // Không tự động chuyển ví ở bước này.
-                // CTV cấp 1 sẽ chủ động xác nhận đã chuyển cho CTV2 (upload bill) qua confirmDownlineTransfer.
-            }
-        });
-    }
-
-    /**
-     * Chuyển tiền commission từ CTV cấp 1 sang CTV cấp 2
-     */
-    private function transferCommissionToDownline(CommissionItem $item): void {
-        $uplineId = $item->meta['upline_collaborator_id'] ?? null;
-        if (!$uplineId) {
-            return;
-        }
-
-        // Đảm bảo cả hai ví tồn tại
-        $uplineWallet = Wallet::firstOrCreate(
-            ['collaborator_id' => $uplineId],
-            ['balance' => 0, 'total_received' => 0, 'total_paid' => 0]
-        );
-        $downlineWallet = Wallet::firstOrCreate(
-            ['collaborator_id' => $item->recipient_collaborator_id],
-            ['balance' => 0, 'total_received' => 0, 'total_paid' => 0]
-        );
-
-        // Chuyển tiền từ wallet CTV cấp 1 sang CTV cấp 2
-        $uplineWallet->transferTo(
-            $downlineWallet,
-            $item->amount,
-            "Hoa hồng cho CTV cấp 2 - {$item->recipient->full_name}",
-            [
-                'commission_item_id' => $item->id,
-                'student_id' => $item->commission->student_id,
-            ]
-        );
-    }
+    // ===== LOẠI BỎ LOGIC CTV CẤP 2 - transferCommissionToDownline() đã bị xóa =====
 
     /**
      * Lấy số tiền commission trực tiếp theo hệ đào tạo
@@ -302,35 +168,6 @@ class CommissionService {
         $item->markAsReceivedConfirmed($userId);
     }
 
-    /**
-     * CTV cấp 1 xác nhận đã chuyển tiền cho CTV cấp 2 (upload bill) -> chuyển trạng thái sang PAYMENT_CONFIRMED
-     * Không chuyển ví ở bước này.
-     */
-    public function confirmDownlineTransfer(CommissionItem $downlineItem, ?string $billPath = null, ?int $userId = null): void {
-        if ($downlineItem->role !== 'downline') return;
-        if (!in_array($downlineItem->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE])) return;
-
-        // Cập nhật trạng thái xác nhận đã chuyển tiền (upload bill)
-        $downlineItem->update([
-            'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
-            'payment_bill_path' => $billPath,
-            'payment_confirmed_at' => now(),
-            'payment_confirmed_by' => $userId ?? (Auth::id() ?? 0),
-        ]);
-
-        // Không chuyển ví ở bước này để tránh trừ tiền hai lần.
-    }
-
-    /**
-     * CTV cấp 2 xác nhận đã nhận tiền -> chuyển ví và set RECEIVED_CONFIRMED
-     */
-    public function confirmDownlineReceived(CommissionItem $downlineItem, int $userId): void {
-        if ($downlineItem->role !== 'downline') return;
-        if ($downlineItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
-        // Thực hiện chuyển tiền từ ví CTV1 sang ví CTV2 tại thời điểm CTV2 xác nhận đã nhận
-        $this->transferCommissionToDownline($downlineItem);
-
-        // Đánh dấu đã nhận để hoàn tất quy trình
-        $downlineItem->markAsReceivedConfirmed($userId);
-    }
+    // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====
+    // confirmDownlineTransfer() và confirmDownlineReceived() đã bị xóa
 }

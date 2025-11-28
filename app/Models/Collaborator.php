@@ -13,7 +13,7 @@ class Collaborator extends Model {
         'email',
         'organization_id',
         'ref_id',
-        'upline_id',
+        // 'upline_id', // Đã loại bỏ - hệ thống chỉ còn 1 cấp
         'note',
         'status',
     ];
@@ -31,40 +31,8 @@ class Collaborator extends Model {
         return $this->belongsTo(Organization::class, 'organization_id');
     }
 
-    /**
-     * Quan hệ: Upline (CTV cha)
-     */
-    public function upline() {
-        return $this->belongsTo(self::class, 'upline_id');
-    }
-
-    /**
-     * Quan hệ: Downlines (CTV con)
-     */
-    public function downlines() {
-        return $this->hasMany(self::class, 'upline_id');
-    }
-
-    /**
-     * Quan hệ: Tất cả downlines (bao gồm cả cấp 2, 3...)
-     */
-    public function allDownlines() {
-        return $this->hasMany(self::class, 'upline_id')->with('allDownlines');
-    }
-
-    /**
-     * Quan hệ: Cấu hình hoa hồng tuyến dưới (khi là upline)
-     */
-    public function downlineCommissionConfigs() {
-        return $this->hasMany(DownlineCommissionConfig::class, 'upline_collaborator_id');
-    }
-
-    /**
-     * Quan hệ: Cấu hình hoa hồng tuyến dưới (khi là downline)
-     */
-    public function uplineCommissionConfigs() {
-        return $this->hasMany(DownlineCommissionConfig::class, 'downline_collaborator_id');
-    }
+    // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====
+    // Đã xóa: upline(), downlines(), allDownlines(), downlineCommissionConfigs(), uplineCommissionConfigs()
 
     /**
      * Quan hệ: Wallet
@@ -94,19 +62,8 @@ class Collaborator extends Model {
         return $this->hasMany(Payment::class, 'sub_collaborator_id');
     }
 
-    /**
-     * Kiểm tra xem có phải CTV cấp 1 không (có upline là null)
-     */
-    public function isLevel1() {
-        return is_null($this->upline_id);
-    }
-
-    /**
-     * Kiểm tra xem có phải CTV cấp 2 không (có upline là CTV cấp 1)
-     */
-    public function isLevel2() {
-        return !is_null($this->upline_id) && $this->upline && $this->upline->isLevel1();
-    }
+    // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====
+    // Đã xóa: isLevel1(), isLevel2()
 
     /**
      * Boot: Tự động sinh ref_id 8 ký tự in hoa, duy nhất khi tạo mới

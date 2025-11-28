@@ -63,13 +63,7 @@ class CollaboratorForm {
                     ->relationship('organization', 'name')
                     ->required()
                     ->visible(fn() => Auth::user()?->role === 'super_admin'),
-                \Filament\Forms\Components\Select::make('upline_id')
-                    ->label('CTV cấp trên')
-                    ->relationship('upline', 'full_name')
-                    ->searchable()
-                    ->preload()
-                    ->helperText('Chọn CTV cấp trên (để trống nếu là CTV cấp cao nhất)')
-                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+                // Đã loại bỏ chọn CTV cấp trên - hệ thống chỉ còn 1 cấp
                 \Filament\Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')
                     ->columnSpanFull(),
