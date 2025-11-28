@@ -26,6 +26,11 @@ class Student extends Model {
         'notes',
         'dob',
         'address',
+        'document_checklist',
+    ];
+
+    protected $casts = [
+        'document_checklist' => 'array',
     ];
 
     // Enum StudentStatus - Pipeline quản lý hành trình nhập học
