@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\Students\Schemas;
 
-use Filament\Forms\Components\TextInput;
+use App\Models\Organization;
+use App\Models\Student;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Student;
 
 class StudentForm {
     public static function configure(Schema $schema): Schema {
@@ -33,6 +35,15 @@ class StudentForm {
                     ->validationMessages([
                         'unique' => 'Số căn cước công dân đã được sử dụng bởi học viên khác.',
                     ]),
+                Select::make('organization_id')
+                    ->label('Tổ chức')
+                    ->options(fn() => Organization::orderBy('name')->pluck('name', 'id'))
+                    ->searchable()
+                    ->preload()
+                    ->visible(fn() => Auth::user()?->role === 'super_admin')
+                    ->required(fn() => Auth::user()?->role === 'super_admin')
+                    ->helperText('Chọn tổ chức quản lý học viên')
+                    ->columnSpanFull(),
                 \Filament\Forms\Components\Select::make('major')
                     ->label('Ngành đăng ký học')
                     ->options(\App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray())

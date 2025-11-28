@@ -15,13 +15,28 @@ class CreateStudent extends CreateRecord {
     protected function mutateFormDataBeforeCreate(array $data): array {
         $user = Auth::user();
 
-        if ($user && in_array($user->role, ['organization_owner', 'ctv'])) {
-            // Tìm collaborator của user hiện tại
-            $collaborator = Collaborator::where('email', $user->email)->first();
-            if ($collaborator) {
-                $data['collaborator_id'] = $collaborator->id;
-                $data['organization_id'] = $collaborator->organization_id;
+        if ($user) {
+            if (in_array($user->role, ['organization_owner', 'ctv'])) {
+                // Tìm collaborator của user hiện tại
+                $collaborator = Collaborator::where('email', $user->email)->first();
+                if ($collaborator) {
+                    $data['collaborator_id'] = $collaborator->id;
+                    $data['organization_id'] = $collaborator->organization_id;
+                }
             }
+
+            if (empty($data['organization_id'])) {
+                $organization = $user->getOrganization()
+                    ?? Organization::where('organization_owner_id', $user->id)->first();
+                if ($organization) {
+                    $data['organization_id'] = $organization->id;
+                }
+            }
+        }
+
+        // Fallback cuối cùng để tránh lỗi NOT NULL
+        if (empty($data['organization_id'])) {
+            $data['organization_id'] = Organization::query()->value('id');
         }
 
         // Tự động set status mặc định
