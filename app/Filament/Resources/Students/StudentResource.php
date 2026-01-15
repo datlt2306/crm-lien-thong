@@ -90,8 +90,12 @@ class StudentResource extends Resource {
                 }
             }
 
-            // Kế toán đếm học viên đã được CTV xác nhận nộp tiền
-            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+            // Kế toán & cán bộ hồ sơ đếm học viên đã được CTV xác nhận nộp tiền
+            if (
+                $user->role === 'accountant'
+                || $user->role === 'document'
+                || ($user->roles && $user->roles->contains('name', 'accountant'))
+            ) {
                 return (string) Student::whereHas('payment', function ($query) {
                     $query->whereIn('status', ['submitted', 'verified']);
                 })->count();
@@ -145,8 +149,12 @@ class StudentResource extends Resource {
             }
         }
 
-        // Kế toán chỉ thấy học viên đã được CTV xác nhận nộp tiền (để xác minh thanh toán)
-        if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+        // Kế toán & cán bộ hồ sơ chỉ thấy học viên đã được CTV xác nhận nộp tiền (để xác minh / xử lý hồ sơ)
+        if (
+            $user->role === 'accountant'
+            || $user->role === 'document'
+            || ($user->roles && $user->roles->contains('name', 'accountant'))
+        ) {
             return $query->whereHas('payment', function ($paymentQuery) {
                 $paymentQuery->whereIn('status', ['submitted', 'verified']);
             });

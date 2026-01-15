@@ -7,11 +7,11 @@ use App\Models\User;
 
 class PaymentPolicy {
     public function viewAny(User $user): bool {
-        return $user->hasRole(['super_admin', 'admin', 'accountant', 'ctv', 'organization_owner']);
+        return $user->hasRole(['super_admin', 'admin', 'accountant', 'ctv', 'organization_owner', 'document']);
     }
 
     public function view(User $user, Payment $payment): bool {
-        if ($user->hasRole(['super_admin', 'admin', 'accountant', 'organization_owner'])) {
+        if ($user->hasRole(['super_admin', 'admin', 'accountant', 'organization_owner', 'document'])) {
             return true;
         }
         if ($user->hasRole('ctv')) {
@@ -24,7 +24,8 @@ class PaymentPolicy {
     }
 
     public function verify(User $user, Payment $payment): bool {
-        return $user->can('verify_payment') || $user->hasRole('accountant');
+        // Kế toán và cán bộ hồ sơ đều có thể xác nhận số tiền sinh viên nộp đăng ký
+        return $user->can('verify_payment') || $user->hasRole(['accountant', 'document']);
     }
 
     public function uploadReceipt(User $user, Payment $payment): bool {

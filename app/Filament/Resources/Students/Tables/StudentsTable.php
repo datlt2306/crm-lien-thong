@@ -192,7 +192,7 @@ class StudentsTable {
                         Payment::STATUS_SUBMITTED => 'Chờ xác minh',
                         Payment::STATUS_VERIFIED => 'Đã xác nhận',
                     ])
-                    ->visible(fn() => Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
+                    ->visible(fn() => in_array(Auth::user()->role, ['accountant', 'document']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
                     ->query(function (Builder $query, array $data): Builder {
                         if (!isset($data['value']) || $data['value'] === '') {
                             return $query;
@@ -402,8 +402,8 @@ class StudentsTable {
                         ->tooltip('Xác nhận đã nhận tiền từ học viên và chuyển trạng thái thanh toán sang "Đã xác nhận"')
                         ->visible(
                             fn(Student $record): bool =>
-                            // Chỉ hiển thị cho kế toán
-                            (Auth::user()->role === 'accountant' || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                            // Kế toán & cán bộ hồ sơ được phép xác nhận thanh toán
+                            (in_array(Auth::user()->role, ['accountant', 'document']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
                                 // Sinh viên phải có payment record
                                 $record->payment &&
                                 // Payment phải ở trạng thái chờ xác minh
