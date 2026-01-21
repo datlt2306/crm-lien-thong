@@ -9,70 +9,87 @@ use Illuminate\Validation\Rule;
 class Student extends Model {
     use HasFactory;
     protected $fillable = [
-        'full_name',
-        'phone',
+        // I. Thông tin cơ bản
+        'full_name',                // 4. Họ và tên
+        'dob',                      // 5. Ngày sinh
+        'birth_place',              // 6. Nơi sinh
+        'permanent_residence',      // 7. Hộ khẩu thường trú
+        'phone',                    // 8. Số điện thoại
+        'ethnicity',                // 9. Dân tộc
+        'gender',                   // 10. Giới tính
         'email',
-        'identity_card',
+        'address',
+        'instructor',              // 3. GVHD
+
+        // II. Thông tin CCCD
+        'identity_card',            // 11. Số CCCD
+        'identity_card_issue_date', // 12. Ngày cấp CCCD
+        'identity_card_issue_place', // 13. Nơi cấp CCCD
+
+        // III. Hồ sơ học tập – Cao đẳng
+        'college_graduation_school',    // 17. Trường tốt nghiệp CĐ
+        'college_graduation_major',     // 18. Ngành tốt nghiệp CĐ
+        'college_graduation_grade',     // 19. Xếp loại tốt nghiệp CĐ
+        'college_training_type',        // 20. Hệ tốt nghiệp CĐ
+        'college_graduation_year',      // 21. Năm tốt nghiệp CĐ
+        'college_diploma_number',       // 22. Số hiệu bằng CĐ
+        'college_diploma_book_number',  // 23. Số vào sổ cấp bằng CĐ
+        'college_diploma_issue_date',   // 24. Ngày ký bằng CĐ
+        'college_diploma_signer',       // 25. Người ký bằng CĐ
+
+        // IV. Hồ sơ học tập – Trung cấp & THPT
+        'high_school_name',         // 28. Tên trường THPT
+        'high_school_code',         // 29. Mã trường THPT
+        'high_school_province',     // 37. Tên tỉnh/TP
+        'high_school_province_code', // 38. Mã tỉnh
+        'high_school_district',     // 39. Tên quận/huyện
+        'high_school_district_code', // 40. Mã quận/huyện
+        'priority_area',             // 41. Khu vực ưu tiên
+        'high_school_graduation_year',      // 42. Năm tốt nghiệp THPT
+        'high_school_academic_performance', // 43. Học lực cả năm
+        'high_school_conduct',              // 44. Hạnh kiểm
+
+        // V. Giấy tờ cá nhân (lưu đường dẫn / ghi chú)
+        'document_birth_certificate',       // 30. Giấy khai sinh (BS/BG)
+        'birth_certificate_copy_type',      // Loại bản sao / bản gốc
+        'document_photo',                   // 31. Ảnh thẻ
+        'document_health_certificate',      // 32. Giấy khám sức khỏe (BS/BG)
+        'health_certificate_copy_type',     // Loại bản sao / bản gốc
+
+        // VI. Thông tin đăng ký Liên thông
+        'major',                    // 33. Ngành đăng ký liên thông
+        'target_university',        // 34. Trường đăng ký liên thông
+        'program_type',             // 35. Hệ đào tạo liên thông
+        'intake_month',             // 36. Đợt đăng ký liên thông
+
+        // VII. Thông tin khu vực – ưu tiên
+        // (Khu vực ưu tiên riêng chưa lưu trong model)
+
+        // VIII. Tuyển sinh & trạng thái hồ sơ
+        'status',                   // 45. Trạng thái hồ sơ
+        'application_status',       // 46. Tình trạng hồ sơ chi tiết
+        'document_checklist',       // 47. Phiếu / checklist hồ sơ
+        'source',                   // 48. Hình thức tuyển sinh
+        'fee',                      // 49. Lệ phí
+        'notes',                    // 50. Ghi chú
+
+        // Hệ thống & liên kết (không có trong file chuẩn nhưng cần cho app)
         'organization_id',
         'collaborator_id',
         'major_id',
         'intake_id',
-        'target_university',
-        'major',
-        'intake_month',
-        'program_type',
-        'source',
-        'status',
-        'notes',
-        'dob',
-        'address',
-        'document_checklist',
-        // Thông tin cá nhân
-        'birth_place',
-        'permanent_residence',
-        'ethnicity',
-        'gender',
-        'identity_card_issue_date',
-        'identity_card_issue_place',
-        // Thông tin THPT
-        'high_school_name',
-        'high_school_code',
-        'high_school_province',
-        'high_school_province_code',
-        'high_school_district',
-        'high_school_district_code',
-        'high_school_graduation_year',
-        'high_school_academic_performance',
-        'high_school_conduct',
-        // Thông tin văn bằng CĐ
-        'college_graduation_school',
-        'college_graduation_major',
-        'college_graduation_grade',
-        'college_training_type',
-        'college_graduation_year',
-        'college_diploma_number',
-        'college_diploma_book_number',
-        'college_diploma_issue_date',
-        'college_diploma_signer',
-        // Thông tin văn bằng TC
-        'intermediate_graduation_school',
-        'intermediate_graduation_major',
-        'intermediate_graduation_grade',
-        'intermediate_training_type',
-        'intermediate_graduation_year',
-        'intermediate_diploma_number',
-        'intermediate_diploma_book_number',
-        'intermediate_diploma_issue_date',
-        'intermediate_diploma_signer',
-        // File uploads
-        'document_college_diploma',
-        'document_college_transcript',
-        'document_high_school_diploma',
-        'document_birth_certificate',
-        'document_identity_card_front',
-        'document_identity_card_back',
-        'document_photo',
-        'document_health_certificate',
+
+        // Các tài liệu chi tiết khác (mapping mở rộng từ file chuẩn)
+        'document_college_diploma',         // 15. Bằng TN CĐ (BS/BG)
+        'college_diploma_copy_type',        // Loại bản sao / bản gốc
+        'document_college_transcript',      // 16. Bảng điểm CĐ (BS/BG)
+        'college_transcript_copy_type',     // Loại bản sao / bản gốc
+        'document_high_school_diploma',     // 26. Bằng TN THPT (BS/BG)
+        'high_school_diploma_copy_type',    // Loại bản sao / bản gốc
+        'document_identity_card_front', // 14. File CCCD - mặt trước
+        'document_identity_card_back',  // 14. File CCCD - mặt sau
+        'document_intermediate_diploma',    // 27. Bằng Trung cấp
+        'document_intermediate_transcript', // Bảng điểm Trung cấp
     ];
 
     protected $casts = [

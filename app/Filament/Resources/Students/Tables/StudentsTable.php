@@ -10,11 +10,14 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use App\Exports\StudentsExcelExport;
 use App\Models\Student;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StudentsTable {
     public static function configure(Table $table): Table {
@@ -101,11 +104,64 @@ class StudentsTable {
                         'PART_TIME' => '⏰ Hệ vừa học vừa làm, linh hoạt thời gian',
                         default => ''
                     }),
-                TextColumn::make('source')
-                    ->label('Nguồn')
-                    ->searchable(),
+                TextColumn::make('application_status')
+                    ->label('Trạng thái hồ sơ')
+                    ->state(function (Student $record) {
+                        $checklist = $record->document_checklist ?? [];
+
+                        $requiredDocuments = [
+                            'phieu_tuyen_sinh',
+                            'bang_cao_dang',
+                            'bang_thpt',
+                            'bang_diem',
+                            'giay_khai_sinh',
+                            'cccd',
+                            'giay_kham_suc_khoe',
+                            'anh_4x6',
+                        ];
+
+                        $missingDocs = array_diff($requiredDocuments, $checklist);
+                        $hasAllDocs = empty($missingDocs);
+
+                        // Ưu tiên trạng thái không đủ điều kiện
+                        if ($record->status === Student::STATUS_REJECTED) {
+                            return 'Không đủ điều kiện';
+                        }
+
+                        // Đang nhập: hồ sơ mới tạo, chưa nộp
+                        if (in_array($record->status, [Student::STATUS_NEW, Student::STATUS_CONTACTED])) {
+                            return 'Đang nhập';
+                        }
+
+                        // Đã nộp nhưng thiếu giấy tờ
+                        if (in_array($record->status, [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED, Student::STATUS_ENROLLED]) && !$hasAllDocs) {
+                            return 'Thiếu giấy tờ';
+                        }
+
+                        // Đã nộp đủ giấy tờ nhưng chưa đủ điều kiện (chờ xác minh / thanh toán)
+                        if (in_array($record->status, [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED]) && $hasAllDocs) {
+                            return 'Đã nộp';
+                        }
+
+                        // Đủ điều kiện khi đã nhập học và đủ hồ sơ
+                        if ($record->status === Student::STATUS_ENROLLED && $hasAllDocs) {
+                            return 'Đủ điều kiện';
+                        }
+
+                        return 'Đang nhập';
+                    })
+                    ->badge()
+                    ->color(fn(string $state) => match ($state) {
+                        'Đang nhập' => 'gray',
+                        'Đã nộp' => 'warning',
+                        'Thiếu giấy tờ' => 'danger',
+                        'Đủ điều kiện' => 'success',
+                        'Không đủ điều kiện' => 'danger',
+                        default => 'gray',
+                    }),
                 TextColumn::make('status')
-                    ->label('Tình trạng')
+                    ->label('Lệ Phí')
+                    ->toggleable()
                     ->badge()
                     ->color(function (Student $record): string {
                         // Ưu tiên hiển thị trạng thái thanh toán nếu có payment
@@ -136,7 +192,7 @@ class StudentsTable {
                             return match ($record->payment->status) {
                                 Payment::STATUS_NOT_PAID => '💳 Chưa nộp tiền',
                                 Payment::STATUS_SUBMITTED => '⏳ Chờ xác minh',
-                                Payment::STATUS_VERIFIED => '✅ Đã xác nhận',
+                                Payment::STATUS_VERIFIED => '✅ Đã nộp tiền',
                                 default => '—',
                             };
                         }
@@ -164,7 +220,7 @@ class StudentsTable {
                             return match ($record->payment->status) {
                                 Payment::STATUS_NOT_PAID => 'Học viên chưa nộp tiền',
                                 Payment::STATUS_SUBMITTED => 'Đã nộp tiền, chờ kế toán xác minh',
-                                Payment::STATUS_VERIFIED => 'Đã xác minh và tạo commission',
+                                Payment::STATUS_VERIFIED => 'Đã nộp tiền và tạo commission',
                                 default => '',
                             };
                         }
@@ -463,7 +519,7 @@ class StudentsTable {
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
-                            
+
                             // Chỉ CTV mới được upload bill
                             if ($user->role !== 'ctv') {
                                 return false;
@@ -536,6 +592,18 @@ class StudentsTable {
                     ->tooltip('Các hành động khả dụng')
             ])
             ->toolbarActions([
+                Action::make('export_excel')
+                    ->label('Xuất Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->action(function () {
+                        // Lấy query từ Resource để áp dụng đúng quyền truy cập
+                        $query = \App\Filament\Resources\Students\StudentResource::getEloquentQuery();
+                        $students = $query->with(['payment', 'organization'])->get();
+
+                        $filename = 'danh_sach_hoc_vien_' . date('Y-m-d_His') . '.xlsx';
+                        return Excel::download(new StudentsExcelExport($students), $filename);
+                    }),
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')

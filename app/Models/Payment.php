@@ -39,13 +39,13 @@ class Payment extends Model {
     // Enum PaymentStatus - Quản lý tiền SV đã chuyển cho Org
     public const STATUS_NOT_PAID = 'not_paid';      // Chưa nộp tiền
     public const STATUS_SUBMITTED = 'submitted';    // Đã nộp (chờ xác minh)
-    public const STATUS_VERIFIED = 'verified';      // Đã xác nhận
+    public const STATUS_VERIFIED = 'verified';      // Đã nộp tiền (đã xác minh)
 
     public static function getStatusOptions(): array {
         return [
             self::STATUS_NOT_PAID => 'Chưa nộp tiền',
             self::STATUS_SUBMITTED => 'Đã nộp (chờ xác minh)',
-            self::STATUS_VERIFIED => 'Đã xác nhận',
+            self::STATUS_VERIFIED => 'Đã nộp tiền',
         ];
     }
 

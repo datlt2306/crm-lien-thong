@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Students\Schemas;
 
 use App\Models\Organization;
 use App\Models\Student;
+use App\Models\Payment;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -15,9 +16,11 @@ use Illuminate\Support\Facades\Auth;
 class StudentForm {
     public static function configure(Schema $schema): Schema {
         return $schema
+            ->columns(12)
             ->schema([
+                // Left section: 8 columns - các tab thông tin & upload giấy tờ
                 Tabs::make('StudentInformation')
-                    ->columnSpanFull()
+                    ->columnSpan(8)
                     ->tabs([
                         // Tab 1: Thông tin cơ bản
                         Tabs\Tab::make('Thông tin cơ bản')
@@ -26,6 +29,10 @@ class StudentForm {
                                 TextInput::make('full_name')
                                     ->label('Họ và tên')
                                     ->required(),
+                                TextInput::make('instructor')
+                                    ->label('GVHD')
+                                    ->helperText('Nhập tên giáo viên hướng dẫn (nếu có)')
+                                    ->maxLength(255),
                                 TextInput::make('phone')
                                     ->label('Số điện thoại')
                                     ->tel()
@@ -96,6 +103,31 @@ class StudentForm {
                                     ])
                                     ->required()
                                     ->default('form'),
+                                \Filament\Forms\Components\Placeholder::make('fee_status')
+                                    ->label('Lệ phí')
+                                    ->content(function (?Student $record) {
+                                        if (!$record?->payment) {
+                                            return 'Chưa có thông tin lệ phí';
+                                        }
+
+                                        $amount = $record->payment->amount ?? 0;
+
+                                        $statusLabel = match ($record->payment->status) {
+                                            Payment::STATUS_NOT_PAID => 'Chưa nộp',
+                                            Payment::STATUS_SUBMITTED => 'Đã nộp, chờ xác minh',
+                                            Payment::STATUS_VERIFIED => 'Đã nộp tiền',
+                                            default => $record->payment->status,
+                                        };
+
+                                        if ($amount <= 0) {
+                                            return "Chưa cập nhật số tiền - {$statusLabel}";
+                                        }
+
+                                        $formattedAmount = number_format($amount, 0, ',', '.');
+                                        return "{$formattedAmount} đ - {$statusLabel}";
+                                    })
+                                    ->columnSpanFull()
+                                    ->visible(fn() => Auth::user()?->role !== 'ctv'),
                                 Textarea::make('notes')
                                     ->label('Ghi chú')
                                     ->columnSpanFull(),
@@ -168,6 +200,9 @@ class StudentForm {
                                     ->maxLength(255),
                                 TextInput::make('high_school_district_code')
                                     ->label('Mã quận/huyện')
+                                    ->maxLength(50),
+                                TextInput::make('priority_area')
+                                    ->label('Khu vực ưu tiên')
                                     ->maxLength(50),
                                 \Filament\Forms\Components\TextInput::make('high_school_graduation_year')
                                     ->label('Năm tốt nghiệp THPT')
@@ -293,71 +328,12 @@ class StudentForm {
                             ])
                             ->columns(3),
 
-                        // Tab 6: Tải lên giấy tờ minh chứng
-                        Tabs\Tab::make('Tải lên giấy tờ minh chứng')
-                            ->icon('heroicon-o-paper-clip')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
-                            ->schema([
-                                FileUpload::make('document_college_diploma')
-                                    ->label('Bằng TN CĐ (bản sao/scan)')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/college-diploma')
-                                    ->helperText('Upload bản sao hoặc scan bằng tốt nghiệp Cao đẳng'),
-                                FileUpload::make('document_college_transcript')
-                                    ->label('Bảng điểm CĐ')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/college-transcript')
-                                    ->helperText('Upload bảng điểm Cao đẳng'),
-                                FileUpload::make('document_high_school_diploma')
-                                    ->label('Bằng TN THPT')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/high-school-diploma')
-                                    ->helperText('Upload bản sao bằng tốt nghiệp THPT'),
-                                FileUpload::make('document_birth_certificate')
-                                    ->label('Giấy khai sinh')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/birth-certificate')
-                                    ->helperText('Upload bản sao giấy khai sinh'),
-                                FileUpload::make('document_identity_card_front')
-                                    ->label('CCCD (mặt trước)')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/identity-card')
-                                    ->helperText('Upload mặt trước căn cước công dân'),
-                                FileUpload::make('document_identity_card_back')
-                                    ->label('CCCD (mặt sau)')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/identity-card')
-                                    ->helperText('Upload mặt sau căn cước công dân'),
-                                FileUpload::make('document_photo')
-                                    ->label('Ảnh cá nhân')
-                                    ->image()
-                                    ->maxSize(2048)
-                                    ->disk('local')
-                                    ->directory('students/documents/photo')
-                                    ->helperText('Upload ảnh chân dung cá nhân (JPG, PNG)'),
-                                FileUpload::make('document_health_certificate')
-                                    ->label('Giấy khám sức khỏe')
-                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                    ->maxSize(5120)
-                                    ->disk('local')
-                                    ->directory('students/documents/health-certificate')
-                                    ->helperText('Upload giấy khám sức khỏe'),
-                            ])
-                            ->columns(2),
+                    ]),
 
-                        // Tab 7: Checklist hồ sơ
+                // Right section: 4 columns - checklist hồ sơ nhập học
+                Tabs::make('StudentChecklist')
+                    ->columnSpan(4)
+                    ->tabs([
                         Tabs\Tab::make('Checklist hồ sơ nhập học')
                             ->icon('heroicon-o-check-circle')
                             ->visible(fn() => Auth::user()?->role !== 'ctv')
