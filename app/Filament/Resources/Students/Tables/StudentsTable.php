@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use App\Exports\StudentsExcelExport;
 use App\Models\Student;
 use App\Models\Payment;
+use App\Services\StudentFeeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
@@ -140,7 +141,7 @@ class StudentsTable {
 
                         // Đã nộp đủ giấy tờ nhưng chưa đủ điều kiện (chờ xác minh / thanh toán)
                         if (in_array($record->status, [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED]) && $hasAllDocs) {
-                            return 'Đã nộp';
+                            return 'Đã nộp hồ sơ';
                         }
 
                         // Đủ điều kiện khi đã nhập học và đủ hồ sơ
@@ -153,7 +154,7 @@ class StudentsTable {
                     ->badge()
                     ->color(fn(string $state) => match ($state) {
                         'Đang nhập' => 'gray',
-                        'Đã nộp' => 'warning',
+                        'Đã nộp hồ sơ' => 'warning',
                         'Thiếu giấy tờ' => 'danger',
                         'Đủ điều kiện' => 'success',
                         'Không đủ điều kiện' => 'danger',
@@ -294,6 +295,36 @@ class StudentsTable {
                         ->modalDescription('Xác nhận học viên đã nộp tiền. Hệ thống sẽ chuyển trạng thái thanh toán sang "Đã nộp (chờ xác minh)".')
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
+                        ->form([
+                            \Filament\Forms\Components\TextInput::make('amount')
+                                ->label('Số tiền (VNĐ)')
+                                ->required()
+                                ->helperText('Nhập số tiền học viên đã nộp (ví dụ: 1.750.000)')
+                                ->formatStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return '';
+                                    }
+                                    return number_format((float) $state, 0, '', '.');
+                                })
+                                ->dehydrateStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return 0;
+                                    }
+                                    // Loại bỏ dấu chấm và chuyển thành số
+                                    return (int) str_replace('.', '', $state);
+                                })
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if (!empty($state)) {
+                                        // Format lại khi người dùng nhập
+                                        $numericValue = (int) str_replace('.', '', $state);
+                                        if ($numericValue > 0) {
+                                            $formatted = number_format($numericValue, 0, '', '.');
+                                            $set('amount', $formatted);
+                                        }
+                                    }
+                                }),
+                        ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
 
@@ -316,11 +347,14 @@ class StudentsTable {
 
                             return true;
                         })
-                        ->action(function (Student $record): void {
+                        ->action(function (array $data, Student $record): void {
+                            $amount = (int) ($data['amount'] ?? 0);
+
                             // Cập nhật payment record nếu có
                             $payment = $record->payment;
                             if ($payment) {
                                 $payment->update([
+                                    'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
@@ -332,7 +366,7 @@ class StudentsTable {
                                     'primary_collaborator_id' => $record->collaborator_id,
                                     'organization_id' => $record->organization_id,
                                     'program_type' => $record->program_type ?? 'REGULAR',
-                                    'amount' => 0, // Sẽ cập nhật sau
+                                    'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
@@ -456,6 +490,48 @@ class StudentsTable {
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->tooltip('Xác nhận đã nhận tiền từ học viên và chuyển trạng thái thanh toán sang "Đã xác nhận"')
+                        ->form([
+                            \Filament\Forms\Components\TextInput::make('amount')
+                                ->label('Số tiền (VNĐ)')
+                                ->helperText('Nếu đang để 0, hãy nhập số tiền trước khi xác nhận (ví dụ: 1.750.000)')
+                                ->default(function (Student $record) {
+                                    $paymentAmount = (float) ($record->payment?->amount ?? 0);
+                                    if ($paymentAmount > 0) {
+                                        return number_format((int) round($paymentAmount), 0, '', '.');
+                                    }
+
+                                    $expectedFee = app(StudentFeeService::class)->getExpectedFeeForStudent($record);
+                                    if ($expectedFee !== null) {
+                                        return number_format((int) round($expectedFee), 0, '', '.');
+                                    }
+                                    return '';
+                                })
+                                ->formatStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return '';
+                                    }
+                                    return number_format((float) $state, 0, '', '.');
+                                })
+                                ->dehydrateStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return 0;
+                                    }
+                                    // Loại bỏ dấu chấm và chuyển thành số
+                                    return (int) str_replace('.', '', $state);
+                                })
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if (!empty($state)) {
+                                        // Format lại khi người dùng nhập
+                                        $numericValue = (int) str_replace('.', '', $state);
+                                        if ($numericValue > 0) {
+                                            $formatted = number_format($numericValue, 0, '', '.');
+                                            $set('amount', $formatted);
+                                        }
+                                    }
+                                })
+                                ->required(),
+                        ])
                         ->visible(
                             fn(Student $record): bool =>
                             // Kế toán & cán bộ hồ sơ được phép xác nhận thanh toán
@@ -465,9 +541,24 @@ class StudentsTable {
                                 // Payment phải ở trạng thái chờ xác minh
                                 $record->payment->status === Payment::STATUS_SUBMITTED
                         )
-                        ->action(function (Student $record) {
+                        ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             if ($payment) {
+                                $amount = (int) ($data['amount'] ?? 0);
+
+                                // Nếu kế toán để 0 thì tự tính theo cấu hình Quota (theo ngành/hệ/đợt).
+                                if ($amount <= 0) {
+                                    $expectedFee = app(StudentFeeService::class)->getExpectedFeeForStudent($record);
+                                    if ($expectedFee !== null) {
+                                        $amount = (int) round($expectedFee);
+                                    }
+                                }
+
+                                // Chỉ cập nhật amount khi có giá trị hợp lệ (>0)
+                                if ($amount > 0 && (float) ($payment->amount ?? 0) <= 0) {
+                                    $payment->update(['amount' => $amount]);
+                                }
+
                                 // Xác minh thanh toán
                                 $payment->markAsVerified(Auth::id());
 
@@ -505,9 +596,32 @@ class StudentsTable {
                                 ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
                             \Filament\Forms\Components\TextInput::make('amount')
                                 ->label('Số tiền')
-                                ->numeric()
                                 ->required()
-                                ->helperText('Nhập số tiền đã thanh toán'),
+                                ->helperText('Nhập số tiền đã thanh toán (ví dụ: 1.750.000)')
+                                ->formatStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return '';
+                                    }
+                                    return number_format((float) $state, 0, '', '.');
+                                })
+                                ->dehydrateStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return 0;
+                                    }
+                                    // Loại bỏ dấu chấm và chuyển thành số
+                                    return (int) str_replace('.', '', $state);
+                                })
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if (!empty($state)) {
+                                        // Format lại khi người dùng nhập
+                                        $numericValue = (int) str_replace('.', '', $state);
+                                        if ($numericValue > 0) {
+                                            $formatted = number_format($numericValue, 0, '', '.');
+                                            $set('amount', $formatted);
+                                        }
+                                    }
+                                }),
                             \Filament\Forms\Components\Select::make('program_type')
                                 ->label('Hệ liên thông')
                                 ->options([

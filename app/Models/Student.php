@@ -4,10 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
+use App\Models\StudentUpdateLog;
 
 class Student extends Model {
     use HasFactory;
+    use SoftDeletes;
     protected $fillable = [
         // I. Thông tin cơ bản
         'full_name',                // 4. Họ và tên
@@ -176,6 +181,48 @@ class Student extends Model {
 
     public function payment() {
         return $this->hasOne(Payment::class);
+    }
+
+    public function updateLogs() {
+        return $this->hasMany(StudentUpdateLog::class)->latest();
+    }
+
+    protected static function booted(): void {
+        static::updated(function (Student $student) {
+            // Nếu chưa có bảng log (ví dụ môi trường dev/test chưa migrate) thì bỏ qua
+            if (!SchemaFacade::hasTable('student_update_logs')) {
+                return;
+            }
+
+            $changes = [];
+            $dirty = $student->getChanges();
+
+            foreach ($dirty as $field => $newValue) {
+                if ($field === 'updated_at') {
+                    continue;
+                }
+                $oldValue = $student->getOriginal($field);
+                if ($oldValue === $newValue) {
+                    continue;
+                }
+
+                $changes[] = [
+                    'field' => $field,
+                    'from' => $oldValue,
+                    'to' => $newValue,
+                ];
+            }
+
+            if (empty($changes)) {
+                return;
+            }
+
+            StudentUpdateLog::create([
+                'student_id' => $student->id,
+                'user_id' => Auth::id(),
+                'changes' => $changes,
+            ]);
+        });
     }
 
     /**

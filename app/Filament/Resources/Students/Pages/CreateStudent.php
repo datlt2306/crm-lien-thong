@@ -22,6 +22,11 @@ class CreateStudent extends CreateRecord {
                 if ($collaborator) {
                     $data['collaborator_id'] = $collaborator->id;
                     $data['organization_id'] = $collaborator->organization_id;
+                    
+                    // Tự động điền GVHD từ tên CTV nếu chưa có
+                    if (empty($data['instructor']) && !empty($collaborator->full_name)) {
+                        $data['instructor'] = $collaborator->full_name;
+                    }
                 }
             }
 
@@ -31,6 +36,11 @@ class CreateStudent extends CreateRecord {
                 if ($organization) {
                     $data['organization_id'] = $organization->id;
                 }
+            }
+            
+            // Nếu chưa có instructor và có user name, điền từ user name
+            if (empty($data['instructor']) && !empty($user->name)) {
+                $data['instructor'] = $user->name;
             }
         }
 

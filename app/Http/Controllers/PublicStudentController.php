@@ -269,6 +269,7 @@ class PublicStudentController extends Controller {
             'email' => $validated['email'] ?? null,
             'organization_id' => $selectedOrg?->id,
             'collaborator_id' => $collaborator->id,
+            'instructor' => $collaborator->full_name ?? null, // Tự động điền GVHD từ tên CTV
 
             'target_university' => $selectedOrg?->name,
             'major' => $selectedMajorName,
