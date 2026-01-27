@@ -84,14 +84,25 @@ class QuotasTable {
 
                 BadgeColumn::make('status')
                     ->label('Trạng Thái')
-                    ->formatStateUsing(function ($state) {
+                    ->formatStateUsing(function ($state, $record) {
+                        $end = $record?->intake?->end_date;
+                        if ($end && $end->format('Y-m-d') < now()->toDateString()) {
+                            return 'Hết hạn tuyển sinh';
+                        }
                         return \App\Models\Quota::getStatusOptions()[$state] ?? $state;
                     })
-                    ->colors([
-                        'success' => \App\Models\Quota::STATUS_ACTIVE,
-                        'warning' => \App\Models\Quota::STATUS_INACTIVE,
-                        'danger' => \App\Models\Quota::STATUS_FULL,
-                    ]),
+                    ->color(function ($state, $record) {
+                        $end = $record?->intake?->end_date;
+                        if ($end && $end->format('Y-m-d') < now()->toDateString()) {
+                            return 'gray';
+                        }
+                        return match ($state) {
+                            \App\Models\Quota::STATUS_ACTIVE => 'success',
+                            \App\Models\Quota::STATUS_INACTIVE => 'warning',
+                            \App\Models\Quota::STATUS_FULL => 'danger',
+                            default => 'gray',
+                        };
+                    }),
 
 
                 TextColumn::make('tuition_fee')

@@ -41,8 +41,8 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tháng nhập học</label>
-                <p class="text-sm text-gray-900">{{ $student->intake_month ?? 'Chưa cập nhật' }}</p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Đợt tuyển</label>
+                <p class="text-sm text-gray-900">{{ $student->intake?->name ?? ($student->intake_month ? 'Tháng ' . $student->intake_month : 'Chưa cập nhật') }}</p>
             </div>
 
             <div>

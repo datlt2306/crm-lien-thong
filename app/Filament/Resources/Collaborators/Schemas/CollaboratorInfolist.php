@@ -15,12 +15,26 @@ class CollaboratorInfolist {
                     ->label('Số điện thoại'),
                 TextEntry::make('email')
                     ->label('Địa chỉ email'),
-                TextEntry::make('organization_id')
-                    ->numeric(),
-                TextEntry::make('ref_id'),
-                TextEntry::make('upline_id')
-                    ->numeric(),
-                TextEntry::make('status'),
+                TextEntry::make('identity_card')
+                    ->label('Số CCCD'),
+                TextEntry::make('tax_code')
+                    ->label('Mã số thuế'),
+                TextEntry::make('bank_name')
+                    ->label('Ngân hàng'),
+                TextEntry::make('bank_account')
+                    ->label('Tài khoản ngân hàng'),
+                TextEntry::make('organization.name')
+                    ->label('Tổ chức'),
+                TextEntry::make('ref_id')
+                    ->label('Mã giới thiệu'),
+                TextEntry::make('status')
+                    ->label('Trạng thái')
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'active' => 'Kích hoạt',
+                        'pending' => 'Chờ duyệt',
+                        'inactive' => 'Vô hiệu',
+                        default => $state,
+                    }),
                 TextEntry::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s'),

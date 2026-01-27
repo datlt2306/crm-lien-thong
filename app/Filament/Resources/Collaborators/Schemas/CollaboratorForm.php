@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Collaborators\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
@@ -26,6 +27,35 @@ class CollaboratorForm {
                     ->email()
                     ->unique(ignoreRecord: true)
                     ->nullable(),
+
+                Section::make('Thông tin định danh & thanh toán')
+                    ->description('CCCD, mã số thuế và tài khoản ngân hàng dùng cho KYC và chi trả hoa hồng.')
+                    ->icon('heroicon-o-identification')
+                    ->schema([
+                        TextInput::make('identity_card')
+                            ->label('Số CCCD')
+                            ->placeholder('Số CCCD 12 chữ số')
+                            ->maxLength(20)
+                            ->nullable(),
+                        TextInput::make('tax_code')
+                            ->label('Mã số thuế')
+                            ->placeholder('Mã số thuế cá nhân/doanh nghiệp')
+                            ->maxLength(20)
+                            ->nullable(),
+                        TextInput::make('bank_name')
+                            ->label('Ngân hàng')
+                            ->placeholder('VD: Vietcombank, Techcombank, ...')
+                            ->maxLength(255)
+                            ->nullable(),
+                        TextInput::make('bank_account')
+                            ->label('Tài khoản ngân hàng')
+                            ->placeholder('Số tài khoản nhận chuyển khoản')
+                            ->maxLength(50)
+                            ->nullable(),
+                    ])
+                    ->columns(2)
+                    ->collapsed(),
+
                 TextInput::make('password')
                     ->label('Mật khẩu')
                     ->password()
@@ -48,14 +78,19 @@ class CollaboratorForm {
                     ->unique(ignoreRecord: true)
                     ->required()
                     ->default(fn() => strtoupper(Str::random(8)))
-                    ->formatStateUsing(
-                        fn($state) =>
-                        $state ? (request()->getSchemeAndHttpHost() . '/ref/' . $state) : ''
-                    )
-                    ->dehydrateStateUsing(
-                        fn($state) =>
-                        $state ? Str::afterLast($state, '/') : null
-                    )
+                    ->formatStateUsing(function ($state) {
+                        if (empty($state)) return '';
+                        // Tránh duplicate: nếu state đã là URL đầy đủ (chứa /ref/), chỉ lấy mã ref_id
+                        $refCode = str_contains((string) $state, '/ref/')
+                            ? Str::afterLast($state, '/')
+                            : $state;
+                        return request()->getSchemeAndHttpHost() . '/ref/' . $refCode;
+                    })
+                    ->dehydrateStateUsing(function ($state) {
+                        if (empty($state)) return null;
+                        // Luôn lưu DB chỉ mã ref_id (bỏ URL nếu user paste cả link)
+                        return Str::afterLast($state, '/') ?: $state;
+                    })
                     ->copyable()
                     ->helperText('Click vào field hoặc icon để copy link'),
                 \Filament\Forms\Components\Select::make('organization_id')
@@ -76,6 +111,21 @@ class CollaboratorForm {
                     ])
                     ->required()
                     ->default('active')
+                    ->formatStateUsing(fn($state) => match (true) {
+                        $state === 'active', $state === 1, $state === '1' => 'Kích hoạt',
+                        $state === 'pending', $state === 2, $state === '2' => 'Chờ duyệt',
+                        $state === 'inactive', $state === 3, $state === '3' => 'Vô hiệu',
+                        default => '—',
+                    })
+                    ->dehydrateStateUsing(function ($state) {
+                        // Chuẩn hóa giá trị lưu DB: số (1,2,3) hoặc dữ liệu cũ -> enum đúng
+                        return match (true) {
+                            $state === 'active', $state === 1, $state === '1' => 'active',
+                            $state === 'pending', $state === 2, $state === '2' => 'pending',
+                            $state === 'inactive', $state === 3, $state === '3' => 'inactive',
+                            default => \in_array((string) $state, ['active', 'pending', 'inactive'], true) ? $state : 'active',
+                        };
+                    })
                     ->helperText('Chọn trạng thái cho cộng tác viên')
                     ->native(false),
             ]);

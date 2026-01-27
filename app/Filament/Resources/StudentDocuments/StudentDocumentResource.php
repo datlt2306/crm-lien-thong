@@ -18,6 +18,10 @@ class StudentDocumentResource extends Resource {
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 2;
 
+    public static function shouldRegisterNavigation(): bool {
+        return false; // Ẩn vì chưa hoàn thiện
+    }
+
     public static function form(Schema $schema): Schema {
         return $schema
             ->components([

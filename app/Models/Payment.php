@@ -40,12 +40,14 @@ class Payment extends Model {
     public const STATUS_NOT_PAID = 'not_paid';      // Chưa nộp tiền
     public const STATUS_SUBMITTED = 'submitted';    // Đã nộp (chờ xác minh)
     public const STATUS_VERIFIED = 'verified';      // Đã nộp tiền (đã xác minh)
+    public const STATUS_REVERTED = 'reverted';      // Đã hoàn trả
 
     public static function getStatusOptions(): array {
         return [
             self::STATUS_NOT_PAID => 'Chưa nộp tiền',
             self::STATUS_SUBMITTED => 'Đã nộp (chờ xác minh)',
-            self::STATUS_VERIFIED => 'Đã nộp tiền',
+            self::STATUS_VERIFIED => 'Đã xác nhận',
+            self::STATUS_REVERTED => 'Đã hoàn trả',
         ];
     }
 
@@ -56,7 +58,8 @@ class Payment extends Model {
         $nextStatuses = [
             self::STATUS_NOT_PAID => [self::STATUS_SUBMITTED],
             self::STATUS_SUBMITTED => [self::STATUS_VERIFIED],
-            self::STATUS_VERIFIED => [],
+            self::STATUS_VERIFIED => [self::STATUS_REVERTED],
+            self::STATUS_REVERTED => [self::STATUS_VERIFIED],
         ];
 
         return !empty($nextStatuses[$this->status] ?? []);
@@ -69,7 +72,8 @@ class Payment extends Model {
         $nextStatuses = [
             self::STATUS_NOT_PAID => [self::STATUS_SUBMITTED],
             self::STATUS_SUBMITTED => [self::STATUS_VERIFIED],
-            self::STATUS_VERIFIED => [],
+            self::STATUS_VERIFIED => [self::STATUS_REVERTED], // Có thể hoàn trả
+            self::STATUS_REVERTED => [self::STATUS_VERIFIED], // Có thể xác nhận lại
         ];
 
         return $nextStatuses[$this->status] ?? [];

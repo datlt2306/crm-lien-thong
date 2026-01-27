@@ -11,9 +11,12 @@ class Collaborator extends Model {
         'full_name',
         'phone',
         'email',
+        'identity_card',
+        'tax_code',
+        'bank_name',
+        'bank_account',
         'organization_id',
         'ref_id',
-        // 'upline_id', // Đã loại bỏ - hệ thống chỉ còn 1 cấp
         'note',
         'status',
     ];

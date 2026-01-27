@@ -18,6 +18,10 @@ class StudentEventResource extends Resource {
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 3;
 
+    public static function shouldRegisterNavigation(): bool {
+        return false; // Ẩn vì chưa hoàn thiện
+    }
+
     public static function form(Schema $schema): Schema {
         return $schema
             ->components([

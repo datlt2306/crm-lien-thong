@@ -71,6 +71,14 @@ class Intake extends Model {
     }
 
     /**
+     * Các chỉ tiêu năm được áp dụng cho đợt này
+     */
+    public function annualQuotas() {
+        return $this->belongsToMany(AnnualQuota::class, 'annual_quota_intake')
+            ->withTimestamps();
+    }
+
+    /**
      * Scope: Lấy intakes đang active
      */
     public function scopeActive($query) {
@@ -93,17 +101,45 @@ class Intake extends Model {
     }
 
     /**
-     * Lấy tổng chỉ tiêu của đợt tuyển
+     * Lấy tổng chỉ tiêu của đợt tuyển (ưu tiên từ relationship, fallback: annual_quotas theo năm)
      */
     public function getTotalTargetQuotaAttribute(): int {
-        return $this->quotas()->sum('target_quota');
+        // Ưu tiên: Lấy từ relationship (đã liên kết cụ thể)
+        $linkedQuotas = $this->annualQuotas()
+            ->where('status', AnnualQuota::STATUS_ACTIVE)
+            ->get();
+
+        if ($linkedQuotas->isNotEmpty()) {
+            return (int) $linkedQuotas->sum('target_quota');
+        }
+
+        // Fallback: Lấy tất cả annual_quotas của năm đó
+        $year = $this->start_date?->format('Y') ?? now()->format('Y');
+        return (int) AnnualQuota::where('organization_id', $this->organization_id)
+            ->where('year', $year)
+            ->where('status', AnnualQuota::STATUS_ACTIVE)
+            ->sum('target_quota');
     }
 
     /**
      * Lấy tổng chỉ tiêu hiện tại (đã nhập học)
      */
     public function getTotalCurrentQuotaAttribute(): int {
-        return $this->quotas()->sum('current_quota');
+        // Ưu tiên: Lấy từ relationship (đã liên kết cụ thể)
+        $linkedQuotas = $this->annualQuotas()
+            ->where('status', AnnualQuota::STATUS_ACTIVE)
+            ->get();
+
+        if ($linkedQuotas->isNotEmpty()) {
+            return (int) $linkedQuotas->sum('current_quota');
+        }
+
+        // Fallback: Lấy tất cả annual_quotas của năm đó
+        $year = $this->start_date?->format('Y') ?? now()->format('Y');
+        return (int) AnnualQuota::where('organization_id', $this->organization_id)
+            ->where('year', $year)
+            ->where('status', AnnualQuota::STATUS_ACTIVE)
+            ->sum('current_quota');
     }
 
     /**

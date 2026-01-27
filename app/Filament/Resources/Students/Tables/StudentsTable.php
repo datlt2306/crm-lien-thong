@@ -49,7 +49,9 @@ class StudentsTable {
             ->columns([
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('contact')
                     ->label('Liên hệ')
                     ->state(fn($record) => $record)
@@ -71,22 +73,40 @@ class StudentsTable {
                             $q->where('phone', 'like', "%$search%")
                                 ->orWhere('email', 'like', "%$search%");
                         });
-                    }),
+                    })
+                    ->toggleable(),
+                TextColumn::make('collaborator.full_name')
+                    ->label('Người giới thiệu')
+                    ->formatStateUsing(fn($state) => $state ?: '—')
+                    ->searchable(query: function ($query, $search) {
+                        return $query->whereHas('collaborator', function ($q) use ($search) {
+                            $q->where('full_name', 'like', "%$search%")
+                                ->orWhere('email', 'like', "%$search%")
+                                ->orWhere('phone', 'like', "%$search%");
+                        });
+                    })
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('dob')
                     ->label('Ngày sinh')
                     ->date('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('major')
                     ->label('Ngành học')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('address')
                     ->label('Địa chỉ')
                     ->limit(50)
-                    ->searchable(),
-                TextColumn::make('intake_month')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('intake.name')
                     ->label('Đợt tuyển')
-                    ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : '—')
-                    ->sortable(),
+                    ->formatStateUsing(fn($state, $record) => $state ?: ($record->intake_month ? "Tháng {$record->intake_month}" : '—'))
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('program_type')
                     ->label('Hệ tuyển sinh')
                     ->formatStateUsing(fn($state) => match ($state) {
@@ -104,10 +124,28 @@ class StudentsTable {
                         'REGULAR' => '🎓 Hệ đào tạo chính quy, học tập toàn thời gian',
                         'PART_TIME' => '⏰ Hệ vừa học vừa làm, linh hoạt thời gian',
                         default => ''
-                    }),
+                    })
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('application_status')
                     ->label('Trạng thái hồ sơ')
-                    ->state(function (Student $record) {
+                    ->sortable()
+                    ->toggleable()
+                    ->formatStateUsing(function ($state, Student $record) {
+                        // Nếu có application_status trong database, dùng nó
+                        if ($state) {
+                            return match ($state) {
+                                'draft' => 'Đang nhập',
+                                'pending_documents' => 'Thiếu giấy tờ',
+                                'submitted' => 'Đã nộp hồ sơ',
+                                'verified' => 'Đã xác minh',
+                                'eligible' => 'Đủ điều kiện',
+                                'ineligible' => 'Không đủ điều kiện',
+                                default => $state,
+                            };
+                        }
+
+                        // Fallback: tính toán từ status và document_checklist
                         $checklist = $record->document_checklist ?? [];
 
                         $requiredDocuments = [
@@ -171,6 +209,7 @@ class StudentsTable {
                                 Payment::STATUS_NOT_PAID => 'gray',
                                 Payment::STATUS_SUBMITTED => 'warning',
                                 Payment::STATUS_VERIFIED => 'success',
+                                Payment::STATUS_REVERTED => 'danger',
                                 default => 'gray',
                             };
                         }
@@ -194,6 +233,7 @@ class StudentsTable {
                                 Payment::STATUS_NOT_PAID => '💳 Chưa nộp tiền',
                                 Payment::STATUS_SUBMITTED => '⏳ Chờ xác minh',
                                 Payment::STATUS_VERIFIED => '✅ Đã nộp tiền',
+                                Payment::STATUS_REVERTED => '↩️ Đã hoàn trả',
                                 default => '—',
                             };
                         }
@@ -222,6 +262,7 @@ class StudentsTable {
                                 Payment::STATUS_NOT_PAID => 'Học viên chưa nộp tiền',
                                 Payment::STATUS_SUBMITTED => 'Đã nộp tiền, chờ kế toán xác minh',
                                 Payment::STATUS_VERIFIED => 'Đã nộp tiền và tạo commission',
+                                Payment::STATUS_REVERTED => 'Đã hoàn trả từ trạng thái đã xác nhận',
                                 default => '',
                             };
                         }
@@ -234,22 +275,39 @@ class StudentsTable {
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
                 TextColumn::make('updated_at')
                     ->label('Ngày cập nhật')
                     ->dateTime('d/m/Y H:i:s')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->filters([
+                \Filament\Tables\Filters\SelectFilter::make('application_status')
+                    ->label('Trạng thái hồ sơ')
+                    ->options([
+                        'draft' => 'Đang nhập',
+                        'pending_documents' => 'Thiếu giấy tờ',
+                        'submitted' => 'Đã nộp hồ sơ',
+                        'verified' => 'Đã xác minh',
+                        'eligible' => 'Đủ điều kiện',
+                        'ineligible' => 'Không đủ điều kiện',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!isset($data['value']) || $data['value'] === '') {
+                            return $query;
+                        }
+                        return $query->where('application_status', $data['value']);
+                    }),
+
                 \Filament\Tables\Filters\SelectFilter::make('payment_status')
                     ->label('Trạng thái thanh toán')
                     ->options([
                         Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
                         Payment::STATUS_SUBMITTED => 'Chờ xác minh',
                         Payment::STATUS_VERIFIED => 'Đã xác nhận',
+                        Payment::STATUS_REVERTED => 'Đã hoàn trả',
                     ])
-                    ->visible(fn() => in_array(Auth::user()->role, ['accountant', 'document']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')))
                     ->query(function (Builder $query, array $data): Builder {
                         if (!isset($data['value']) || $data['value'] === '') {
                             return $query;
@@ -257,6 +315,58 @@ class StudentsTable {
                         return $query->whereHas('payment', function (Builder $paymentQuery) use ($data) {
                             $paymentQuery->where('status', $data['value']);
                         });
+                    }),
+
+                \Filament\Tables\Filters\SelectFilter::make('program_type')
+                    ->label('Hệ đào tạo')
+                    ->options([
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'Vừa học vừa làm',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!isset($data['value']) || $data['value'] === '') {
+                            return $query;
+                        }
+                        return $query->where('program_type', $data['value']);
+                    }),
+
+                \Filament\Tables\Filters\SelectFilter::make('major')
+                    ->label('Ngành học')
+                    ->options(function () {
+                        return \App\Models\Major::where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'name')
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!isset($data['value']) || $data['value'] === '') {
+                            return $query;
+                        }
+                        return $query->where('major', $data['value']);
+                    }),
+
+                \Filament\Tables\Filters\SelectFilter::make('intake_id')
+                    ->label('Đợt tuyển sinh')
+                    ->relationship('intake', 'name')
+                    ->searchable()
+                    ->preload(),
+
+                \Filament\Tables\Filters\SelectFilter::make('organization_id')
+                    ->label('Tổ chức')
+                    ->relationship('organization', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
+
+                \Filament\Tables\Filters\SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options(Student::getStatusOptions())
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!isset($data['value']) || $data['value'] === '') {
+                            return $query;
+                        }
+                        return $query->where('status', $data['value']);
                     }),
             ])
             ->recordActions([
@@ -506,11 +616,30 @@ class StudentsTable {
                                     }
                                     return '';
                                 })
-                                ->formatStateUsing(function ($state) {
-                                    if (empty($state)) {
-                                        return '';
+                                ->formatStateUsing(function ($state, Student $record) {
+                                    // Luôn ưu tiên lấy từ payment->amount để đảm bảo hiển thị đúng
+                                    if ($record->payment) {
+                                        $amount = (float) ($record->payment->amount ?? 0);
+                                        if ($amount > 0) {
+                                            return number_format((int) round($amount), 0, '', '.');
+                                        }
                                     }
-                                    return number_format((float) $state, 0, '', '.');
+
+                                    // Nếu không có payment hoặc payment->amount = 0, format từ state (nhưng chỉ nếu state hợp lệ)
+                                    if (!empty($state) && $state != 0 && $state != '0') {
+                                        // Loại bỏ dấu chấm và dấu phẩy để lấy số
+                                        $numericValue = is_string($state)
+                                            ? (int) str_replace(['.', ',', ' '], '', $state)
+                                            : (int) round((float) $state);
+
+                                        // Chỉ format nếu số tiền hợp lệ (>= 100 VNĐ) - bỏ qua các giá trị nhỏ như 2
+                                        if ($numericValue >= 100) {
+                                            return number_format($numericValue, 0, '', '.');
+                                        }
+                                    }
+
+                                    // Nếu state không hợp lệ, trả về rỗng
+                                    return '';
                                 })
                                 ->dehydrateStateUsing(function ($state) {
                                     if (empty($state)) {
@@ -538,8 +667,8 @@ class StudentsTable {
                             (in_array(Auth::user()->role, ['accountant', 'document']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
                                 // Sinh viên phải có payment record
                                 $record->payment &&
-                                // Payment phải ở trạng thái chờ xác minh
-                                $record->payment->status === Payment::STATUS_SUBMITTED
+                                // Payment phải ở trạng thái chờ xác minh hoặc đã hoàn trả (có thể xác nhận lại)
+                                in_array($record->payment->status, [Payment::STATUS_SUBMITTED, Payment::STATUS_REVERTED])
                         )
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;

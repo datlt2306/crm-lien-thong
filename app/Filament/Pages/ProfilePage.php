@@ -26,6 +26,19 @@ class ProfilePage extends Page {
 
     public ?array $data = [];
 
+    /**
+     * Lấy link giới thiệu cho CTV (user có collaborator khớp email và có ref_id).
+     */
+    protected function getRefLinkForUser(?User $user): string {
+        if (!$user || $user->role !== 'ctv') {
+            return '';
+        }
+        $collab = $user->collaborator;
+        return ($collab && !empty($collab->ref_id))
+            ? (request()->getSchemeAndHttpHost() . '/ref/' . $collab->ref_id)
+            : '';
+    }
+
     public function mount(): void {
         $user = Auth::user();
         $this->data = [
@@ -34,6 +47,7 @@ class ProfilePage extends Page {
             'phone' => $user->phone,
             'avatar' => $user->avatar ? [$user->avatar] : [],
             'bio' => $user->bio,
+            'ref_link' => $this->getRefLinkForUser($user),
             'current_password' => '',
             'password' => '',
             'password_confirmation' => '',
@@ -96,6 +110,20 @@ class ProfilePage extends Page {
                         ->helperText('Tối đa 500 ký tự'),
                 ])
                 ->columns(2)
+                ->columnSpanFull(),
+
+            Section::make('🔗 Link giới thiệu')
+                ->description('Chia sẻ link này để học viên đăng ký qua bạn')
+                ->icon('heroicon-o-link')
+                ->visible(fn () => $this->getRefLinkForUser(Auth::user()) !== '')
+                ->components([
+                    TextInput::make('ref_link')
+                        ->label('Link giới thiệu')
+                        ->readOnly()
+                        ->copyable()
+                        ->dehydrated(false)
+                        ->helperText('Bấm vào biểu tượng copy để sao chép link. Học viên dùng link này để đăng ký và nộp hóa đơn qua bạn.'),
+                ])
                 ->columnSpanFull(),
 
             Section::make('🔐 Bảo mật tài khoản')
@@ -187,6 +215,7 @@ class ProfilePage extends Page {
             'phone' => $user->phone,
             'avatar' => $user->avatar ? [$user->avatar] : [],
             'bio' => $user->bio ?? '',
+            'ref_link' => $this->getRefLinkForUser($user),
             'current_password' => '',
             'password' => '',
             'password_confirmation' => '',

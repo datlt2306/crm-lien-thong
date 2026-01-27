@@ -27,6 +27,11 @@ class NotificationPreferenceResource extends Resource {
 
     protected static ?string $pluralModelLabel = 'Cài đặt thông báo';
 
+    public static function shouldRegisterNavigation(): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        return $user && $user->role === 'super_admin';
+    }
+
     public static function form(Schema $schema): Schema {
         return NotificationPreferenceForm::configure($schema);
     }

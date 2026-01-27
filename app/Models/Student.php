@@ -82,6 +82,7 @@ class Student extends Model {
         'organization_id',
         'collaborator_id',
         'major_id',
+        'program_id',
         'intake_id',
 
         // Các tài liệu chi tiết khác (mapping mở rộng từ file chuẩn)
@@ -175,6 +176,10 @@ class Student extends Model {
         return $this->belongsTo(Major::class, 'major_id');
     }
 
+    public function program() {
+        return $this->belongsTo(Program::class, 'program_id');
+    }
+
     public function intake() {
         return $this->belongsTo(Intake::class, 'intake_id');
     }
@@ -188,6 +193,17 @@ class Student extends Model {
     }
 
     protected static function booted(): void {
+        static::saving(function (Student $student) {
+            if (array_key_exists('intake_id', $student->getDirty())) {
+                if ($student->intake_id) {
+                    $intake = Intake::find($student->intake_id);
+                    $student->intake_month = $intake?->start_date?->format('n');
+                } else {
+                    $student->intake_month = null;
+                }
+            }
+        });
+
         static::updated(function (Student $student) {
             // Nếu chưa có bảng log (ví dụ môi trường dev/test chưa migrate) thì bỏ qua
             if (!SchemaFacade::hasTable('student_update_logs')) {
@@ -238,6 +254,7 @@ class Student extends Model {
             'collaborator_id' => 'nullable|exists:collaborators,id',
             'target_university' => 'nullable|string|max:255',
             'major' => 'nullable|string|max:255',
+            'intake_id' => 'nullable|exists:intakes,id',
             'intake_month' => 'nullable|integer|between:1,12',
             'program_type' => ['nullable', Rule::in(['REGULAR', 'PART_TIME'])],
             'source' => ['required', Rule::in(['form', 'ref', 'facebook', 'zalo', 'tiktok', 'hotline', 'event', 'school', 'walkin', 'other'])],

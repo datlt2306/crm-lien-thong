@@ -174,7 +174,7 @@ class StudentsExcelExport implements FromCollection, WithHeadings, WithMapping, 
             default => $student->program_type ?? '—',
         };
 
-        $intakeMonth = $student->intake_month ? "Tháng {$student->intake_month}" : '—';
+        $intakeDisplay = $student->intake?->name ?: ($student->intake_month ? "Tháng {$student->intake_month}" : '—');
 
         $checklist = $student->document_checklist ?? [];
         $requiredDocs = ['phieu_tuyen_sinh', 'bang_cao_dang', 'bang_thpt', 'bang_diem', 'giay_khai_sinh', 'cccd', 'giay_kham_suc_khoe', 'anh_4x6'];
@@ -271,7 +271,7 @@ class StudentsExcelExport implements FromCollection, WithHeadings, WithMapping, 
             $student->major ?? '',
             $student->target_university ?? '',
             $programType,
-            $intakeMonth,
+            $intakeDisplay,
             $student->high_school_name ?? '',
             $student->high_school_code ?? '',
             $student->high_school_province ?? '',

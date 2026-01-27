@@ -14,6 +14,9 @@ use App\Models\Organization;
 class CreateCollaborator extends CreateRecord {
     protected static string $resource = CollaboratorResource::class;
 
+    /** Mật khẩu tạm để tạo User trong afterCreate (tránh UserObserver tạo Collaborator trùng trước khi Filament tạo) */
+    protected ?string $pendingUserPassword = null;
+
     public function mount(): void {
         parent::mount();
 
@@ -25,7 +28,7 @@ class CreateCollaborator extends CreateRecord {
 
     protected function mutateFormDataBeforeCreate(array $data): array {
         // Kiểm tra xem collaborator với email này đã tồn tại chưa
-        $existingCollaborator = Collaborator::where('email', $data['email'])->first();
+        $existingCollaborator = Collaborator::where('email', $data['email'] ?? '')->first();
         if ($existingCollaborator) {
             \Filament\Notifications\Notification::make()
                 ->title('Email đã tồn tại')
@@ -48,49 +51,55 @@ class CreateCollaborator extends CreateRecord {
                 $data['organization_id'] = $org->id;
             } else {
                 // Nếu không phải chủ tổ chức, tìm collaborator của user hiện tại
-                $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                $collaborator = Collaborator::where('email', $user->email)->first();
                 if ($collaborator) {
                     $data['organization_id'] = $collaborator->organization_id;
-                    // Tự động gán upline_id là CTV hiện tại
                     $data['upline_id'] = $collaborator->id;
                 }
             }
         }
 
-        // Tạo User account cho collaborator
+        // Lưu mật khẩu để tạo User trong afterCreate. KHÔNG tạo User ở đây:
+        // UserObserver khi tạo User (role=ctv) sẽ tạo Collaborator → trùng email với
+        // Collaborator do Filament sắp tạo → lỗi UNIQUE. Tạo User sau khi Collaborator
+        // đã tồn tại, UserObserver sẽ thấy Collaborator có sẵn và không tạo thêm.
         if (!empty($data['email'])) {
-            // Kiểm tra xem email đã tồn tại chưa
-            $existingUser = User::where('email', $data['email'])->first();
-
-            if (!$existingUser) {
-                $password = !empty($data['password']) ? $data['password'] : '123456';
-
-                $userAccount = User::create([
-                    'name' => $data['full_name'],
-                    'email' => $data['email'],
-                    'password' => Hash::make($password),
-                    'role' => 'ctv',
-                ]);
-
-                // Gán role 'ctv' cho collaborator
-                $userAccount->assignRole('ctv');
-            } else {
-                $userAccount = $existingUser;
-            }
-
-            // Cập nhật organization organization_owner_id nếu chưa có
-            if (isset($data['organization_id'])) {
-                $org = Organization::find($data['organization_id']);
-                if ($org && !$org->organization_owner_id && $existingUser) {
-                    $org->update(['organization_owner_id' => $userAccount->id]);
-                }
-            }
+            $this->pendingUserPassword = $data['password'] ?? '123456';
         }
 
-        // Loại bỏ password khỏi data trước khi tạo Collaborator
         unset($data['password'], $data['password_confirmation']);
 
         return $data;
+    }
+
+    protected function afterCreate(): void {
+        if (empty($this->record->email)) {
+            $this->pendingUserPassword = null;
+            return;
+        }
+
+        $existingUser = User::where('email', $this->record->email)->first();
+
+        if (!$existingUser) {
+            $userAccount = User::create([
+                'name' => $this->record->full_name,
+                'email' => $this->record->email,
+                'password' => Hash::make($this->pendingUserPassword ?? '123456'),
+                'role' => 'ctv',
+            ]);
+            $userAccount->assignRole('ctv');
+        } else {
+            $userAccount = $existingUser;
+        }
+
+        if (isset($this->record->organization_id)) {
+            $org = Organization::find($this->record->organization_id);
+            if ($org && !$org->organization_owner_id && $existingUser) {
+                $org->update(['organization_owner_id' => $userAccount->id]);
+            }
+        }
+
+        $this->pendingUserPassword = null;
     }
 
     public function getTitle(): string {

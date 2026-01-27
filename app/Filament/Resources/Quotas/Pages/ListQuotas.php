@@ -11,10 +11,8 @@ class ListQuotas extends ListRecords {
 
     protected function getHeaderActions(): array {
         $actions = [];
-
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        // Chỉ super_admin và organization_owner mới có thể create
         if ($user && in_array($user->role, ['super_admin', 'organization_owner'])) {
             $actions[] = CreateAction::make();
         }

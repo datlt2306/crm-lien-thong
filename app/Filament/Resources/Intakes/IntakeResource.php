@@ -20,11 +20,11 @@ class IntakeResource extends Resource {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Đợt tuyển sinh';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3; // Trước "Đợt tuyển & Chỉ tiêu" (4): tạo đợt (tên + khoảng thời gian) trước, gán chỉ tiêu sau
 
     public static function shouldRegisterNavigation(): bool {
-        // Ẩn menu "Đợt tuyển sinh" riêng lẻ vì đã gộp vào "Đợt tuyển & Chỉ tiêu"
-        return false;
+        $user = \Illuminate\Support\Facades\Auth::user();
+        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv']);
     }
 
     public static function form(Schema $schema): Schema {
@@ -77,18 +77,10 @@ class IntakeResource extends Resource {
     }
 
     public static function getPages(): array {
-        $pages = [
+        return [
             'index' => ListIntakes::route('/'),
+            'create' => CreateIntake::route('/create'),
+            'edit' => EditIntake::route('/{record}/edit'),
         ];
-
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        // Chỉ super_admin và organization_owner mới có thể create và edit
-        if ($user && in_array($user->role, ['super_admin', 'organization_owner'])) {
-            $pages['create'] = CreateIntake::route('/create');
-            $pages['edit'] = EditIntake::route('/{record}/edit');
-        }
-
-        return $pages;
     }
 }

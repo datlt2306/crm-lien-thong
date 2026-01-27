@@ -32,9 +32,9 @@ class StudentInfolist {
                         'PART_TIME' => 'Vừa học vừa làm',
                         default => 'Chưa chọn'
                     }),
-                TextEntry::make('intake_month')
+                TextEntry::make('intake.name')
                     ->label('Đợt tuyển')
-                    ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : 'Chưa chọn'),
+                    ->formatStateUsing(fn($state, $record) => $state ?: ($record->intake_month ? "Tháng {$record->intake_month}" : 'Chưa chọn')),
                 TextEntry::make('address')
                     ->label('Địa chỉ')
                     ->columnSpanFull(),

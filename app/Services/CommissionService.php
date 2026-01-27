@@ -51,9 +51,24 @@ class CommissionService {
     private function createDirectCommission(Commission $commission, Payment $payment, string $initialStatus): void {
         $amount = $this->getDirectCommissionAmount($payment);
 
+        // Lấy collaborator_id: ưu tiên từ payment->primary_collaborator_id, nếu không có thì lấy từ student->collaborator_id
+        $collaboratorId = $payment->primary_collaborator_id;
+        if (!$collaboratorId && $payment->student) {
+            $collaboratorId = $payment->student->collaborator_id;
+        }
+
+        // Nếu vẫn không có collaborator_id, không thể tạo commission_item
+        if (!$collaboratorId) {
+            Log::warning('Cannot create commission item: missing collaborator_id', [
+                'payment_id' => $payment->id,
+                'student_id' => $payment->student_id,
+            ]);
+            return;
+        }
+
         // Tránh tạo trùng (idempotent)
         $exists = CommissionItem::where('commission_id', $commission->id)
-            ->where('recipient_collaborator_id', $payment->primary_collaborator_id)
+            ->where('recipient_collaborator_id', $collaboratorId)
             ->where('role', 'direct')
             ->exists();
         if ($exists) {
@@ -62,7 +77,7 @@ class CommissionService {
 
         CommissionItem::create([
             'commission_id' => $commission->id,
-            'recipient_collaborator_id' => $payment->primary_collaborator_id,
+            'recipient_collaborator_id' => $collaboratorId,
             'role' => 'direct',
             'amount' => $amount,
             'status' => $initialStatus,

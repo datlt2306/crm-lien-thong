@@ -23,18 +23,7 @@ class QuotaResource extends Resource {
     protected static ?int $navigationSort = 4;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        if (!$user) {
-            return false;
-        }
-
-        // Super admin, organization_owner và CTV đều có thể xem
-        if (in_array($user->role, ['super_admin', 'organization_owner', 'ctv'])) {
-            return true;
-        }
-
-        return false;
+        return false; // Thay bằng Chỉ tiêu năm (AnnualQuotaResource) và Đợt tuyển sinh (IntakeResource)
     }
 
     public static function form(Schema $schema): Schema {
@@ -52,7 +41,7 @@ class QuotaResource extends Resource {
     }
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with('intake');
         $user = \Illuminate\Support\Facades\Auth::user();
 
         if (!$user) {

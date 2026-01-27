@@ -27,7 +27,12 @@ class CommissionResource extends Resource {
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
 
     public static function shouldRegisterNavigation(): bool {
-        return true; // Cho phép tất cả user đã đăng nhập thấy menu, quyền truy cập sẽ được kiểm tra ở page level
+        $user = Auth::user();
+        // Ẩn menu "Hoa hồng & Đối soát" cho cán bộ hồ sơ
+        if ($user && $user->role === 'document') {
+            return false;
+        }
+        return true; // Cho phép các role khác thấy menu, quyền truy cập sẽ được kiểm tra ở page level
     }
 
     public static function form(Schema $schema): Schema {
@@ -92,9 +97,9 @@ class CommissionResource extends Resource {
                     ->limit(50)
                     ->searchable(),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.intake_month')
+                \Filament\Tables\Columns\TextColumn::make('commission.student.intake.name')
                     ->label('Đợt tuyển')
-                    ->formatStateUsing(fn($state) => $state ? "Tháng {$state}" : '—')
+                    ->formatStateUsing(fn($state, $record) => $state ?: ($record->commission?->student?->intake_month ? "Tháng {$record->commission->student->intake_month}" : '—'))
                     ->sortable(),
 
                 \Filament\Tables\Columns\TextColumn::make('commission.student.program_type')

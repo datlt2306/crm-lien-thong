@@ -5,15 +5,17 @@ namespace App\Filament\Resources\Intakes\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Table;
 
 class IntakesTable {
     public static function configure(Table $table): Table {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
+
         return $table
+            ->recordUrl(fn($r) => ($canEdit && $r) ? \App\Filament\Resources\Intakes\IntakeResource::getUrl('edit', ['record' => $r]) : null)
             ->columns([
                 TextColumn::make('name')
                     ->label('Tên đợt tuyển sinh')
@@ -57,20 +59,85 @@ class IntakesTable {
                     ->date('d/m/Y')
                     ->sortable(),
 
-                TextColumn::make('quotas_count')
-                    ->label('Số ngành')
-                    ->counts('quotas')
-                    ->sortable(),
+                TextColumn::make('majors_recruiting')
+                    ->label('Ngành tuyển sinh')
+                    ->getStateUsing(function ($record) {
+                        // Ưu tiên: Lấy từ relationship (đã liên kết cụ thể)
+                        $linkedQuotas = $record->annualQuotas()
+                            ->where('status', \App\Models\AnnualQuota::STATUS_ACTIVE)
+                            ->with('major')
+                            ->get();
+
+                        if ($linkedQuotas->isNotEmpty()) {
+                            $majors = $linkedQuotas->pluck('major.name')->unique()->filter()->toArray();
+                            return implode(', ', $majors);
+                        }
+
+                        // Fallback: Lấy tất cả annual_quotas của năm đó (chưa liên kết cụ thể)
+                        $year = $record->start_date?->format('Y') ?? now()->format('Y');
+                        $majors = \Illuminate\Support\Facades\DB::table('annual_quotas')
+                            ->join('majors', 'annual_quotas.major_id', '=', 'majors.id')
+                            ->where('annual_quotas.organization_id', $record->organization_id)
+                            ->where('annual_quotas.year', $year)
+                            ->where('annual_quotas.status', \App\Models\AnnualQuota::STATUS_ACTIVE)
+                            ->select('majors.name')
+                            ->distinct()
+                            ->pluck('name')
+                            ->toArray();
+                        
+                        if (empty($majors)) {
+                            return 'Chưa cấu hình';
+                        }
+                        return implode(', ', $majors) . ' *';
+                    })
+                    ->wrap()
+                    ->tooltip(function ($record) {
+                        $linkedQuotas = $record->annualQuotas()
+                            ->where('status', \App\Models\AnnualQuota::STATUS_ACTIVE)
+                            ->with(['major', 'program'])
+                            ->get();
+
+                        if ($linkedQuotas->isNotEmpty()) {
+                            $lines = ['✅ Đã chỉ định đợt tuyển cụ thể:'];
+                            foreach ($linkedQuotas as $q) {
+                                $remaining = $q->target_quota - $q->current_quota;
+                                $lines[] = "• {$q->major?->name} ({$q->program?->name}): {$q->current_quota}/{$q->target_quota} (còn {$remaining})";
+                            }
+                            return implode("\n", $lines);
+                        }
+
+                        // Fallback
+                        $year = $record->start_date?->format('Y') ?? now()->format('Y');
+                        $details = \Illuminate\Support\Facades\DB::table('annual_quotas')
+                            ->join('majors', 'annual_quotas.major_id', '=', 'majors.id')
+                            ->join('programs', 'annual_quotas.program_id', '=', 'programs.id')
+                            ->where('annual_quotas.organization_id', $record->organization_id)
+                            ->where('annual_quotas.year', $year)
+                            ->where('annual_quotas.status', \App\Models\AnnualQuota::STATUS_ACTIVE)
+                            ->select('majors.name as major_name', 'programs.name as program_name', 'annual_quotas.target_quota', 'annual_quotas.current_quota')
+                            ->get();
+                        
+                        if ($details->isEmpty()) {
+                            return 'Chưa có chỉ tiêu năm nào được cấu hình';
+                        }
+                        
+                        $lines = ["⚠️ Chưa chỉ định đợt cụ thể (hiện tất cả năm {$year}):"];
+                        foreach ($details as $d) {
+                            $remaining = $d->target_quota - $d->current_quota;
+                            $lines[] = "• {$d->major_name} ({$d->program_name}): {$d->current_quota}/{$d->target_quota} (còn {$remaining})";
+                        }
+                        return implode("\n", $lines);
+                    }),
 
                 TextColumn::make('total_target_quota')
                     ->label('Tổng chỉ tiêu')
                     ->getStateUsing(function ($record) {
                         return number_format($record->total_target_quota);
                     })
-                    ->sortable(),
+                    ->description(fn($record) => 'Đã tuyển: ' . number_format($record->total_current_quota)),
 
                 TextColumn::make('quota_utilization')
-                    ->label('Tỷ lệ sử dụng')
+                    ->label('Tỷ lệ')
                     ->getStateUsing(function ($record) {
                         return $record->quota_utilization . '%';
                     })
@@ -80,7 +147,7 @@ class IntakesTable {
                     ),
 
                 TextColumn::make('students_count')
-                    ->label('Số học viên')
+                    ->label('Học viên')
                     ->counts('students')
                     ->sortable(),
 
@@ -110,20 +177,10 @@ class IntakesTable {
                     ->preload(),
             ])
             ->recordActions([
-                ActionGroup::make([
-                    ViewAction::make()
-                        ->label('Xem chi tiết'),
-                    EditAction::make()
-                        ->label('Chỉnh sửa')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
-                ])
-                    ->label('Hành động')
-                    ->icon('heroicon-m-ellipsis-vertical')
-                    ->color('gray')
-                    ->button()
-                    ->size('sm')
-                    ->tooltip('Các hành động khả dụng')
+                EditAction::make()
+                    ->label('Chỉnh sửa')
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
+                        in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

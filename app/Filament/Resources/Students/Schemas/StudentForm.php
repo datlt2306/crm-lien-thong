@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Students\Schemas;
 
+use App\Models\Intake;
 use App\Models\Organization;
 use App\Models\Student;
 use App\Models\Payment;
 use App\Models\StudentUpdateLog;
+use App\Models\Collaborator;
 use App\Services\StudentFeeService;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
@@ -35,8 +37,41 @@ class StudentForm {
                                     ->required(),
                                 TextInput::make('instructor')
                                     ->label('GVHD')
-                                    ->helperText(fn() => 'Tự động điền theo người đã submit. Có thể chỉnh sửa nếu cần.')
-                                    ->default(fn() => Auth::user()?->name ?? '')
+                                    ->default(function (?Student $record) {
+                                        $user = Auth::user();
+
+                                        // Nếu đang edit và đã có instructor, giữ nguyên
+                                        if ($record && $record->instructor) {
+                                            return $record->instructor;
+                                        }
+
+                                        // Nếu user là CTV hoặc organization_owner, lấy từ collaborator
+                                        if ($user && in_array($user->role, ['ctv', 'organization_owner'])) {
+                                            $collaborator = Collaborator::where('email', $user->email)->first();
+                                            if ($collaborator && !empty($collaborator->full_name)) {
+                                                return $collaborator->full_name;
+                                            }
+                                        }
+
+                                        // Fallback về user name
+                                        return $user?->name ?? '';
+                                    })
+                                    ->afterStateHydrated(function (TextInput $component, $state, ?Student $record) {
+                                        // Nếu state rỗng và đang tạo mới, tự động điền từ collaborator
+                                        if (empty($state) && !$record) {
+                                            $user = Auth::user();
+                                            if ($user && in_array($user->role, ['ctv', 'organization_owner'])) {
+                                                $collaborator = Collaborator::where('email', $user->email)->first();
+                                                if ($collaborator && !empty($collaborator->full_name)) {
+                                                    $component->state($collaborator->full_name);
+                                                } elseif ($user->name) {
+                                                    $component->state($user->name);
+                                                }
+                                            } elseif ($user && $user->name) {
+                                                $component->state($user->name);
+                                            }
+                                        }
+                                    })
                                     ->maxLength(255),
                                 TextInput::make('phone')
                                     ->label('Số điện thoại')
@@ -53,6 +88,13 @@ class StudentForm {
                                     ->validationMessages([
                                         'unique' => 'Email đã được sử dụng bởi học viên khác.',
                                     ]),
+                                Select::make('collaborator_id')
+                                    ->label('Người giới thiệu')
+                                    ->relationship('collaborator', 'full_name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->helperText('CTV/Đối tác giới thiệu học viên này')
+                                    ->visible(fn() => Auth::user()?->role !== 'ctv'),
                                 Select::make('organization_id')
                                     ->label('Tổ chức')
                                     ->options(fn() => Organization::orderBy('name')->pluck('name', 'id'))
@@ -84,28 +126,22 @@ class StudentForm {
                                         'PART_TIME' => 'Vừa học vừa làm',
                                     ])
                                     ->helperText('Chọn hệ dự kiến cho sinh viên'),
-                                \Filament\Forms\Components\Select::make('intake_month')
+                                \Filament\Forms\Components\Select::make('intake_id')
                                     ->label('Đợt đăng ký liên thông')
-                                    ->options([
-                                        1 => 'Tháng 1',
-                                        2 => 'Tháng 2',
-                                        3 => 'Tháng 3',
-                                        4 => 'Tháng 4',
-                                        5 => 'Tháng 5',
-                                        6 => 'Tháng 6',
-                                        7 => 'Tháng 7',
-                                        8 => 'Tháng 8',
-                                        9 => 'Tháng 9',
-                                        10 => 'Tháng 10',
-                                        11 => 'Tháng 11',
-                                        12 => 'Tháng 12',
-                                    ])
-                                    ->helperText('Chọn tháng tuyển sinh dự kiến'),
-                                \Filament\Forms\Components\Textarea::make('address')
-                                    ->label('Địa chỉ')
-                                    ->rows(3)
-                                    ->helperText('Nhập địa chỉ của sinh viên')
-                                    ->columnSpanFull(),
+                                    ->options(function ($get) {
+                                        $orgId = $get('organization_id') ?? Auth::user()?->organization_id;
+                                        if (!$orgId) {
+                                            return [];
+                                        }
+                                        return Intake::where('organization_id', $orgId)
+                                            ->whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING, Intake::STATUS_CLOSED])
+                                            ->orderBy('start_date')
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->searchable()
+                                    ->required()
+                                    ->helperText('Chọn đợt tuyển sinh'),
+
                                 \Filament\Forms\Components\Select::make('source')
                                     ->label('Hình thức tuyển sinh')
                                     ->options([
@@ -152,8 +188,11 @@ class StudentForm {
                                         return null;
                                     })
                                     ->helperText('Chọn tình trạng chi tiết của hồ sơ')
-                                    ->columnSpanFull()
                                     ->visible(fn() => Auth::user()?->role !== 'ctv'),
+                                \Filament\Forms\Components\Textarea::make('address')
+                                    ->label('Địa chỉ')
+                                    ->rows(3)
+                                    ->helperText('Nhập địa chỉ của sinh viên'),
                                 \Filament\Forms\Components\TextInput::make('fee')
                                     ->label('Lệ phí (VNĐ)')
                                     ->default(function (?Student $record) {
@@ -234,6 +273,7 @@ class StudentForm {
                                             Payment::STATUS_NOT_PAID => 'Chưa nộp',
                                             Payment::STATUS_SUBMITTED => 'Chờ xác minh',
                                             Payment::STATUS_VERIFIED => 'Đã nộp',
+                                            Payment::STATUS_REVERTED => 'Đã hoàn trả',
                                             default => $record->payment->status,
                                         };
                                     })
@@ -253,9 +293,11 @@ class StudentForm {
                                 \Filament\Forms\Components\DatePicker::make('dob')
                                     ->label('Ngày sinh')
                                     ->displayFormat('d/m/Y')
+                                    ->required()
                                     ->helperText('Chọn ngày tháng năm sinh của sinh viên'),
                                 TextInput::make('birth_place')
                                     ->label('Nơi sinh')
+                                    ->required()
                                     ->maxLength(255),
                                 Textarea::make('permanent_residence')
                                     ->label('Hộ khẩu thường trú')
@@ -273,6 +315,7 @@ class StudentForm {
                                     ]),
                                 TextInput::make('identity_card')
                                     ->label('Số CCCD')
+                                    ->required()
                                     ->helperText('Nhập số căn cước công dân của học viên')
                                     ->unique(ignoreRecord: true)
                                     ->validationMessages([
@@ -612,7 +655,8 @@ class StudentForm {
                                             'document_checklist' => 'Checklist giấy tờ',
                                             'fee' => 'Lệ phí',
                                             'application_status' => 'Tình trạng hồ sơ',
-                                            'intake_month' => 'Đợt đăng ký',
+                                            'intake_id' => 'Đợt đăng ký',
+                                            'intake_month' => 'Đợt đăng ký (tháng)',
                                             'full_name' => 'Họ và tên',
                                             'phone' => 'Số điện thoại',
                                             'email' => 'Email',
@@ -621,6 +665,7 @@ class StudentForm {
                                             'status' => 'Trạng thái',
                                             'source' => 'Hình thức tuyển sinh',
                                             'notes' => 'Ghi chú',
+                                            'payment_status' => 'Trạng thái thanh toán',
                                         ];
 
                                         $formatValue = function ($value, $field = '') {
@@ -695,9 +740,26 @@ class StudentForm {
                                                 return $statusLabels[$str] ?? $str;
                                             }
 
+                                            // Format payment_status
+                                            if ($field === 'payment_status') {
+                                                $paymentStatusLabels = [
+                                                    Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
+                                                    Payment::STATUS_SUBMITTED => 'Chờ xác minh',
+                                                    Payment::STATUS_VERIFIED => 'Đã xác nhận',
+                                                    Payment::STATUS_REVERTED => 'Đã hoàn trả',
+                                                ];
+                                                return $paymentStatusLabels[$str] ?? $str;
+                                            }
+
                                             // Format program_type
                                             if ($field === 'program_type') {
                                                 return $str === 'REGULAR' ? 'Chính quy' : ($str === 'PART_TIME' ? 'Vừa học vừa làm' : $str);
+                                            }
+
+                                            // Format intake_id: hiển thị tên đợt tuyển
+                                            if ($field === 'intake_id' && !empty($value)) {
+                                                $intake = Intake::find($value);
+                                                return $intake ? $intake->name : (string) $value;
                                             }
 
                                             return $str;

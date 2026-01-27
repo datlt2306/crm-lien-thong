@@ -2,52 +2,44 @@
 
 namespace App\Filament\Resources\Quotas\Schemas;
 
-use App\Models\Intake;
 use App\Models\Major;
-use App\Models\Organization;
-use Filament\Schemas\Schema;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class QuotaForm {
     public static function configure(Schema $schema): Schema {
         return $schema
             ->schema([
                 Section::make('📅 Thông tin đợt tuyển sinh')
-                    ->description('Chọn đợt tuyển sinh và tổ chức')
+                    ->description('Điền tên đợt, khoảng thời gian và tổ chức — tạo/chỉnh sửa trực tiếp tại đây')
                     ->icon('heroicon-o-calendar-days')
                     ->schema([
-                        Select::make('intake_id')
-                            ->label('Đợt tuyển sinh')
-                            ->relationship('intake', 'name')
+                        TextInput::make('intake_name')
+                            ->label('Tên đợt tuyển sinh')
                             ->required()
-                            ->searchable()
-                            ->preload()
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                if ($state) {
-                                    $intake = Intake::find($state);
-                                    if ($intake) {
-                                        $set('organization_id', $intake->organization_id);
-                                    }
-                                }
-                            })
-                            ->getOptionLabelFromRecordUsing(function (\App\Models\Intake $record): string {
-                                $program = $record->program ? ' (' . $record->program->name . ')' : '';
-                                return $record->name . $program;
-                            })
-                            ->placeholder('Chọn đợt tuyển sinh...')
-                            ->helperText('Chọn đợt tuyển sinh để tạo chỉ tiêu'),
+                            ->placeholder('VD: Đợt 1 - Học kỳ I 2026')
+                            ->maxLength(255)
+                            ->columnSpanFull()
+                            ->helperText('Đặt tên đợt tuyển sinh'),
 
-                        Select::make('program_id')
-                            ->label('Hệ đào tạo')
-                            ->relationship('program', 'name')
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn hệ đào tạo...')
-                            ->helperText('Chọn hệ đào tạo cho chỉ tiêu này'),
+                        DatePicker::make('intake_start_date')
+                            ->label('Từ ngày')
+                            ->required()
+                            ->displayFormat('d/m/Y')
+                            ->native(false)
+                            ->helperText('Ngày bắt đầu nhận hồ sơ'),
+
+                        DatePicker::make('intake_end_date')
+                            ->label('Đến ngày')
+                            ->required()
+                            ->displayFormat('d/m/Y')
+                            ->native(false)
+                            ->after('intake_start_date')
+                            ->helperText('Ngày cuối cùng nhận hồ sơ'),
 
                         Select::make('organization_id')
                             ->label('Tổ chức')
@@ -56,9 +48,17 @@ class QuotaForm {
                             ->searchable()
                             ->preload()
                             ->placeholder('Chọn tổ chức...')
-                            ->helperText('Tổ chức sẽ được tự động chọn theo đợt tuyển sinh'),
+                            ->helperText('Tổ chức quản lý đợt tuyển sinh này'),
+
+                        Select::make('program_id')
+                            ->label('Hệ đào tạo')
+                            ->relationship('program', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Chọn hệ đào tạo...')
+                            ->helperText('Hệ đào tạo cho đợt này'),
                     ])
-                    ->columns(3)
+                    ->columns(2)
                     ->columnSpanFull()
                     ->collapsible(),
 

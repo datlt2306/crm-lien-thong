@@ -80,13 +80,10 @@
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Đợt tuyển <span class="text-red-500">*</span></label>
-                <select name="intake_month" id="intake_month" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
+                <select name="intake_id" id="intake_select" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
                     <option value="">-- Chọn đợt tuyển --</option>
-                    @foreach(($intakeMonths ?? []) as $month)
-                    <option value="{{ e($month) }}" {{ old('intake_month') == $month ? 'selected' : '' }}>Tháng {{ e($month) }}</option>
-                    @endforeach
                 </select>
-                <div id="intake_month_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
+                <div id="intake_select_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ghi chú</label>
@@ -101,12 +98,19 @@
         // Hiển thị thông tin chi tiết khi chọn ngành
         const majorSelect = document.getElementById('major_id');
         const programSelect = document.getElementById('program_id');
-        const intakeSelect = document.getElementById('intake_month');
+        const intakeSelect = document.getElementById('intake_select');
         const form = document.getElementById('student-form');
+
+        function formatDateStr(s) {
+            if (!s) return '';
+            const d = new Date(s);
+            return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
+        }
 
         // Lấy dữ liệu majors từ server
         const majorsData = @json($majors ?? []);
         const programsData = @json($programs ?? []);
+        const oldIntakeId = @json(old('intake_id'));
 
         // Hàm hiển thị lỗi
         function showError(fieldId, message) {
@@ -155,10 +159,10 @@
 
             // Validate đợt tuyển
             if (!intakeSelect.value) {
-                showError('intake_month', 'Vui lòng chọn đợt tuyển');
+                showError('intake_select', 'Vui lòng chọn đợt tuyển');
                 isValid = false;
             } else {
-                hideError('intake_month');
+                hideError('intake_select');
             }
 
             return isValid;
@@ -189,17 +193,19 @@
             });
 
             if (selectedMajor) {
-                // Reset và cập nhật đợt tuyển theo ngành đã chọn
+                // Cập nhật đợt tuyển theo ngành: chỉ dùng đợt tuyển (intakes), không dùng tháng 1–12
                 intakeSelect.innerHTML = '<option value="">-- Chọn đợt tuyển --</option>';
-                if (selectedMajor.intake_months && selectedMajor.intake_months.length > 0) {
-                    // Sắp xếp tháng theo thứ tự tăng dần
-                    const sortedMonths = [...selectedMajor.intake_months].sort((a, b) => parseInt(a) - parseInt(b));
-                    sortedMonths.forEach(function(month) {
+                intakeSelect.setAttribute('name', 'intake_id');
+                if (selectedMajor.intakes && selectedMajor.intakes.length > 0) {
+                    selectedMajor.intakes.forEach(function(i) {
                         const option = document.createElement('option');
-                        option.value = month;
-                        option.textContent = 'Tháng ' + month;
+                        option.value = i.id;
+                        option.textContent = i.name + ' (từ ' + formatDateStr(i.start_date) + ' đến ' + formatDateStr(i.end_date) + ')';
                         intakeSelect.appendChild(option);
                     });
+                }
+                if (oldIntakeId && intakeSelect.querySelector('option[value="' + oldIntakeId + '"]')) {
+                    intakeSelect.value = oldIntakeId;
                 }
 
                 // Reset và cập nhật hệ đào tạo theo ngành đã chọn
@@ -239,12 +245,15 @@
                     programNames = programsData.map(p => p.name).join(', ');
                 }
 
-                const monthText = (selectedMajor.intake_months && selectedMajor.intake_months.length) ?
-                    ('Tháng ' + selectedMajor.intake_months.join(', ')) :
-                    'Chưa cấu hình';
+                let dotTuyenText = 'Chưa cấu hình';
+                if (selectedMajor.intakes && selectedMajor.intakes.length > 0) {
+                    dotTuyenText = selectedMajor.intakes.map(function(i) {
+                        return i.name + ' (từ ' + formatDateStr(i.start_date) + ' đến ' + formatDateStr(i.end_date) + ')';
+                    }).join('; ');
+                }
                 infoDiv.innerHTML = '<strong>Thông tin ngành ' + selectedMajor.name + ':</strong><br>' +
                     'Chỉ tiêu: ' + selectedMajor.quota + ' sinh viên<br>' +
-                    'Đợt tuyển: ' + monthText + '<br>' +
+                    'Đợt tuyển: ' + dotTuyenText + '<br>' +
                     'Hệ đào tạo: ' + programNames;
 
                 majorSelect.parentNode.insertBefore(infoDiv, majorSelect.nextSibling);
@@ -257,8 +266,13 @@
         });
 
         intakeSelect.addEventListener('change', function() {
-            hideError('intake_month');
+            hideError('intake_select');
         });
+
+        // Khi load lại (vd. sau lỗi validation), cập nhật Hệ đào tạo & Đợt tuyển theo major đã chọn
+        if (majorSelect.value) {
+            majorSelect.dispatchEvent(new Event('change'));
+        }
     </script>
 </body>
 

@@ -52,6 +52,23 @@ class CollaboratorsTable {
                 TextColumn::make('organization.name')
                     ->label('Tổ chức')
                     ->searchable(),
+                TextColumn::make('identity_card')
+                    ->label('CCCD')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('bank_info')
+                    ->label('Ngân hàng / STK')
+                    ->state(fn($record) => $record)
+                    ->formatStateUsing(fn($record) => $record->bank_name && $record->bank_account
+                        ? e($record->bank_name) . ' - ' . e($record->bank_account)
+                        : ($record->bank_name ? e($record->bank_name) : ($record->bank_account ? '•••' . substr($record->bank_account, -4) : '—')))
+                    ->searchable(query: function ($query, $search) {
+                        return $query->where(function ($q) use ($search) {
+                            $q->where('bank_name', 'like', "%{$search}%")
+                                ->orWhere('bank_account', 'like', "%{$search}%");
+                        });
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
