@@ -93,24 +93,69 @@ class IntakeForm {
                     ->columns(3)
                     ->collapsible(),
 
-                Section::make('📊 Chỉ tiêu tuyển sinh năm')
-                    ->description('Thông tin chỉ tiêu các ngành cho năm của đợt tuyển này (cấu hình tại Chỉ tiêu năm)')
+                Section::make('📊 Quản lý chỉ tiêu năm')
+                    ->description('Tạo và liên kết chỉ tiêu năm với đợt tuyển sinh này. Chỉ tiêu năm có thể được chia sẻ giữa nhiều đợt trong cùng năm.')
                     ->icon('heroicon-o-chart-bar')
                     ->schema([
+                        Select::make('annual_quota_ids')
+                            ->label('📌 Chỉ tiêu năm đã có sẵn')
+                            ->options(function ($get, $record) {
+                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
+                                $startDate = $get('start_date') ?? ($record?->start_date ?? null);
+                                
+                                if (!$orgId || !$startDate) {
+                                    return [];
+                                }
+                                
+                                $year = \Carbon\Carbon::parse($startDate)->format('Y');
+                                
+                                return \App\Models\AnnualQuota::where('organization_id', $orgId)
+                                    ->where('year', $year)
+                                    ->with(['major', 'program'])
+                                    ->get()
+                                    ->mapWithKeys(function ($quota) {
+                                        $major = $quota->major?->name ?? 'N/A';
+                                        $program = $quota->program?->name ?? 'N/A';
+                                        $target = number_format($quota->target_quota);
+                                        $current = number_format($quota->current_quota);
+                                        $label = "{$major} ({$program}) - {$current}/{$target}";
+                                        return [$quota->id => $label];
+                                    })
+                                    ->toArray();
+                            })
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Chọn các chỉ tiêu năm để liên kết với đợt này...')
+                            ->helperText('Chọn các chỉ tiêu năm đã tạo sẵn để áp dụng cho đợt tuyển sinh này. Để trống = áp dụng tất cả chỉ tiêu năm của tổ chức trong năm.')
+                            ->reactive()
+                            ->columnSpanFull(),
+
                         \Filament\Forms\Components\Placeholder::make('annual_quotas_info')
-                            ->label('')
-                            ->content(function ($record) {
-                                if (!$record || !$record->organization_id || !$record->start_date) {
-                                    return new \Illuminate\Support\HtmlString('<p class="text-gray-500">Vui lòng chọn tổ chức và ngày bắt đầu trước.</p>');
+                            ->label('📋 Xem trước chỉ tiêu năm')
+                            ->content(function ($get, $record) {
+                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
+                                $startDate = $get('start_date') ?? ($record?->start_date ?? null);
+                                
+                                if (!$orgId || !$startDate) {
+                                    return new \Illuminate\Support\HtmlString('<p class="text-gray-500 text-sm">Vui lòng chọn tổ chức và ngày bắt đầu để xem chỉ tiêu năm.</p>');
                                 }
 
-                                $year = $record->start_date->format('Y');
-                                $quotas = \Illuminate\Support\Facades\DB::table('annual_quotas')
+                                $year = \Carbon\Carbon::parse($startDate)->format('Y');
+                                $selectedIds = $get('annual_quota_ids') ?? ($record?->annualQuotas?->pluck('id')->toArray() ?? []);
+                                
+                                $query = \Illuminate\Support\Facades\DB::table('annual_quotas')
                                     ->join('majors', 'annual_quotas.major_id', '=', 'majors.id')
                                     ->join('programs', 'annual_quotas.program_id', '=', 'programs.id')
-                                    ->where('annual_quotas.organization_id', $record->organization_id)
-                                    ->where('annual_quotas.year', $year)
-                                    ->select(
+                                    ->where('annual_quotas.organization_id', $orgId)
+                                    ->where('annual_quotas.year', $year);
+                                
+                                if (!empty($selectedIds)) {
+                                    $query->whereIn('annual_quotas.id', $selectedIds);
+                                }
+                                
+                                $quotas = $query->select(
+                                        'annual_quotas.id',
                                         'majors.name as major_name',
                                         'programs.name as program_name',
                                         'annual_quotas.target_quota',
@@ -120,13 +165,10 @@ class IntakeForm {
                                     ->get();
 
                                 if ($quotas->isEmpty()) {
-                                    $url = route('filament.admin.resources.annual-quotas.create');
                                     return new \Illuminate\Support\HtmlString("
                                         <div class='p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800'>
-                                            <p class='text-yellow-700 dark:text-yellow-300 font-medium'>⚠️ Chưa có chỉ tiêu năm {$year} nào được cấu hình cho tổ chức này.</p>
-                                            <a href='{$url}' class='mt-2 inline-block text-blue-600 hover:underline'>
-                                                → Tạo chỉ tiêu năm mới
-                                            </a>
+                                            <p class='text-yellow-700 dark:text-yellow-300 font-medium text-sm'>⚠️ Chưa có chỉ tiêu năm {$year} nào được cấu hình cho tổ chức này.</p>
+                                            <p class='text-yellow-600 dark:text-yellow-400 text-xs mt-1'>Tạo chỉ tiêu năm mới ở phần bên dưới hoặc truy cập menu 'Chỉ tiêu năm'.</p>
                                         </div>
                                     ");
                                 }
@@ -148,45 +190,45 @@ class IntakeForm {
                                         <div class='p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border'>
                                             <div class='flex justify-between items-center'>
                                                 <div>
-                                                    <span class='font-semibold text-gray-900 dark:text-white'>{$q->major_name}</span>
-                                                    <span class='text-sm text-gray-500 dark:text-gray-400'>({$q->program_name})</span>
+                                                    <span class='font-semibold text-gray-900 dark:text-white text-sm'>{$q->major_name}</span>
+                                                    <span class='text-xs text-gray-500 dark:text-gray-400 ml-1'>({$q->program_name})</span>
                                                 </div>
                                                 <span class='px-2 py-1 text-xs rounded-full bg-{$statusColor}-100 text-{$statusColor}-700 dark:bg-{$statusColor}-900/30 dark:text-{$statusColor}-400'>
                                                     " . ($q->status === 'active' ? 'Đang tuyển' : ($q->status === 'full' ? 'Đã đủ' : 'Tạm dừng')) . "
                                                 </span>
                                             </div>
                                             <div class='mt-2'>
-                                                <div class='flex justify-between text-sm text-gray-600 dark:text-gray-300 mb-1'>
+                                                <div class='flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-1'>
                                                     <span>Đã tuyển: {$q->current_quota}/{$q->target_quota}</span>
                                                     <span>Còn lại: <strong class='text-{$progressColor}-600'>{$remaining}</strong></span>
                                                 </div>
-                                                <div class='w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2'>
-                                                    <div class='bg-{$progressColor}-500 h-2 rounded-full' style='width: {$percent}%'></div>
+                                                <div class='w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5'>
+                                                    <div class='bg-{$progressColor}-500 h-1.5 rounded-full' style='width: {$percent}%'></div>
                                                 </div>
                                             </div>
                                         </div>
                                     ";
                                 }
 
-                                $totalRemaining = $totalTarget - $totalCurrent;
                                 $totalPercent = $totalTarget > 0 ? round(($totalCurrent / $totalTarget) * 100, 1) : 0;
-                                $url = route('filament.admin.resources.annual-quotas.index') . "?tableFilters[organization_id][value]={$record->organization_id}&tableFilters[year][value]={$year}";
+                                $url = route('filament.admin.resources.annual-quotas.index') . "?tableFilters[organization_id][value]={$orgId}&tableFilters[year][value]={$year}";
 
                                 $html .= "
-                                    <div class='mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
+                                    <div class='mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
                                         <div class='flex justify-between items-center'>
-                                            <span class='font-semibold text-blue-700 dark:text-blue-300'>📊 Tổng cộng năm {$year}</span>
-                                            <span class='text-blue-600 dark:text-blue-400'>{$totalCurrent}/{$totalTarget} ({$totalPercent}%)</span>
+                                            <span class='font-semibold text-blue-700 dark:text-blue-300 text-sm'>📊 Tổng cộng năm {$year}</span>
+                                            <span class='text-blue-600 dark:text-blue-400 text-sm'>{$totalCurrent}/{$totalTarget} ({$totalPercent}%)</span>
                                         </div>
-                                        <div class='mt-2 text-sm'>
-                                            <a href='{$url}' class='text-blue-600 hover:underline'>→ Quản lý chỉ tiêu năm {$year}</a>
+                                        <div class='mt-2 text-xs'>
+                                            <a href='{$url}' target='_blank' class='text-blue-600 hover:underline'>→ Quản lý chỉ tiêu năm {$year}</a>
                                         </div>
                                     </div>
                                 </div>";
 
                                 return new \Illuminate\Support\HtmlString($html);
                             })
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->visible(fn($get) => $get('organization_id') && $get('start_date')),
                     ])
                     ->collapsible()
                     ->collapsed(false),

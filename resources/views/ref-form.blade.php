@@ -194,7 +194,11 @@
 
             if (selectedMajor) {
                 // Cập nhật đợt tuyển theo ngành: chỉ dùng đợt tuyển (intakes), không dùng tháng 1–12
-                intakeSelect.innerHTML = '<option value="">-- Chọn đợt tuyển --</option>';
+                intakeSelect.textContent = '';
+                const defaultIntakeOption = document.createElement('option');
+                defaultIntakeOption.value = '';
+                defaultIntakeOption.textContent = '-- Chọn đợt tuyển --';
+                intakeSelect.appendChild(defaultIntakeOption);
                 intakeSelect.setAttribute('name', 'intake_id');
                 if (selectedMajor.intakes && selectedMajor.intakes.length > 0) {
                     selectedMajor.intakes.forEach(function(i) {
@@ -209,8 +213,13 @@
                 }
 
                 // Reset và cập nhật hệ đào tạo theo ngành đã chọn
+                programSelect.textContent = '';
+                const defaultProgramOption = document.createElement('option');
+                defaultProgramOption.value = '';
+                defaultProgramOption.textContent = '-- Chọn hệ đào tạo --';
+                programSelect.appendChild(defaultProgramOption);
+
                 if (selectedMajor.programs && selectedMajor.programs.length > 0) {
-                    programSelect.innerHTML = '<option value="">-- Chọn hệ đào tạo --</option>';
                     selectedMajor.programs.forEach(function(program) {
                         const option = document.createElement('option');
                         option.value = program.id;
@@ -219,7 +228,6 @@
                     });
                 } else {
                     // Fallback: hiển thị tất cả hệ đào tạo
-                    programSelect.innerHTML = '<option value="">-- Chọn hệ đào tạo --</option>';
                     programsData.forEach(function(program) {
                         const option = document.createElement('option');
                         option.value = program.id;
@@ -251,10 +259,17 @@
                         return i.name + ' (từ ' + formatDateStr(i.start_date) + ' đến ' + formatDateStr(i.end_date) + ')';
                     }).join('; ');
                 }
-                infoDiv.innerHTML = '<strong>Thông tin ngành ' + selectedMajor.name + ':</strong><br>' +
-                    'Chỉ tiêu: ' + selectedMajor.quota + ' sinh viên<br>' +
-                    'Đợt tuyển: ' + dotTuyenText + '<br>' +
-                    'Hệ đào tạo: ' + programNames;
+                
+                // Tránh sử dụng innerHTML đễ ngăn XSS
+                const titleStr = document.createElement('strong');
+                titleStr.textContent = 'Thông tin ngành ' + selectedMajor.name + ':';
+                infoDiv.appendChild(titleStr);
+                infoDiv.appendChild(document.createElement('br'));
+                infoDiv.appendChild(document.createTextNode('Chỉ tiêu: ' + selectedMajor.quota + ' sinh viên'));
+                infoDiv.appendChild(document.createElement('br'));
+                infoDiv.appendChild(document.createTextNode('Đợt tuyển: ' + dotTuyenText));
+                infoDiv.appendChild(document.createElement('br'));
+                infoDiv.appendChild(document.createTextNode('Hệ đào tạo: ' + programNames));
 
                 majorSelect.parentNode.insertBefore(infoDiv, majorSelect.nextSibling);
             }

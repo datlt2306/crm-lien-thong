@@ -35,20 +35,11 @@ class FileController extends Controller {
             }
         }
 
-        // CTV có thể xem payment của mình và của downline trong nhánh
+        // CTV có thể xem payment của mình
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
-            if ($collaborator) {
-                // Kiểm tra xem payment có phải của mình không
-                if ($payment->primary_collaborator_id === $collaborator->id) {
-                    return $this->serveFile($payment->bill_path);
-                }
-
-                // Kiểm tra xem payment có phải của downline trong nhánh không
-                $downlineIds = self::getDownlineIds($collaborator->id);
-                if (in_array($payment->primary_collaborator_id, $downlineIds)) {
-                    return $this->serveFile($payment->bill_path);
-                }
+            if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
+                return $this->serveFile($payment->bill_path);
             }
         }
 
@@ -101,13 +92,28 @@ class FileController extends Controller {
         if (!$user) {
             abort(403, 'Không có quyền truy cập');
         }
-
-        // Super admin, accountant, organization_owner, ctv có thể xem receipt
+        // Super admin và accountant có thể xem receipt tự do
         if (
-            in_array($user->role, ['super_admin', 'accountant', 'organization_owner', 'ctv']) ||
+            in_array($user->role, ['super_admin', 'accountant']) ||
             ($user->roles && $user->roles->contains('name', 'accountant'))
         ) {
             return $this->serveFile($payment->receipt_path);
+        }
+
+        // Chủ đơn vị (organization_owner) chỉ được xem receipt của học viên trong trường
+        if ($user->role === 'organization_owner') {
+            $org = Organization::where('organization_owner_id', $user->id)->first();
+            if ($org && $payment->organization_id === $org->id) {
+                return $this->serveFile($payment->receipt_path);
+            }
+        }
+
+        // CTV chỉ được xem receipt của học viên do chính CTV đó quản lý (Chống IDOR tải chênh lệch)
+        if ($user->role === 'ctv') {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
+                return $this->serveFile($payment->receipt_path);
+            }
         }
 
         abort(403, 'Không có quyền truy cập file này');
@@ -125,25 +131,5 @@ class FileController extends Controller {
             'Content-Type' => $mimeType,
             'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"'
         ]);
-    }
-
-    /**
-     * Lấy danh sách ID của tất cả downline trong nhánh
-     */
-    private static function getDownlineIds(int $collaboratorId): array {
-        $downlineIds = [];
-
-        // Lấy tất cả downline trực tiếp
-        $directDownlines = Collaborator::where('upline_id', $collaboratorId)->get();
-
-        foreach ($directDownlines as $downline) {
-            $downlineIds[] = $downline->id;
-
-            // Đệ quy lấy downline của downline
-            $subDownlineIds = self::getDownlineIds($downline->id);
-            $downlineIds = array_merge($downlineIds, $subDownlineIds);
-        }
-
-        return $downlineIds;
     }
 }

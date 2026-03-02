@@ -25,6 +25,15 @@ class UserObserver {
         if ($user->role === 'ctv') {
             $this->createCollaboratorRecord($user);
         }
+
+        // 3. Đồng bộ hóa với Spatie Role để User mới thao tác được Permission
+        if (!empty($user->role)) {
+            // Kiểm tra role có tồn tại trong Spatie Role DB không, nếu có thì assign
+            $roleExists = \Spatie\Permission\Models\Role::where('name', $user->role)->exists();
+            if ($roleExists && method_exists($user, 'assignRole')) {
+                $user->assignRole($user->role);
+            }
+        }
     }
 
     /**
@@ -54,6 +63,18 @@ class UserObserver {
 
             // Cập nhật Collaborator record
             $this->updateCollaboratorRecord($user, $oldRole, $newRole);
+
+            // Đồng bộ lại Spatie Role khi user bị đổi chức danh
+            if (!empty($newRole)) {
+                $roleExists = \Spatie\Permission\Models\Role::where('name', $newRole)->exists();
+                if ($roleExists && method_exists($user, 'syncRoles')) {
+                    $user->syncRoles([$newRole]);
+                }
+            } else {
+                if (method_exists($user, 'syncRoles')) {
+                    $user->syncRoles([]);
+                }
+            }
         }
     }
 
@@ -89,7 +110,6 @@ class UserObserver {
                     'email' => $user->email,
                     'phone' => $phone,
                     'organization_id' => $organization->id,
-                    'upline_id' => null, // CTV cấp 1
                     'status' => 'active'
                 ]);
             }
@@ -138,12 +158,15 @@ class UserObserver {
      * Lấy organization phù hợp cho user
      */
     private function getUserOrganization(User $user): ?Organization {
+        if (!empty($user->organization_id)) {
+            return Organization::find($user->organization_id);
+        }
+
         // Nếu là organization_owner, tìm organization của họ
         if ($user->role === 'organization_owner') {
             return Organization::where('organization_owner_id', $user->id)->first();
         }
 
-        // Nếu là ctv, tìm organization đầu tiên (hoặc có thể mở rộng logic)
-        return Organization::first();
+        return null;
     }
 }

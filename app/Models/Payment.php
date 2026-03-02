@@ -13,7 +13,6 @@ class Payment extends Model {
         'organization_id',
         'student_id',
         'primary_collaborator_id',
-        'sub_collaborator_id',
         'program_type',
         'amount',
         'bill_path',
@@ -107,10 +106,6 @@ class Payment extends Model {
 
     public function primaryCollaborator(): BelongsTo {
         return $this->belongsTo(Collaborator::class, 'primary_collaborator_id');
-    }
-
-    public function subCollaborator(): BelongsTo {
-        return $this->belongsTo(Collaborator::class, 'sub_collaborator_id');
     }
 
     public function editedBy(): BelongsTo {

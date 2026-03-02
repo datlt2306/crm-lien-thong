@@ -52,17 +52,10 @@ class Collaborator extends Model {
     }
 
     /**
-     * Quan hệ: Payments (khi là primary collaborator)
+     * Quan hệ: Payments
      */
     public function payments() {
         return $this->hasMany(Payment::class, 'primary_collaborator_id');
-    }
-
-    /**
-     * Quan hệ: Payments (khi là sub collaborator)
-     */
-    public function subPayments() {
-        return $this->hasMany(Payment::class, 'sub_collaborator_id');
     }
 
     // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====

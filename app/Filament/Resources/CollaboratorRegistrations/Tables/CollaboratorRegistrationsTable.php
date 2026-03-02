@@ -37,15 +37,7 @@ class CollaboratorRegistrationsTable {
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('upline.full_name')
-                    ->label('CTV giới thiệu')
-                    ->formatStateUsing(function ($record) {
-                        if (!$record->upline) {
-                            return 'CTV cấp 1';
-                        }
-                        return $record->upline->full_name . ' (' . $record->upline->ref_id . ')';
-                    })
-                    ->searchable(),
+
 
                 TextColumn::make('status')
                     ->label('Trạng thái')

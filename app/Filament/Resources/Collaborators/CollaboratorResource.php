@@ -84,12 +84,8 @@ class CollaboratorResource extends Resource {
             return $query->whereNull('id');
         }
 
-        // CTV: thấy CTV cấp 2 trực tiếp (downlines trực tiếp)
         if ($user->role === 'ctv') {
-            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-            if ($collaborator) {
-                return $query->where('upline_id', $collaborator->id);
-            }
+            // CTV không được xem danh sách CTV khác
             return $query->whereNull('id');
         }
 
@@ -112,7 +108,6 @@ class CollaboratorResource extends Resource {
                 $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
                 if ($org) {
                     return (string) Collaborator::where('organization_id', $org->id)
-                        ->whereNull('upline_id')
                         ->count();
                 }
             }

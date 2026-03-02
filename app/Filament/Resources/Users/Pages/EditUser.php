@@ -87,22 +87,6 @@ class EditUser extends EditRecord {
             $user = $this->record;
             $user->role = $data['role'];
             $user->save();
-
-            // Cập nhật role trong Spatie Permission
-            try {
-                $user->syncRoles([$data['role']]);
-            } catch (\Exception $e) {
-                // Nếu role chưa tồn tại, tạo mới
-                if (str_contains($e->getMessage(), 'There is no role named')) {
-                    \Spatie\Permission\Models\Role::create([
-                        'name' => $data['role'],
-                        'guard_name' => 'web'
-                    ]);
-                    $user->syncRoles([$data['role']]);
-                } else {
-                    throw $e;
-                }
-            }
         }
 
         return $data;

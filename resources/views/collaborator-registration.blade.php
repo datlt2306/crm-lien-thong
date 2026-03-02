@@ -94,6 +94,37 @@
                         @enderror
                     </div>
 
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-lock text-gray-400"></i>
+                            Mật khẩu đăng nhập *
+                        </label>
+                        <input id="password"
+                            name="password"
+                            type="password"
+                            required
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('password') border-red-500 @enderror"
+                            placeholder="Nhập mật khẩu (ít nhất 6 ký tự)">
+                        @error('password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Password Confirmation -->
+                    <div>
+                        <label for="password_confirmation" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-lock text-gray-400"></i>
+                            Xác nhận mật khẩu *
+                        </label>
+                        <input id="password_confirmation"
+                            name="password_confirmation"
+                            type="password"
+                            required
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                            placeholder="Nhập lại mật khẩu">
+                    </div>
+
                     <!-- Organization -->
                     <div>
                         <label for="organization_id" class="block text-sm font-medium text-gray-700">

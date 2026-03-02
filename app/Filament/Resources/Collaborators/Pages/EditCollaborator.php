@@ -54,9 +54,7 @@ class EditCollaborator extends EditRecord {
             // Organization ID đã có, không cần xử lý thêm
         }
 
-        if (isset($data['upline_id']) && !empty($data['upline_id'])) {
-            // Upline ID đã có, không cần xử lý thêm
-        }
+
 
         return $data;
     }

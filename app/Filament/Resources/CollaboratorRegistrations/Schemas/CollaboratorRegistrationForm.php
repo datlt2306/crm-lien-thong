@@ -46,24 +46,7 @@ class CollaboratorRegistrationForm {
                             ->preload()
                             ->visible(fn() => \Illuminate\Support\Facades\Auth::user()->role === 'super_admin'),
 
-                        Select::make('upline_id')
-                            ->label('Cộng tác viên giới thiệu')
-                            ->options(function ($get) {
-                                $organizationId = $get('organization_id');
-                                if (!$organizationId) {
-                                    return [];
-                                }
-                                return Collaborator::where('organization_id', $organizationId)
-                                    ->where('status', 'active')
-                                    ->pluck('full_name', 'id')
-                                    ->map(function ($name, $id) {
-                                        $collaborator = Collaborator::find($id);
-                                        return $name . ' (' . $collaborator->ref_id . ')';
-                                    });
-                            })
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn CTV giới thiệu (tùy chọn)'),
+
                     ])
                     ->columns(2),
 

@@ -28,24 +28,14 @@ class PublicCollaboratorController extends Controller {
             'phone' => 'required|string|max:20|unique:collaborators,phone',
             'organization_id' => 'nullable|exists:organizations,id',
             'password' => 'required|string|min:6|confirmed',
-            'upline_ref' => 'nullable|string|max:32',
             'note' => 'nullable|string',
         ]);
-
-        // Lấy collaborator từ cookie hoặc upline_ref
-        $uplineId = null;
-        $uplineRef = $data['upline_ref'] ?: $this->refTrackingService->getRefFromCookie($request);
-
-        if (!empty($uplineRef)) {
-            $uplineId = Collaborator::where('ref_id', $uplineRef)->value('id');
-        }
 
         Collaborator::create([
             'full_name' => $data['full_name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
             'organization_id' => $data['organization_id'] ?? null,
-            'upline_id' => $uplineId,
             'note' => $data['note'] ?? null,
             'status' => 'active',
         ]);
@@ -90,7 +80,6 @@ class PublicCollaboratorController extends Controller {
             'email' => $data['email'],
             'phone' => $data['phone'],
             'organization_id' => $org?->id,
-            'upline_id' => $upline->id,
             'note' => $data['note'] ?? null,
             'status' => 'active',
         ]);

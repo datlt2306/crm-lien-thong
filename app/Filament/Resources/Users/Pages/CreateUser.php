@@ -65,63 +65,17 @@ class CreateUser extends CreateRecord {
         return $data;
     }
 
-    protected function afterCreate(): void {
-        // Gán role cho user mới tạo
-        $user = $this->record;
-        if (isset($user->role)) {
-            try {
-                $user->assignRole($user->role);
-            } catch (\Exception $e) {
-                // Nếu role chưa tồn tại, tạo mới
-                if (str_contains($e->getMessage(), 'There is no role named')) {
-                    \Spatie\Permission\Models\Role::create([
-                        'name' => $user->role,
-                        'guard_name' => 'web'
-                    ]);
-                    $user->assignRole($user->role);
-                } else {
-                    throw $e;
-                }
-            }
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model {
+        $user = parent::handleRecordCreation($data);
+
+        // Upload avatar logic remains here
+        if (isset($data['avatar']) && request()->hasFile('components.avatar')) {
+            $file = request()->file('components.avatar');
+            $path = $file->store('avatars', 'public');
+            $user->update(['avatar' => $path]);
         }
 
-        // Tạo Collaborator record cho user có vai trò 'ctv'
-        $currentUser = \Illuminate\Support\Facades\Auth::user();
-        $shouldCreateCollaborator = false;
-        $orgId = null;
-
-        if ($user->role === 'ctv') {
-            if ($currentUser && $currentUser->role === 'organization_owner') {
-                // Owner tạo CTV: gán về tổ chức của owner
-                $shouldCreateCollaborator = true;
-                $org = \App\Models\Organization::where('organization_owner_id', $currentUser->id)->first();
-                if ($org) {
-                    $orgId = $org->id;
-                }
-            } elseif ($currentUser && $currentUser->role === 'super_admin') {
-                // Super admin tạo CTV: gán theo lựa chọn
-                $shouldCreateCollaborator = true;
-                if ($this->selectedOrganizationId) {
-                    $orgId = $this->selectedOrganizationId;
-                }
-            }
-        }
-
-        if ($shouldCreateCollaborator && $orgId) {
-            // Validate email and phone using service
-            CollaboratorValidationService::validateForCreation($user->email, $user->phone);
-
-            \App\Models\Collaborator::create([
-                'full_name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'organization_id' => $orgId,
-                'status' => 'active',
-            ]);
-        }
-
-        // Reset selectedOrganizationId sau khi xử lý
-        $this->selectedOrganizationId = null;
+        return $user;
     }
 
     protected function getFormActions(): array {

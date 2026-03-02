@@ -84,9 +84,7 @@ class StudentResource extends Resource {
             if ($user->role === 'ctv') {
                 $collaborator = Collaborator::where('email', $user->email)->first();
                 if ($collaborator) {
-                    $downlineIds = self::getDownlineIds($collaborator->id);
-                    $allCollaboratorIds = array_merge([$collaborator->id], $downlineIds);
-                    return (string) Student::whereIn('collaborator_id', $allCollaboratorIds)->count();
+                    return (string) Student::where('collaborator_id', $collaborator->id)->count();
                 }
             }
 
@@ -135,17 +133,11 @@ class StudentResource extends Resource {
             }
         }
 
-        // CTV thấy student của mình và của downline trong nhánh
+        // CTV thấy student của mình
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
-                // Lấy danh sách ID của tất cả downline trong nhánh
-                $downlineIds = self::getDownlineIds($collaborator->id);
-
-                // Thêm ID của chính mình vào danh sách
-                $allCollaboratorIds = array_merge([$collaborator->id], $downlineIds);
-
-                return $query->whereIn('collaborator_id', $allCollaboratorIds);
+                return $query->where('collaborator_id', $collaborator->id);
             }
         }
 
@@ -164,23 +156,4 @@ class StudentResource extends Resource {
         return $query->whereNull('id');
     }
 
-    /**
-     * Lấy danh sách ID của tất cả downline trong nhánh
-     */
-    private static function getDownlineIds(int $collaboratorId): array {
-        $downlineIds = [];
-
-        // Lấy tất cả downline trực tiếp
-        $directDownlines = Collaborator::where('upline_id', $collaboratorId)->get();
-
-        foreach ($directDownlines as $downline) {
-            $downlineIds[] = $downline->id;
-
-            // Đệ quy lấy downline của downline
-            $subDownlineIds = self::getDownlineIds($downline->id);
-            $downlineIds = array_merge($downlineIds, $subDownlineIds);
-        }
-
-        return $downlineIds;
-    }
 }

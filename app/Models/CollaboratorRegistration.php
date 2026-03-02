@@ -17,7 +17,7 @@ class CollaboratorRegistration extends Model {
         'email',
         'organization_id',
         'ref_id',
-        'upline_id',
+        'password',
         'note',
         'status',
         'rejection_reason',
@@ -37,13 +37,6 @@ class CollaboratorRegistration extends Model {
      */
     public function organization(): BelongsTo {
         return $this->belongsTo(Organization::class, 'organization_id');
-    }
-
-    /**
-     * Quan hệ: Upline (CTV cha)
-     */
-    public function upline(): BelongsTo {
-        return $this->belongsTo(Collaborator::class, 'upline_id');
     }
 
     /**
@@ -103,7 +96,6 @@ class CollaboratorRegistration extends Model {
                 'email' => $this->email,
                 'organization_id' => $this->organization_id,
                 'ref_id' => $this->ref_id,
-                'upline_id' => $this->upline_id,
                 'note' => $this->note,
                 'status' => 'active',
             ]);
@@ -113,6 +105,21 @@ class CollaboratorRegistration extends Model {
                 'balance' => 0,
                 'currency' => 'VND',
             ]);
+
+            // Tự động sinh User Account cho CTV đăng nhập nếu có email
+            if (!empty($this->email) && !empty($this->password)) {
+                $user = \App\Models\User::where('email', $this->email)->first();
+                if (!$user) {
+                    \App\Models\User::create([
+                        'name' => $this->full_name,
+                        'email' => $this->email,
+                        'phone' => $this->phone,
+                        'password' => $this->password, // Đã hash trước lúc lưu
+                        'role' => 'ctv',
+                        'organization_id' => $this->organization_id,
+                    ]);
+                }
+            }
 
             // Gửi notification cho người đăng ký (nếu có email)
             if ($this->email) {

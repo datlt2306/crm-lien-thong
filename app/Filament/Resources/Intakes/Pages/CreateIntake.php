@@ -18,4 +18,20 @@ class CreateIntake extends CreateRecord {
 
         parent::mount();
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array {
+        // Tách annual_quota_ids ra khỏi data để xử lý riêng
+        $annualQuotaIds = $data['annual_quota_ids'] ?? null;
+        unset($data['annual_quota_ids']);
+        
+        return $data;
+    }
+
+    protected function afterCreate(): void {
+        // Liên kết chỉ tiêu năm với đợt tuyển sinh sau khi tạo
+        $annualQuotaIds = $this->form->getState()['annual_quota_ids'] ?? [];
+        
+        // Sync các chỉ tiêu năm đã chọn (có thể là mảng rỗng)
+        $this->record->annualQuotas()->sync($annualQuotaIds);
+    }
 }

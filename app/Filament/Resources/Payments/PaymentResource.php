@@ -68,19 +68,14 @@ class PaymentResource extends Resource {
                     ->sortable()
                     ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin', 'organization_owner']))
                     ->formatStateUsing(function ($record) {
-                        // Chủ đơn vị thấy CTV cấp 1 (không có upline)
                         $studentCtv = $record->student->collaborator;
-                        if ($studentCtv && $studentCtv->upline_id) {
-                            // Nếu student CTV có upline, lấy upline (CTV cấp 1)
-                            return $studentCtv->upline->full_name;
-                        }
                         return $studentCtv ? $studentCtv->full_name : '—';
                     }),
                 \Filament\Tables\Columns\TextColumn::make('student.collaborator.full_name')
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn(): bool => Auth::user()->role === 'ctv' && self::isPrimaryCollaborator()),
+                    ->visible(fn(): bool => Auth::user()->role === 'ctv'),
 
                 \Filament\Tables\Columns\TextColumn::make('program_type')
                     ->label('Hệ đào tạo')
@@ -300,11 +295,13 @@ class PaymentResource extends Resource {
                             in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
                     )
                     ->action(function (Payment $record) {
-                        $record->markAsVerified(\Illuminate\Support\Facades\Auth::id());
+                        \Illuminate\Support\Facades\DB::transaction(function () use ($record) {
+                            $record->markAsVerified(\Illuminate\Support\Facades\Auth::id());
 
-                        // Tạo commission
-                        $commissionService = new \App\Services\CommissionService();
-                        $commissionService->createCommissionFromPayment($record);
+                            // Tạo commission
+                            $commissionService = new \App\Services\CommissionService();
+                            $commissionService->createCommissionFromPayment($record);
+                        });
 
                         \Filament\Notifications\Notification::make()
                             ->title('Đã xác nhận thanh toán')
@@ -395,21 +392,14 @@ class PaymentResource extends Resource {
             return $query->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]);
         }
 
-        // CTV thấy payments của mình và downline
+        // CTV thấy payments của mình
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
                 // Lấy danh sách student IDs mà CTV này giới thiệu
                 $studentIds = \App\Models\Student::where('collaborator_id', $collaborator->id)->pluck('id');
 
-                // Lấy danh sách downline IDs
-                $downlineIds = self::getDownlineIds($collaborator->id);
-                $downlineStudentIds = \App\Models\Student::whereIn('collaborator_id', $downlineIds)->pluck('id');
-
-                // Gộp tất cả student IDs
-                $allStudentIds = $studentIds->merge($downlineStudentIds);
-
-                return $query->whereIn('student_id', $allStudentIds);
+                return $query->whereIn('student_id', $studentIds);
             }
         }
 
@@ -455,43 +445,7 @@ class PaymentResource extends Resource {
         return $payment->student->collaborator_id === $collaborator->id;
     }
 
-    /**
-     * Lấy danh sách ID của tất cả downline trong nhánh
-     */
-    private static function getDownlineIds(int $collaboratorId): array {
-        $downlineIds = [];
 
-        // Lấy tất cả downline trực tiếp
-        $directDownlines = Collaborator::where('upline_id', $collaboratorId)->get();
-
-        foreach ($directDownlines as $downline) {
-            $downlineIds[] = $downline->id;
-
-            // Đệ quy lấy downline của downline
-            $subDownlineIds = self::getDownlineIds($downline->id);
-            $downlineIds = array_merge($downlineIds, $subDownlineIds);
-        }
-
-        return $downlineIds;
-    }
-
-    /**
-     * Kiểm tra xem CTV hiện tại có phải là CTV cấp 1 (không có upline) không
-     */
-    private static function isPrimaryCollaborator(): bool {
-        $user = Auth::user();
-        if ($user->role !== 'ctv') {
-            return false;
-        }
-
-        $collaborator = Collaborator::where('email', $user->email)->first();
-        if (!$collaborator) {
-            return false;
-        }
-
-        // CTV cấp 1 là CTV không có upline_id
-        return $collaborator->upline_id === null;
-    }
 
     /**
      * Kiểm tra user hiện tại có Spatie role 'accountant' không

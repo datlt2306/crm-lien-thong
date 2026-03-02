@@ -397,45 +397,46 @@ class PublicStudentController extends Controller {
         $intake = Intake::find($intakeId);
         $intakeMonth = $intake?->start_date?->format('n');
 
-        $student = Student::create([
-            'full_name' => $validated['full_name'],
-            'dob' => $validated['dob'],
-            'address' => $validated['address'],
-            'phone' => $validated['phone'],
-            'email' => $validated['email'] ?? null,
-            'organization_id' => $selectedOrg?->id,
-            'collaborator_id' => $collaborator->id,
-            'instructor' => $collaborator->full_name ?? null,
+        try {
+            DB::transaction(function () use ($validated, $selectedOrg, $collaborator, $selectedMajorName, $selectedProgramType, $intakeId, $intakeMonth, $notes) {
+                $student = Student::create([
+                    'full_name' => $validated['full_name'],
+                    'dob' => $validated['dob'],
+                    'address' => $validated['address'],
+                    'phone' => $validated['phone'],
+                    'email' => $validated['email'] ?? null,
+                    'organization_id' => $selectedOrg?->id,
+                    'collaborator_id' => $collaborator->id,
+                    'instructor' => $collaborator->full_name ?? null,
 
-            'target_university' => $selectedOrg?->name,
-            'major_id' => $validated['major_id'],
-            'program_id' => $validated['program_id'] ?? null,
-            'major' => $selectedMajorName,
-            'program_type' => $selectedProgramType,
-            'intake_id' => $intakeId,
-            'intake_month' => $intakeMonth,
-            'source' => 'ref',
-            'status' => 'new',
-            'notes' => !empty($notes) ? implode("\n", $notes) : null,
-        ]);
+                    'target_university' => $selectedOrg?->name,
+                    'major_id' => $validated['major_id'],
+                    'program_id' => $validated['program_id'] ?? null,
+                    'major' => $selectedMajorName,
+                    'program_type' => $selectedProgramType,
+                    'intake_id' => $intakeId,
+                    'intake_month' => $intakeMonth,
+                    'source' => 'ref',
+                    'status' => 'new',
+                    'notes' => !empty($notes) ? implode("\n", $notes) : null,
+                ]);
 
-        // Xác định CTV cấp 1 (upline) và cấp 2 (nếu có)
-        $primaryCollaboratorId = $collaborator->upline_id ? $collaborator->upline_id : $collaborator->id;
-        $subCollaboratorId = $collaborator->upline_id ? $collaborator->id : null;
-
-        \App\Models\Payment::firstOrCreate(
-            [
-                'student_id' => $student->id,
-            ],
-            [
-                'organization_id' => $student->organization_id,
-                'primary_collaborator_id' => $primaryCollaboratorId,
-                'sub_collaborator_id' => $subCollaboratorId,
-                'program_type' => $selectedProgramType ?? 'REGULAR',
-                'amount' => 0,
-                'status' => \App\Models\Payment::STATUS_NOT_PAID,
-            ]
-        );
+                \App\Models\Payment::firstOrCreate(
+                    [
+                        'student_id' => $student->id,
+                    ],
+                    [
+                        'organization_id' => $student->organization_id,
+                        'primary_collaborator_id' => $collaborator->id,
+                        'program_type' => $selectedProgramType ?? 'REGULAR',
+                        'amount' => 0,
+                        'status' => \App\Models\Payment::STATUS_NOT_PAID,
+                    ]
+                );
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra trong quá trình lưu hồ sơ, vui lòng thử lại!'])->withInput();
+        }
 
         // Xóa cookie sau khi đăng ký thành công
         $this->refTrackingService->clearRefCookie();
@@ -494,19 +495,16 @@ class PublicStudentController extends Controller {
             return back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.']);
         }
 
-        // Lưu bill
-        $path = $request->file('bill')->store('bills', 'public');
-
-        // Xác định CTV cấp 1 (upline) và cấp 2 (nếu có)
-        $primaryId = $collaborator->upline_id ? $collaborator->upline_id : $collaborator->id;
-        $subId = $collaborator->upline_id ? $collaborator->id : null;
+        // Lưu bill với extension hợp lệ và tên ngẫu nhiên UUID để chống RCE, Directory Traversal
+        $extension = $request->file('bill')->extension();
+        $safeFileName = \Illuminate\Support\Str::uuid() . '.' . $extension;
+        $path = $request->file('bill')->storeAs('bills', $safeFileName, 'public');
 
         // Tạo payment SUBMITTED
         $payment = Payment::create([
             'organization_id' => $student->organization_id,
             'student_id' => $student->id,
-            'primary_collaborator_id' => $primaryId,
-            'sub_collaborator_id' => $subId,
+            'primary_collaborator_id' => $collaborator->id,
             'program_type' => $validated['program_type'],
             'amount' => $validated['amount'],
             'bill_path' => $path,

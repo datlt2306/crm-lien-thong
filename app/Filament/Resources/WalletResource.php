@@ -114,10 +114,7 @@ class WalletResource extends Resource {
                         if ($user->role === 'super_admin') return true;
 
                         if ($user->role === 'ctv') {
-                            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-                            // CTV cấp 1 (không có upline) thấy cột chi để theo dõi chuyển cho CTV2
-                            // CTV cấp 2 (có upline) không thấy cột chi
-                            return $collaborator && $collaborator->upline_id === null;
+                            return true;
                         }
 
                         return false;

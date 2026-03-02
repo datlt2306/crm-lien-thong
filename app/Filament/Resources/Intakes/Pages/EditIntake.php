@@ -25,4 +25,27 @@ class EditIntake extends EditRecord {
             DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeFill(array $data): array {
+        // Load annual_quota_ids vào form data
+        $data['annual_quota_ids'] = $this->record->annualQuotas->pluck('id')->toArray();
+        
+        return $data;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array {
+        // Tách annual_quota_ids ra khỏi data để xử lý riêng
+        $annualQuotaIds = $data['annual_quota_ids'] ?? null;
+        unset($data['annual_quota_ids']);
+        
+        return $data;
+    }
+
+    protected function afterSave(): void {
+        // Cập nhật liên kết chỉ tiêu năm với đợt tuyển sinh
+        $annualQuotaIds = $this->form->getState()['annual_quota_ids'] ?? [];
+        
+        // Sync các chỉ tiêu năm đã chọn (có thể là mảng rỗng để bỏ link)
+        $this->record->annualQuotas()->sync($annualQuotaIds);
+    }
 }

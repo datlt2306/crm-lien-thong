@@ -174,13 +174,19 @@ class CommissionService {
      * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
      */
     public function confirmDirectReceived(CommissionItem $item, int $userId): void {
-        if ($item->role !== 'direct') return;
-        if ($item->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
+        DB::transaction(function () use ($item, $userId) {
+            // Lock row commission_item để ngăn việc gửi nhiều request đồng thời (Race Condition)
+            $lockedItem = CommissionItem::where('id', $item->id)->lockForUpdate()->first();
 
-        // Nạp tiền vào ví của CTV cấp 1
-        $this->depositToWallet($item->recipient_collaborator_id, (float) $item->amount, 'CTV xác nhận nhận tiền (hoa hồng trực tiếp)');
+            if (!$lockedItem) return;
+            if ($lockedItem->role !== 'direct') return;
+            if ($lockedItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
 
-        $item->markAsReceivedConfirmed($userId);
+            // Nạp tiền vào ví của CTV cấp 1
+            $this->depositToWallet($lockedItem->recipient_collaborator_id, (float) $lockedItem->amount, 'CTV xác nhận nhận tiền (hoa hồng trực tiếp)');
+
+            $lockedItem->markAsReceivedConfirmed($userId);
+        });
     }
 
     // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====

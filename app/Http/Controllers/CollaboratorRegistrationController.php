@@ -29,6 +29,7 @@ class CollaboratorRegistrationController extends Controller {
             'phone' => 'required|string|unique:collaborators,phone',
             'email' => 'nullable|email|unique:collaborators,email',
             'organization_id' => 'required|exists:organizations,id',
+            'password' => 'required|string|min:6|confirmed',
             'note' => 'nullable|string',
         ], [
             'full_name.required' => 'Họ và tên là bắt buộc',
@@ -38,6 +39,9 @@ class CollaboratorRegistrationController extends Controller {
             'email.unique' => 'Email đã được đăng ký',
             'organization_id.required' => 'Vui lòng chọn tổ chức',
             'organization_id.exists' => 'Tổ chức không tồn tại',
+            'password.required' => 'Mật khẩu là bắt buộc',
+            'password.min' => 'Mật khẩu phải từ 6 ký tự',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp',
         ]);
 
         if ($validator->fails()) {
@@ -47,13 +51,13 @@ class CollaboratorRegistrationController extends Controller {
         }
 
         try {
-            // Tạo collaborator với status pending để admin/owner có thể duyệt
-            $collaborator = Collaborator::create([
+            // Tạo registration với status pending để admin/owner có thể duyệt
+            $collaborator = CollaboratorRegistration::create([
                 'full_name' => $request->full_name,
                 'phone' => $request->phone,
                 'email' => $request->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
                 'organization_id' => $request->organization_id,
-                'upline_id' => null, // Không có người giới thiệu
                 'ref_id' => 'REG-' . time() . '-' . rand(1000, 9999),
                 'status' => 'pending', // Chờ duyệt
                 'note' => $request->note,

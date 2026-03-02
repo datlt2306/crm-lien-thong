@@ -45,8 +45,6 @@ class CommissionResource extends Resource {
 
         // Kiểm tra xem CTV có phải là người trực tiếp giới thiệu sinh viên không
         $isDirectRef = false;
-        // Kiểm tra xem CTV có phải là CTV cấp 1 không (không có upline)
-        $isPrimaryCtv = false;
         // Kiểm tra xem có phải là organization_owner không
         $isOwner = $user->role === 'organization_owner';
         if ($isCtv) {
@@ -56,8 +54,6 @@ class CommissionResource extends Resource {
             $isDirectRef = $collaborator && CommissionItem::where('recipient_collaborator_id', $collaborator->id)
                 ->where('role', 'direct')
                 ->exists();
-            // CTV cấp 1 là CTV không có upline
-            $isPrimaryCtv = $collaborator && $collaborator->upline_id === null;
         }
 
         return $table
@@ -130,58 +126,11 @@ class CommissionResource extends Resource {
                         return $state ? 'success' : 'gray';
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.collaborator.full_name')
-                    ->label('Người giới thiệu')
-                    ->searchable()
-                    ->sortable()
-                    ->visible(function (?CommissionItem $record) {
-                        if (!$record) return false;
-
-                        // Chỉ hiển thị khi là commission downline (sinh viên được CTV cấp dưới giới thiệu)
-                        // Không hiển thị khi là commission direct (sinh viên do CTV đó trực tiếp giới thiệu)
-                        return $record->role === 'downline';
-                    })
-                    ->formatStateUsing(function ($state, ?CommissionItem $record) {
-                        if (!$record || !$record->commission || !$record->commission->student) return '—';
-
-                        $student = $record->commission->student;
-
-                        // Chỉ hiển thị khi là downline commission và có collaborator
-                        if ($record->role === 'downline' && $student->collaborator) {
-                            return $student->collaborator->full_name;
-                        }
-
-                        return '—';
-                    }),
-
                 \Filament\Tables\Columns\TextColumn::make('recipient.full_name')
                     ->label('CTV nhận hoa hồng')
                     ->searchable()
                     ->sortable()
-                    ->visible(function ($record) use ($user, $isCtv, $isDirectRef): bool {
-                        if (!$isCtv) return true; // Super admin và organization_owner vẫn thấy
-                        if ($isDirectRef) return false; // CTV trực tiếp giới thiệu không thấy
-
-                        // CTV cấp 2 (downline) không thấy cột này
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if ($collab && $collab->upline_id !== null) {
-                            return false; // CTV cấp 2 không thấy
-                        }
-
-                        return true; // CTV cấp 1 thấy
-                    })
-                    ->formatStateUsing(function ($state, CommissionItem $record) use ($user) {
-                        if ($user->role === 'organization_owner') {
-                            // Với organization_owner: hiển thị rõ vai trò để tránh hiểu nhầm
-                            if (strtolower($record->role) === 'direct') {
-                                return $state; // CTV cấp 1 nhận trực tiếp
-                            }
-                            if (strtolower($record->role) === 'downline') {
-                                return $state . ' (CTV cấp 2)'; // Hiển thị đúng CTV cấp 2
-                            }
-                        }
-                        return $state;
-                    }),
+                    ->visible(fn(): bool => !$isCtv),
 
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
@@ -216,303 +165,19 @@ class CommissionResource extends Resource {
                         };
                     })
                     ->formatStateUsing(function (string $state, CommissionItem $record) use ($user) {
-                        // Nếu là CTV và trạng thái là PAYABLE, hiển thị "Chưa nhận được hoa hồng"
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
                             return 'Chưa nhận được hoa hồng';
                         }
-                        // Nếu là CTV và trạng thái là PAYMENT_CONFIRMED, hiển thị "Chờ xác nhận nhận tiền"
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
                             return 'Chờ xác nhận nhận tiền';
                         }
-                        // Nếu là CTV và đã xác nhận nhận tiền (ưu tiên hiển thị thông điệp rõ ràng cho CTV1)
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return 'Đã nhận tiền thành công';
                         }
-                        // Với chủ đơn vị: khi CTV cấp 1 đã xác nhận đã nhận (RECEIVED_CONFIRMED)
-                        // hiển thị "Đã chuyển thành công" để phản ánh trạng thái từ phía đơn vị
-                        if (
-                            $user->role === 'organization_owner'
-                            && $record->role === 'direct'
-                            && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED
-                        ) {
+                        if ($user->role === 'organization_owner' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return 'Đã chuyển thành công';
                         }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
-                    })
-                    ->visible(function ($record) use ($isCtv, $user): bool {
-                        if (!$isCtv) return true;
-                        if (!$record) return false;
-
-                        // CTV cấp 1: chỉ hiển thị cho item KHÔNG PHẢI direct (downline)
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if ($collab && $collab->upline_id === null) {
-                            return strtolower($record->role) !== 'direct';
-                        }
-
-                        // CTV cấp 2: không hiển thị cột trạng thái gốc (sẽ dùng cột downline_status)
-                        return false;
-                    }),
-
-                // Dành cho CTV cấp 1: Trạng thái từ đơn vị (khi CTV1 đã nhận tiền từ đơn vị)
-                \Filament\Tables\Columns\BadgeColumn::make('status_from_org')
-                    ->label('Trạng thái từ đơn vị')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        if ($record->role !== 'direct') return null;
-                        return $record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED
-                            ? 'Đã nhận tiền thành công'
-                            : null;
-                    })
-                    ->color(function ($state) {
-                        return $state ? 'success' : 'gray';
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if ($user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return false;
-                        // Chỉ hiển thị cho CTV cấp 1 (không có upline)
-                        return $collab->upline_id === null;
-                    }),
-
-                // Dành cho CTV cấp 1: Trạng thái với CTV (khi đã chuyển cho CTV2 xong)
-                \Filament\Tables\Columns\BadgeColumn::make('status_with_ctv')
-                    ->label('Trạng thái với CTV')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        if ($record->role !== 'direct') return null;
-                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
-                            ->where('role', 'downline')
-                            ->orderBy('id')
-                            ->first();
-                        if ($downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            return 'Đã chuyển tiền thành công';
-                        }
-                        return null;
-                    })
-                    ->color(function ($state) {
-                        return $state ? 'success' : 'gray';
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if ($user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return false;
-                        // Chỉ hiển thị cho CTV cấp 1 (không có upline)
-                        return $collab->upline_id === null;
-                    }),
-
-                // Gợi ý cho CTV cấp 1 (VHVL): cần SV nhập học mới được chuyển cho CTV2
-                \Filament\Tables\Columns\BadgeColumn::make('downline_enroll_hint')
-                    ->label('CTV2 (VHVL)')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return null;
-                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
-                            return null;
-                        }
-                        $commission = $record->commission;
-                        $payment = $commission?->payment;
-                        $student = $commission?->student;
-                        $programType = strtoupper($payment->program_type ?? $student?->program_type ?? '');
-                        if (!in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
-                            return null;
-                        }
-                        if (!$student || $student->status !== \App\Models\Student::STATUS_ENROLLED) {
-                            return 'Cần SV nhập học để chuyển CTV2';
-                        }
-                        return null;
-                    })
-                    ->color('warning')
-                    ->extraAttributes(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return [];
-                        $commission = $record->commission;
-                        $student = $commission?->student;
-                        if (!$student) return [];
-                        return [
-                            'title' => 'SV hiện chưa được chủ đơn vị xác nhận nhập học (VHVL). Sau khi SV nhập học, bạn có thể chuyển cho CTV2.',
-                        ];
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return false;
-                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
-                            return false;
-                        }
-                        $commission = $record->commission;
-                        $payment = $commission?->payment;
-                        $student = $commission?->student;
-                        $programType = strtoupper($payment->program_type ?? $student?->program_type ?? '');
-                        if (!in_array($programType, ['PART_TIME', 'VHVL', 'VHVLV'])) {
-                            return false;
-                        }
-                        return !$student || $student->status !== \App\Models\Student::STATUS_ENROLLED;
-                    }),
-
-                // Hiển thị cho CTV cấp 1: chỉ khi downline đã xác nhận nhận tiền
-                \Filament\Tables\Columns\BadgeColumn::make('downline_received_status')
-                    ->label('Chuyển CTV2')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return null;
-                        // Chỉ áp dụng cho item DIRECT của CTV cấp 1
-                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
-                            return null;
-                        }
-                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
-                            ->where('role', 'downline')
-                            ->orderBy('id')
-                            ->first();
-                        if ($downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            return 'Đã hoàn tất chuyển CTV2';
-                        }
-                        return null;
-                    })
-                    ->color('success')
-                    ->extraAttributes(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return [];
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return [];
-                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
-                            return [];
-                        }
-                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
-                            ->where('role', 'downline')
-                            ->orderBy('id')
-                            ->first();
-                        if ($downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            $time = optional($downlineItem->received_confirmed_at)->format('d/m/Y H:i');
-                            return [
-                                'title' => $time ? "CTV2 xác nhận lúc {$time}" : 'CTV2 đã xác nhận nhận tiền',
-                            ];
-                        }
-                        return [];
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return false;
-                        if (!($record->role === 'direct' && $record->recipient_collaborator_id === $collab->id)) {
-                            return false;
-                        }
-                        $downlineItem = CommissionItem::where('commission_id', $record->commission_id)
-                            ->where('role', 'downline')
-                            ->orderBy('id')
-                            ->first();
-                        return $downlineItem && $downlineItem->status === CommissionItem::STATUS_RECEIVED_CONFIRMED;
-                    }),
-
-                // Cột trạng thái tổng quát cho CTV cấp 2
-                \Filament\Tables\Columns\BadgeColumn::make('downline_status')
-                    ->label('Trạng thái')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return null; // Chỉ CTV cấp 2 (có upline)
-                        if ($record->recipient_collaborator_id !== $collab->id) return null;
-
-                        return match ($record->status) {
-                            CommissionItem::STATUS_PENDING => 'Chờ xử lý',
-                            CommissionItem::STATUS_PAYABLE => 'Chưa nhận được hoa hồng',
-                            CommissionItem::STATUS_PAYMENT_CONFIRMED => 'Chờ xác nhận nhận tiền',
-                            CommissionItem::STATUS_RECEIVED_CONFIRMED => 'Đã nhận thành công',
-                            CommissionItem::STATUS_CANCELLED => 'Đã hủy',
-                            default => 'Không xác định',
-                        };
-                    })
-                    ->color(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return 'gray';
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return 'gray';
-                        if ($record->recipient_collaborator_id !== $collab->id) return 'gray';
-
-                        return match ($record->status) {
-                            CommissionItem::STATUS_PENDING => 'gray',
-                            CommissionItem::STATUS_PAYABLE => 'warning',
-                            CommissionItem::STATUS_PAYMENT_CONFIRMED => 'info',
-                            CommissionItem::STATUS_RECEIVED_CONFIRMED => 'success',
-                            CommissionItem::STATUS_CANCELLED => 'danger',
-                            default => 'gray',
-                        };
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return false; // Chỉ CTV cấp 2 (có upline)
-                        // Đơn giản hóa: chỉ cần kiểm tra CTV cấp 2 và record thuộc về họ
-                        return $record->recipient_collaborator_id === $collab->id;
-                    }),
-
-                // Cột trạng thái đơn giản cho CTV cấp 2 (debug)
-                \Filament\Tables\Columns\BadgeColumn::make('simple_status')
-                    ->label('Trạng thái đơn giản')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return null; // Chỉ CTV cấp 2 (có upline)
-                        if ($record->recipient_collaborator_id !== $collab->id) return null;
-
-                        return $record->status;
-                    })
-                    ->color('info')
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return false; // Chỉ CTV cấp 2 (có upline)
-                        return $record->recipient_collaborator_id === $collab->id;
-                    }),
-
-                // Cột debug để kiểm tra dữ liệu
-                \Filament\Tables\Columns\TextColumn::make('debug_info')
-                    ->label('Debug Info')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return 'No collab';
-                        if ($collab->upline_id === null) return 'CTV cấp 1';
-
-                        return "Role: {$record->role}, Recipient: {$record->recipient_collaborator_id}, Collab: {$collab->id}";
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return false; // Chỉ CTV cấp 2 (có upline)
-                        return true; // Hiển thị cho tất cả CTV cấp 2
-                    }),
-
-                // Hiển thị cho CTV cấp 2: trạng thái đã nhận tiền thành công
-                \Filament\Tables\Columns\BadgeColumn::make('downline_received_confirmed')
-                    ->label('Đã nhận tiền thành công')
-                    ->state(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return null;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return null; // Chỉ CTV cấp 2 (có upline)
-                        if ($record->role !== 'downline' || $record->recipient_collaborator_id !== $collab->id) return null;
-                        if ($record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            return 'Đã nhận tiền thành công';
-                        }
-                        return null;
-                    })
-                    ->color('success')
-                    ->extraAttributes(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return [];
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return []; // Chỉ CTV cấp 2 (có upline)
-                        if ($record->role !== 'downline' || $record->recipient_collaborator_id !== $collab->id) return [];
-                        if ($record->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            $time = optional($record->received_confirmed_at)->format('d/m/Y H:i');
-                            return [
-                                'title' => $time ? "Đã nhận tiền lúc {$time}" : 'Đã nhận tiền thành công',
-                            ];
-                        }
-                        return [];
-                    })
-                    ->visible(function ($record) use ($user) {
-                        if (!$record || $user->role !== 'ctv') return false;
-                        $collab = Collaborator::where('email', $user->email)->first();
-                        if (!$collab || $collab->upline_id === null) return false; // Chỉ CTV cấp 2 (có upline)
-                        return $record->role === 'downline' && $record->recipient_collaborator_id === $collab->id;
                     }),
 
                 \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
@@ -686,14 +351,7 @@ class CommissionResource extends Resource {
                             ]);
                         })
                         ->modalWidth('4xl')
-                        ->visible(function (CommissionItem $record) use ($user): bool {
-                            if (!$record->payment_bill_path) return false;
-                            if ($user->role === 'ctv') {
-                                $collab = Collaborator::where('email', $user->email)->first();
-                                return $collab && $collab->upline_id === null;
-                            }
-                            return in_array($user->role, ['organization_owner', 'super_admin', 'accountant']);
-                        }),
+                        ->visible(fn (CommissionItem $record): bool => !empty($record->payment_bill_path)),
 
                     Action::make('view_bill_receipt')
                         ->label('Xem phiếu thu')
@@ -830,37 +488,6 @@ class CommissionResource extends Resource {
                     ->color('gray')
                     ->button()
                     ->size('sm'),
-
-                // CTV cấp 2 xác nhận đã nhận tiền (tiền chuyển từ ví CTV1 sang CTV2)
-                Action::make('transfer_to_downline')
-                    ->label('CTV cấp 2 xác nhận đã nhận tiền')
-                    ->icon('heroicon-o-hand-thumb-up')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận đã nhận tiền')
-                    ->modalDescription('Xác nhận đã nhận tiền từ CTV cấp 1.')
-                    ->modalSubmitActionLabel('Xác nhận')
-                    ->modalCancelActionLabel('Hủy')
-                    ->visible(function (CommissionItem $record) use ($user): bool {
-                        if ($user->role !== 'ctv') return false;
-                        $collab = \App\Models\Collaborator::where('email', $user->email)->first();
-                        if (!$collab) return false;
-                        return $record->role === 'downline'
-                            && $record->recipient_collaborator_id === $collab->id
-                            && $record->status === \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED;
-                    })
-                    ->action(function (CommissionItem $record) {
-                        $service = new \App\Services\CommissionService();
-                        $service->confirmDownlineReceived($record, \Illuminate\Support\Facades\Auth::id());
-
-                        \Filament\Notifications\Notification::make()
-                            ->title('Đã xác nhận nhận tiền')
-                            ->success()
-                            ->send();
-
-                        // Chuyển hướng sang trang Ví tiền để hiển thị ngay số dư mới
-                        return redirect()->route('filament.admin.resources.wallets.index');
-                    }),
 
                 Action::make('mark_cancelled')
                     ->label('Đánh dấu đã huỷ')
@@ -1013,21 +640,4 @@ class CommissionResource extends Resource {
         return 'Tổng số bộ hoa hồng';
     }
 
-    /**
-     * Lấy tất cả ID của downline collaborators
-     */
-    private static function getDownlineIds(int $collaboratorId): array {
-        $downlineIds = [];
-
-        $downlines = Collaborator::where('upline_id', $collaboratorId)->get();
-
-        foreach ($downlines as $downline) {
-            $downlineIds[] = $downline->id;
-            // Đệ quy lấy downline của downline
-            $subDownlineIds = self::getDownlineIds($downline->id);
-            $downlineIds = array_merge($downlineIds, $subDownlineIds);
-        }
-
-        return $downlineIds;
-    }
 }

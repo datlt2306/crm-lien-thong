@@ -26,27 +26,27 @@ Route::get('/', function () {
 
 
 Route::get('/ref/{ref_id}', [PublicStudentController::class, 'showForm'])->name('public.ref.form');
-Route::post('/ref/{ref_id}', [PublicStudentController::class, 'submitForm'])->name('public.ref.submit');
+Route::post('/ref/{ref_id}', [PublicStudentController::class, 'submitForm'])->middleware('throttle:10,1')->name('public.ref.submit');
 // Alias rõ ràng cho luồng học viên
 Route::get('/ref/{ref_id}/student', [PublicStudentController::class, 'showForm'])->name('public.ref.student.form');
-Route::post('/ref/{ref_id}/student', [PublicStudentController::class, 'submitForm'])->name('public.ref.student.submit');
+Route::post('/ref/{ref_id}/student', [PublicStudentController::class, 'submitForm'])->middleware('throttle:10,1')->name('public.ref.student.submit');
 
 // Upload bill/payment
 Route::get('/ref/{ref_id}/payment', [PublicStudentController::class, 'showPaymentForm'])->name('public.ref.payment.form');
-Route::post('/ref/{ref_id}/payment', [PublicStudentController::class, 'submitPayment'])->name('public.ref.payment.submit');
+Route::post('/ref/{ref_id}/payment', [PublicStudentController::class, 'submitPayment'])->middleware('throttle:10,1')->name('public.ref.payment.submit');
 
 // Đăng ký cộng tác viên mới (cần admin approve)
 Route::get('/collaborator/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('collaborator.register.form');
-Route::post('/collaborator/register', [CollaboratorRegistrationController::class, 'store'])->name('collaborator.register.submit');
-Route::post('/collaborator/check-status', [CollaboratorRegistrationController::class, 'checkStatus'])->name('collaborator.check.status');
+Route::post('/collaborator/register', [CollaboratorRegistrationController::class, 'store'])->middleware('throttle:10,1')->name('collaborator.register.submit');
+Route::post('/collaborator/check-status', [CollaboratorRegistrationController::class, 'checkStatus'])->middleware('throttle:10,1')->name('collaborator.check.status');
 
 // Đăng ký cộng tác viên (route mới)
 Route::get('/collaborators/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('collaborators.register.form');
-Route::post('/collaborators/register', [CollaboratorRegistrationController::class, 'store'])->name('collaborators.register.submit');
+Route::post('/collaborators/register', [CollaboratorRegistrationController::class, 'store'])->middleware('throttle:10,1')->name('collaborators.register.submit');
 
 // Đăng ký tài khoản Cộng tác viên (public)
-Route::get('/ctv/register', [PublicCollaboratorController::class, 'showRegisterForm'])->name('public.ctv.register.form');
-Route::post('/ctv/register', [PublicCollaboratorController::class, 'submitRegister'])->name('public.ctv.register.submit');
+Route::get('/ctv/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('public.ctv.register.form');
+Route::post('/ctv/register', [CollaboratorRegistrationController::class, 'store'])->middleware('throttle:10,1')->name('public.ctv.register.submit');
 // Đã loại bỏ route tuyển CTV tuyến dưới - hệ thống chỉ còn 1 cấp
 // Route::get('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'showRefRegister'])->name('public.ref.ctv.form');
 // Route::post('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'submitRefRegister'])->name('public.ref.ctv.submit');

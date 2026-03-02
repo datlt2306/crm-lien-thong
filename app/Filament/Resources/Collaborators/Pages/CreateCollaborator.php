@@ -43,9 +43,9 @@ class CreateCollaborator extends CreateRecord {
 
         $user = Auth::user();
         if ($user->role === 'super_admin') {
-            // Nếu là super_admin, cho phép chọn organization_id và upline_id (không làm gì)
+            // Nếu là super_admin, cho phép chọn organization_id
         } else {
-            // Nếu là chủ tổ chức hoặc CTV, tự động gán organization_id và upline_id
+            // Nếu là chủ tổ chức hoặc CTV, tự động gán organization_id
             $org = Organization::where('organization_owner_id', $user->id)->first();
             if ($org) {
                 $data['organization_id'] = $org->id;
@@ -54,7 +54,6 @@ class CreateCollaborator extends CreateRecord {
                 $collaborator = Collaborator::where('email', $user->email)->first();
                 if ($collaborator) {
                     $data['organization_id'] = $collaborator->organization_id;
-                    $data['upline_id'] = $collaborator->id;
                 }
             }
         }
