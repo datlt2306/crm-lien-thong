@@ -35,21 +35,15 @@ Route::post('/ref/{ref_id}/student', [PublicStudentController::class, 'submitFor
 Route::get('/ref/{ref_id}/payment', [PublicStudentController::class, 'showPaymentForm'])->name('public.ref.payment.form');
 Route::post('/ref/{ref_id}/payment', [PublicStudentController::class, 'submitPayment'])->middleware('throttle:10,1')->name('public.ref.payment.submit');
 
-// Đăng ký cộng tác viên mới (cần admin approve)
-Route::get('/collaborator/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('collaborator.register.form');
-Route::post('/collaborator/register', [CollaboratorRegistrationController::class, 'store'])->middleware('throttle:10,1')->name('collaborator.register.submit');
-Route::post('/collaborator/check-status', [CollaboratorRegistrationController::class, 'checkStatus'])->middleware('throttle:10,1')->name('collaborator.check.status');
-
-// Đăng ký cộng tác viên (route mới)
-Route::get('/collaborators/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('collaborators.register.form');
-Route::post('/collaborators/register', [CollaboratorRegistrationController::class, 'store'])->middleware('throttle:10,1')->name('collaborators.register.submit');
-
-// Đăng ký tài khoản Cộng tác viên (public)
-Route::get('/ctv/register', [CollaboratorRegistrationController::class, 'showRegistrationForm'])->name('public.ctv.register.form');
-Route::post('/ctv/register', [CollaboratorRegistrationController::class, 'store'])->middleware('throttle:10,1')->name('public.ctv.register.submit');
+// Đã loại bỏ hoàn toàn tính năng tự đăng ký cộng tác viên
+// Route::get('/collaborator/register', ...);
+// Route::post('/collaborator/register', ...);
+// Route::post('/collaborator/check-status', ...);
+// Route::get('/collaborators/register', ...);
+// Route::post('/collaborators/register', ...);
+// Route::get('/ctv/register', ...);
+// Route::post('/ctv/register', ...);
 // Đã loại bỏ route tuyển CTV tuyến dưới - hệ thống chỉ còn 1 cấp
-// Route::get('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'showRefRegister'])->name('public.ref.ctv.form');
-// Route::post('/ref/{ref_id}/ctv', [PublicCollaboratorController::class, 'submitRefRegister'])->name('public.ref.ctv.submit');
 
 // Route để xem bill (cần authentication)
 Route::middleware(['auth'])->group(function () {

@@ -12,23 +12,30 @@ class UserObserver {
      */
     public function created(User $user): void {
         // Tự động tạo mối quan hệ khi tạo user mới
-
-        // 1. Nếu là organization_owner, gán cho organization chưa có owner
+        
+        // 1. Nếu là organization_owner, ưu tiên tổ chức được chọn hoặc tìm tự do chưa có chủ
         if ($user->role === 'organization_owner') {
-            $organizationWithoutOwner = Organization::whereNull('organization_owner_id')->first();
-            if ($organizationWithoutOwner) {
-                $organizationWithoutOwner->update(['organization_owner_id' => $user->id]);
+            if ($user->organization_id) {
+                $org = Organization::find($user->organization_id);
+                if ($org) {
+                    $org->update(['organization_owner_id' => $user->id]);
+                }
+            } else {
+                $organizationWithoutOwner = Organization::whereNull('organization_owner_id')->first();
+                if ($organizationWithoutOwner) {
+                    $organizationWithoutOwner->update(['organization_owner_id' => $user->id]);
+                    $user->updateQuietly(['organization_id' => $organizationWithoutOwner->id]);
+                }
             }
         }
 
-        // 2. Tạo Collaborator record chỉ cho CTV (không tạo cho organization_owner)
+        // 2. Tạo Collaborator record chỉ cho CTV
         if ($user->role === 'ctv') {
             $this->createCollaboratorRecord($user);
         }
 
         // 3. Đồng bộ hóa với Spatie Role để User mới thao tác được Permission
         if (!empty($user->role)) {
-            // Kiểm tra role có tồn tại trong Spatie Role DB không, nếu có thì assign
             $roleExists = \Spatie\Permission\Models\Role::where('name', $user->role)->exists();
             if ($roleExists && method_exists($user, 'assignRole')) {
                 $user->assignRole($user->role);
@@ -40,27 +47,27 @@ class UserObserver {
      * Handle the User "updated" event.
      */
     public function updated(User $user): void {
-        // Khi role thay đổi, cập nhật mối quan hệ
+        $oldRole = $user->getOriginal('role');
+        $newRole = $user->role;
+        $oldOrgId = $user->getOriginal('organization_id');
+        $newOrgId = $user->organization_id;
+
+        // Xử lý thay đổi role liên quan đến organization_owner
+        if ($oldRole === 'organization_owner' && $newRole !== 'organization_owner') {
+            Organization::where('organization_owner_id', $user->id)->update(['organization_owner_id' => null]);
+        }
+
+        if ($newRole === 'organization_owner') {
+            if ($newOrgId) {
+                // Bỏ owner của tổ chức cũ (nếu có)
+                Organization::where('organization_owner_id', $user->id)->where('id', '!=', $newOrgId)->update(['organization_owner_id' => null]);
+                // Set owner cho tổ chức mới
+                Organization::where('id', $newOrgId)->update(['organization_owner_id' => $user->id]);
+            }
+        }
+
+        // Khi role thay đổi, cập nhật mối quan hệ Role/Collaborator
         if ($user->isDirty('role')) {
-            $oldRole = $user->getOriginal('role');
-            $newRole = $user->role;
-
-            // Nếu chuyển từ organization_owner sang role khác
-            if ($oldRole === 'organization_owner' && $newRole !== 'organization_owner') {
-                $organization = Organization::where('organization_owner_id', $user->id)->first();
-                if ($organization) {
-                    $organization->update(['organization_owner_id' => null]);
-                }
-            }
-
-            // Nếu chuyển sang organization_owner
-            if ($newRole === 'organization_owner') {
-                $organizationWithoutOwner = Organization::whereNull('organization_owner_id')->first();
-                if ($organizationWithoutOwner) {
-                    $organizationWithoutOwner->update(['organization_owner_id' => $user->id]);
-                }
-            }
-
             // Cập nhật Collaborator record
             $this->updateCollaboratorRecord($user, $oldRole, $newRole);
 
@@ -73,6 +80,19 @@ class UserObserver {
             } else {
                 if (method_exists($user, 'syncRoles')) {
                     $user->syncRoles([]);
+                }
+            }
+        } elseif ($newRole === 'ctv') {
+            // Nếu người này là CTV và role không đổi, update thông tin (tên, sđt, tổ chức)
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if ($collaborator) {
+                $updates = [];
+                if ($user->isDirty('name')) $updates['full_name'] = $user->name;
+                if ($user->isDirty('phone')) $updates['phone'] = $user->phone;
+                if ($user->isDirty('organization_id') && $newOrgId) $updates['organization_id'] = $newOrgId;
+                
+                if (!empty($updates)) {
+                    $collaborator->update($updates);
                 }
             }
         }

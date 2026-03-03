@@ -13,8 +13,8 @@ class RefTrackingService {
      * Lưu ref_id vào cookie khi user vào ref link
      */
     public function setRefCookie(Request $request, string $ref_id): void {
-        // Kiểm tra ref_id có hợp lệ không
-        $collaborator = Collaborator::where('ref_id', $ref_id)->first();
+        // Kiểm tra ref_id có hợp lệ và hoạt động không
+        $collaborator = Collaborator::where('ref_id', $ref_id)->where('status', 'active')->first();
         if (!$collaborator) {
             return;
         }
@@ -58,6 +58,6 @@ class RefTrackingService {
             return null;
         }
 
-        return Collaborator::where('ref_id', $finalRefId)->first();
+        return Collaborator::where('ref_id', $finalRefId)->where('status', 'active')->first();
     }
 }

@@ -152,6 +152,50 @@ class QuotaService {
     }
 
     /**
+     * Hoàn trả chỉ tiêu khi Payment bị hủy hoặc reject (từ VERIFIED sang trạng thái khác)
+     */
+    public function restoreQuotaOnPaymentReverted(Payment $payment): bool {
+        $student = $payment->student;
+        if (!$student) return false;
+        
+        $majorId = $student->major_id ?? DB::table('majors')->where('name', $student->major)->value('id');
+        $programId = $student->program_id;
+        
+        if (!$majorId || !$programId || !Schema::hasTable('annual_quotas')) {
+            return false;
+        }
+        
+        $year = (int) ($student->intake?->start_date?->format('Y') ?? now()->format('Y'));
+
+        try {
+            DB::beginTransaction();
+            $annual = AnnualQuota::query()
+                ->where('organization_id', $payment->organization_id)
+                ->where('major_id', $majorId)
+                ->where('program_id', $programId)
+                ->where('year', $year)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$annual || $annual->current_quota <= 0) {
+                DB::rollBack();
+                return false;
+            }
+            
+            $annual->decrement('current_quota');
+            DB::commit();
+            return true;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('QuotaService::restoreQuotaOnPaymentReverted', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Kiểm tra còn chỉ tiêu. Nếu có programId: kiểm tra (org, major, hệ); không thì xét tổng ngành.
      */
     public function hasQuota(int $organizationId, int $majorId, ?int $programId = null): bool {

@@ -500,16 +500,21 @@ class PublicStudentController extends Controller {
         $safeFileName = \Illuminate\Support\Str::uuid() . '.' . $extension;
         $path = $request->file('bill')->storeAs('bills', $safeFileName, 'public');
 
-        // Tạo payment SUBMITTED
-        $payment = Payment::create([
-            'organization_id' => $student->organization_id,
-            'student_id' => $student->id,
-            'primary_collaborator_id' => $collaborator->id,
-            'program_type' => $validated['program_type'],
-            'amount' => $validated['amount'],
-            'bill_path' => $path,
-            'status' => 'SUBMITTED',
-        ]);
+        // Tạo hoặc cập nhật payment (tránh sinh bản ghi trùng lặp)
+        $payment = Payment::updateOrCreate(
+            ['student_id' => $student->id],
+            [
+                'organization_id' => $student->organization_id,
+                'primary_collaborator_id' => $collaborator->id,
+                'program_type' => $validated['program_type'],
+                'amount' => $validated['amount'],
+                'bill_path' => $path,
+                'status' => Payment::STATUS_SUBMITTED,
+            ]
+        );
+
+        // Chuyển status Học viên sang SUBMITTED (Đã nộp hồ sơ/Đang chờ duyệt)
+        $student->update(['status' => Student::STATUS_SUBMITTED]);
 
         // Quota sẽ được trừ khi payment được verify (trong PaymentObserver)
 

@@ -663,8 +663,8 @@ class StudentsTable {
                         ])
                         ->visible(
                             fn(Student $record): bool =>
-                            // Kế toán & cán bộ hồ sơ được phép xác nhận thanh toán
-                            (in_array(Auth::user()->role, ['accountant', 'document']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                            // Kế toán, cán bộ hồ sơ, chủ đơn vị, super_admin được phép xác nhận thanh toán
+                            (in_array(Auth::user()->role, ['accountant', 'document', 'organization_owner', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
                                 // Sinh viên phải có payment record
                                 $record->payment &&
                                 // Payment phải ở trạng thái chờ xác minh hoặc đã hoàn trả (có thể xác nhận lại)
@@ -690,6 +690,9 @@ class StudentsTable {
 
                                 // Xác minh thanh toán
                                 $payment->markAsVerified(Auth::id());
+
+                                // Chuyển trạng thái học viên sang Đã duyệt (APPROVED)
+                                $record->update(['status' => Student::STATUS_APPROVED]);
 
                                 // Tạo commission
                                 $commissionService = new \App\Services\CommissionService();
@@ -819,6 +822,9 @@ class StudentsTable {
                                     'status' => Payment::STATUS_SUBMITTED,
                                 ]);
                             }
+
+                            // Chuyển status Học viên sang SUBMITTED
+                            $record->update(['status' => Student::STATUS_SUBMITTED]);
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã upload bill thành công')

@@ -33,21 +33,36 @@ class CommissionPoliciesTable {
                     ->label('Loại')
                     ->formatStateUsing(fn($state) => match ($state) {
                         'FIXED' => 'Cố định',
+                        'PERCENT' => 'Phần trăm',
                         'PASS_THROUGH' => 'Chuyển tiếp',
                         default => $state
                     }),
                 TextColumn::make('amount_vnd')
-                    ->label('Số tiền (VND)')
+                    ->label('Mức hoa hồng')
                     ->formatStateUsing(function ($state, $record) {
                         if ($record->type === 'FIXED' && $state) {
                             return number_format($state) . ' VND';
                         }
+                        if ($record->type === 'PERCENT' && $record->percent) {
+                            return rtrim(rtrim((string) $record->percent, '0'), '.') . '%';
+                        }
+                        if ($record->type === 'PASS_THROUGH') {
+                            return '100%';
+                        }
                         return '-';
                     }),
-
+                TextColumn::make('effective_from')
+                    ->label('Hiệu lực từ')
+                    ->date('d/m/Y')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('effective_to')
+                    ->label('Đến ngày')
+                    ->date('d/m/Y')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('trigger')
                     ->label('Kích hoạt')
-                    ->formatStateUsing(fn($state) => $state ? ($state === 'ON_VERIFICATION' ? 'Khi xác nhận' : 'Khi nhập học') : 'Mặc định'),
+                    ->formatStateUsing(fn($state) => $state ? ($state === 'ON_VERIFICATION' ? 'Khi xác nhận' : 'Khi nhập học') : 'Mặc định')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('priority')
                     ->label('Ưu tiên')
                     ->sortable(),
@@ -78,6 +93,7 @@ class CommissionPoliciesTable {
                     ->label('Loại hoa hồng')
                     ->options([
                         'FIXED' => 'Cố định',
+                        'PERCENT' => 'Phần trăm',
                         'PASS_THROUGH' => 'Chuyển tiếp',
                     ]),
                 TernaryFilter::make('active')

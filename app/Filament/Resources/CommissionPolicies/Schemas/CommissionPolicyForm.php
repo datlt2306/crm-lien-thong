@@ -49,6 +49,7 @@ class CommissionPolicyForm {
                     ->label('Loại hoa hồng')
                     ->options([
                         'FIXED' => 'Cố định (VND)',
+                        'PERCENT' => 'Phần trăm (%)',
                         'PASS_THROUGH' => 'Chuyển tiếp (100%)',
                     ])
                     ->required()
@@ -56,6 +57,8 @@ class CommissionPolicyForm {
                     ->afterStateUpdated(function ($state, callable $set) {
                         if ($state === 'FIXED') {
                             $set('percent', null);
+                        } elseif ($state === 'PERCENT') {
+                            $set('amount_vnd', null);
                         } else {
                             $set('amount_vnd', null);
                             $set('percent', null);
@@ -67,6 +70,23 @@ class CommissionPolicyForm {
                     ->visible(fn($get) => $get('type') === 'FIXED')
                     ->required(fn($get) => $get('type') === 'FIXED')
                     ->helperText('Số tiền hoa hồng cố định'),
+                TextInput::make('percent')
+                    ->label('Phần trăm (%)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->visible(fn($get) => $get('type') === 'PERCENT')
+                    ->required(fn($get) => $get('type') === 'PERCENT')
+                    ->helperText('Phần trăm hoa hồng (0-100)'),
+
+                DatePicker::make('effective_from')
+                    ->label('Ngày bắt đầu có hiệu lực')
+                    ->nullable()
+                    ->default(null),
+                DatePicker::make('effective_to')
+                    ->label('Ngày kết thúc hiệu lực')
+                    ->nullable()
+                    ->default(null),
 
                 Select::make('trigger')
                     ->label('Thời điểm kích hoạt')

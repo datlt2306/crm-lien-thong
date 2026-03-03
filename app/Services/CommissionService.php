@@ -104,36 +104,45 @@ class CommissionService {
      */
     private function getDirectCommissionAmount(Payment $payment): float {
         $programType = $payment->program_type;
+        $now = now();
+        $collaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
 
-        // Tìm chính sách hoa hồng phù hợp
-        $policy = \App\Models\CommissionPolicy::where('type', 'PASS_THROUGH')
-            ->where('role', 'PRIMARY')
+        // Lấy chính sách có độ ưu tiên cao nhất, vẫn còn hiệu lực và đúng điều kiện
+        $policy = \App\Models\CommissionPolicy::where('role', 'PRIMARY')
             ->where('active', true)
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
                     ->orWhere('program_type', strtoupper($programType));
+            })
+            ->where(function ($query) use ($now) {
+                $query->whereNull('effective_from')
+                    ->orWhere('effective_from', '<=', $now);
+            })
+            ->where(function ($query) use ($now) {
+                $query->whereNull('effective_to')
+                    ->orWhere('effective_to', '>=', $now);
+            })
+            ->where(function ($query) use ($payment) {
+                $query->whereNull('organization_id')
+                    ->orWhere('organization_id', $payment->organization_id);
+            })
+            ->where(function ($query) use ($collaboratorId) {
+                $query->whereNull('collaborator_id')
+                    ->orWhere('collaborator_id', $collaboratorId);
             })
             ->orderBy('priority', 'desc')
             ->first();
 
         if ($policy) {
-            // PASS_THROUGH: nhận toàn bộ số tiền thanh toán
-            return (float) $payment->amount;
-        }
-
-        // Fallback: tìm chính sách cố định
-        $fixedPolicy = \App\Models\CommissionPolicy::where('type', 'FIXED')
-            ->where('role', 'PRIMARY')
-            ->where('active', true)
-            ->where(function ($query) use ($programType) {
-                $query->whereNull('program_type')
-                    ->orWhere('program_type', strtoupper($programType));
-            })
-            ->orderBy('priority', 'desc')
-            ->first();
-
-        if ($fixedPolicy) {
-            return (float) $fixedPolicy->amount_vnd ?? 0;
+            if ($policy->type === 'PASS_THROUGH') {
+                return (float) $payment->amount;
+            }
+            if ($policy->type === 'FIXED') {
+                return (float) ($policy->amount_vnd ?? 0);
+            }
+            if ($policy->type === 'PERCENT') {
+                return (float) $payment->amount * ((float) ($policy->percent ?? 0) / 100);
+            }
         }
 
         // Fallback cứng nếu không có chính sách

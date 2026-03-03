@@ -39,9 +39,16 @@ class Wallet extends Model {
     /**
      * Nạp tiền vào wallet
      */
-    public function deposit(float $amount, string $description = '', array $meta = []): WalletTransaction {
+    public function deposit(float $amount, string $description = '', array $meta = []): ?WalletTransaction {
+        if ($amount <= 0) {
+            Log::warning('Wallet deposit failed: amount must be greater than zero', ['amount' => $amount, 'wallet_id' => $this->id]);
+            return null;
+        }
+
         return DB::transaction(function () use ($amount, $description, $meta) {
             $wallet = self::where('id', $this->id)->lockForUpdate()->first();
+
+            if (!$wallet) return null;
 
             $balanceBefore = $wallet->balance;
             $wallet->balance += $amount;
@@ -66,11 +73,16 @@ class Wallet extends Model {
      * Rút tiền từ wallet
      */
     public function withdraw(float $amount, string $description = '', array $meta = []): ?WalletTransaction {
+        if ($amount <= 0) {
+            Log::warning('Wallet withdraw failed: amount must be greater than zero', ['amount' => $amount, 'wallet_id' => $this->id]);
+            return null;
+        }
+
         return DB::transaction(function () use ($amount, $description, $meta) {
             $wallet = self::where('id', $this->id)->lockForUpdate()->first();
 
-            if ($wallet->balance < $amount) {
-                return null; // Không đủ tiền
+            if (!$wallet || $wallet->balance < $amount) {
+                return null; // Không đủ tiền hoặc ví không tồn tại
             }
 
             $balanceBefore = $wallet->balance;
@@ -95,6 +107,16 @@ class Wallet extends Model {
      * Chuyển tiền cho wallet khác
      */
     public function transferTo(Wallet $targetWallet, float $amount, string $description = '', array $meta = []): ?WalletTransaction {
+        if ($amount <= 0) {
+            Log::warning('Wallet transfer failed: amount must be greater than zero', ['amount' => $amount, 'wallet_id' => $this->id]);
+            return null;
+        }
+        
+        if ($this->id === $targetWallet->id) {
+            Log::warning('Wallet transfer failed: cannot transfer to the same wallet', ['wallet_id' => $this->id]);
+            return null;
+        }
+
         return DB::transaction(function () use ($targetWallet, $amount, $description, $meta) {
             // Lock theo thứ tự ID để tránh deadlock
             $walletIds = [$this->id, $targetWallet->id];
@@ -104,8 +126,12 @@ class Wallet extends Model {
             self::whereIn('id', $walletIds)->lockForUpdate()->get();
 
             // Lấy data mới nhất sau khi lock
-            $sourceWallet = self::find($this->id);
-            $destinationWallet = self::find($targetWallet->id);
+            $sourceWallet = self::where('id', $this->id)->first();
+            $destinationWallet = self::where('id', $targetWallet->id)->first();
+
+            if (!$sourceWallet || !$destinationWallet) {
+                return null;
+            }
 
             if ($sourceWallet->balance < $amount) {
                 Log::warning('Wallet transfer failed: insufficient funds', [

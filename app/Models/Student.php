@@ -258,7 +258,15 @@ class Student extends Model {
             'intake_month' => 'nullable|integer|between:1,12',
             'program_type' => ['nullable', Rule::in(['REGULAR', 'PART_TIME'])],
             'source' => ['required', Rule::in(['form', 'ref', 'facebook', 'zalo', 'tiktok', 'hotline', 'event', 'school', 'walkin', 'other'])],
-            'status' => ['required', Rule::in(['new', 'contacted', 'submitted', 'approved', 'enrolled', 'rejected', 'dropped', 'pending', 'interviewed', 'deposit_paid', 'offer_sent', 'offer_accepted'])],
+            'status' => ['required', Rule::in([
+                self::STATUS_NEW,
+                self::STATUS_CONTACTED,
+                self::STATUS_SUBMITTED,
+                self::STATUS_APPROVED,
+                self::STATUS_ENROLLED,
+                self::STATUS_REJECTED,
+                self::STATUS_DROPPED
+            ])],
             'notes' => 'nullable|string',
             'dob' => 'nullable|date|before:today',
             'address' => 'nullable|string|max:500',
