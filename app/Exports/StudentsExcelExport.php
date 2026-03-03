@@ -6,7 +6,7 @@ use App\Models\Payment;
 use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -14,15 +14,16 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use Illuminate\Database\Eloquent\Builder;
 
-class StudentsExcelExport implements FromCollection, WithHeadings, WithMapping, WithEvents, ShouldAutoSize {
+class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithEvents, ShouldAutoSize {
     private int $rowNumber = 0;
 
-    public function __construct(private readonly Collection $students) {
+    public function __construct(private readonly Builder $query) {
     }
 
-    public function collection(): Collection {
-        return $this->students;
+    public function query(): Builder {
+        return $this->query;
     }
 
     public function headings(): array {
@@ -296,7 +297,17 @@ class StudentsExcelExport implements FromCollection, WithHeadings, WithMapping, 
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Merge group headers on row 1
+                // Lấy Cột chữ để merge chính xác
+                $columnsToMergeVertical = [
+                    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                    'X', 'Y', 'Z',
+                    'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ',
+                    'BA', 'BB', 'BC', 'BD', 'BE'
+                ];
+                foreach ($columnsToMergeVertical as $col) {
+                    $sheet->mergeCells("{$col}1:{$col}2");
+                }
+
                 $sheet->mergeCells('N1:O1');  // Bằng TN CĐ
                 $sheet->mergeCells('P1:Q1');  // Bảng điểm CĐ
                 $sheet->mergeCells('R1:S1');  // Bằng TN THPT
@@ -304,8 +315,8 @@ class StudentsExcelExport implements FromCollection, WithHeadings, WithMapping, 
                 $sheet->mergeCells('V1:W1');  // Giấy khai sinh
                 $sheet->mergeCells('AA1:AB1'); // Giấy khám sức khỏe
 
-                // Style header rows
-                $headerRange = 'A1:BF2';
+                // Style header rows - BE là cột 57
+                $headerRange = 'A1:BE2';
                 $sheet->getStyle($headerRange)->getFont()->setBold(true);
                 $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle($headerRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);

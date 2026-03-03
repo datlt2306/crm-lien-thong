@@ -839,13 +839,13 @@ class StudentsTable {
                     ->label('Xuất Excel')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->action(function () {
-                        // Lấy query từ Resource để áp dụng đúng quyền truy cập
-                        $query = \App\Filament\Resources\Students\StudentResource::getEloquentQuery();
-                        $students = $query->with(['payment', 'organization'])->get();
+                    ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
+                        // Lấy query đã áp dụng filter và search từ bảng hiện tại thay vì lấy full
+                        $query = $livewire->getFilteredTableQuery();
+                        $query->with(['payment', 'organization']);
 
                         $filename = 'danh_sach_hoc_vien_' . date('Y-m-d_His') . '.xlsx';
-                        return Excel::download(new StudentsExcelExport($students), $filename);
+                        return Excel::download(new StudentsExcelExport($query), $filename);
                     }),
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
