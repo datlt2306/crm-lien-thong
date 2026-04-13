@@ -333,9 +333,10 @@ class StudentsTable {
                 \Filament\Tables\Filters\SelectFilter::make('major')
                     ->label('Ngành học')
                     ->options(function () {
-                        return \App\Models\Major::where('is_active', true)
-                            ->orderBy('name')
-                            ->pluck('name', 'name')
+                        return \App\Models\Quota::whereNotNull('major_name')
+                            ->distinct()
+                            ->orderBy('major_name')
+                            ->pluck('major_name', 'major_name')
                             ->toArray();
                     })
                     ->searchable()

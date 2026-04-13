@@ -163,9 +163,9 @@ class StudentApiController extends Controller {
             $query->where('collaborator_id', $request->get('collaborator_id'));
         }
 
-        // Filter theo major_id
-        if ($request->has('major_id')) {
-            $query->where('major_id', $request->get('major_id'));
+        // Filter theo major
+        if ($request->has('major')) {
+            $query->where('major', $request->get('major'));
         }
 
         // Filter theo intake_id
@@ -276,8 +276,7 @@ class StudentApiController extends Controller {
                 'ref_id' => $student->collaborator->ref_id,
             ] : null,
             'major_info' => $student->major ? [
-                'id' => $student->major->id,
-                'name' => $student->major->name,
+                'name' => $student->major,
             ] : null,
             'intake_info' => $student->intake ? [
                 'id' => $student->intake->id,

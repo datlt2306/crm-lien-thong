@@ -7,6 +7,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class AnnualQuotaForm {
     public static function configure(Schema $schema): Schema {
@@ -23,20 +24,29 @@ class AnnualQuotaForm {
                             ->searchable()
                             ->preload(),
 
-                        Select::make('major_id')
+                        Select::make('major_name')
                             ->label('Ngành học')
-                            ->relationship('major', 'name')
-                            ->required()
+                            ->options(fn() => SchemaFacade::hasTable('majors')
+                                ? \App\Models\Major::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'name')
+                                : [])
                             ->searchable()
                             ->preload()
-                            ->getOptionLabelFromRecordUsing(fn($record) => ($record->code ? $record->code . ' - ' : '') . $record->name),
+                            ->required(),
 
-                        Select::make('program_id')
+                        Select::make('program_name')
                             ->label('Hệ đào tạo')
-                            ->relationship('program', 'name')
-                            ->required()
+                            ->options(fn() => SchemaFacade::hasTable('programs')
+                                ? \App\Models\Program::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'name')
+                                : [])
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->required(),
 
                         TextInput::make('year')
                             ->label('Năm tuyển sinh')
@@ -67,14 +77,6 @@ class AnnualQuotaForm {
                             ->options(\App\Models\AnnualQuota::getStatusOptions())
                             ->default(\App\Models\AnnualQuota::STATUS_ACTIVE),
 
-                        Select::make('intakes')
-                            ->label('📅 Áp dụng cho đợt tuyển')
-                            ->relationship('intakes', 'name')
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->helperText('Chọn các đợt tuyển sinh sẽ áp dụng chỉ tiêu này. Để trống = áp dụng tất cả đợt trong năm.')
-                            ->columnSpanFull(),
 
                         Textarea::make('notes')
                             ->label('Ghi chú')

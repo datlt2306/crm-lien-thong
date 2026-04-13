@@ -4,7 +4,7 @@ namespace App\Filament\Widgets;
 
 use Filament\Widgets\Widget;
 use App\Models\Organization;
-use App\Models\Major;
+
 
 class DashboardFiltersWidget extends Widget {
     protected string $view = 'livewire.dashboard-filters';
@@ -23,7 +23,12 @@ class DashboardFiltersWidget extends Widget {
 
     protected function getViewData(): array {
         $organizations = Organization::query()->orderBy('name')->get(['id', 'name']);
-        $majors = Major::query()->orderBy('name')->get(['id', 'name']);
+        $majors = \Illuminate\Support\Facades\DB::table('quotas')
+            ->select('major_name as id', 'major_name as name')
+            ->whereNotNull('major_name')
+            ->distinct()
+            ->orderBy('major_name')
+            ->get();
         return compact('organizations', 'majors');
     }
 

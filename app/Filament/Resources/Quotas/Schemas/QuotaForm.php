@@ -2,13 +2,14 @@
 
 namespace App\Filament\Resources\Quotas\Schemas;
 
-use App\Models\Major;
+
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class QuotaForm {
     public static function configure(Schema $schema): Schema {
@@ -50,35 +51,43 @@ class QuotaForm {
                             ->placeholder('Chọn tổ chức...')
                             ->helperText('Tổ chức quản lý đợt tuyển sinh này'),
 
-                        Select::make('program_id')
-                            ->label('Hệ đào tạo')
-                            ->relationship('program', 'name')
+                        TextInput::make('name')
+                            ->label('Tên chương trình tuyển sinh')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('VD: Ngôn ngữ Anh - Đại học từ xa')
+                            ->columnSpanFull()
+                            ->helperText('Tên gọi hiển thị của chỉ tiêu/chương trình này'),
+
+                        Select::make('major_name')
+                            ->label('Ngành học')
+                            ->options(fn() => SchemaFacade::hasTable('majors')
+                                ? \App\Models\Major::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'name')
+                                : [])
                             ->searchable()
                             ->preload()
-                            ->placeholder('Chọn hệ đào tạo...')
-                            ->helperText('Hệ đào tạo cho đợt này'),
+                            ->required(),
+
+                        Select::make('program_name')
+                            ->label('Hệ đào tạo')
+                            ->options(fn() => SchemaFacade::hasTable('programs')
+                                ? \App\Models\Program::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'name')
+                                : [])
+                            ->searchable()
+                            ->preload()
+                            ->required(),
                     ])
                     ->columns(2)
                     ->columnSpanFull()
                     ->collapsible(),
 
-                Section::make('🎓 Thông tin ngành học')
-                    ->description('Chọn ngành học cần tuyển sinh')
-                    ->icon('heroicon-o-academic-cap')
-                    ->schema([
-                        Select::make('major_id')
-                            ->label('Ngành học')
-                            ->relationship('major', 'name')
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn ngành học...')
-                            ->helperText('Chọn ngành học cần tuyển sinh')
-                            ->getOptionLabelFromRecordUsing(fn(\App\Models\Major $record): string => $record->code . ' - ' . $record->name),
-                    ])
-                    ->columns(1)
-                    ->columnSpanFull()
-                    ->collapsible(),
+
 
                 Section::make('📊 Chỉ tiêu tuyển sinh')
                     ->description('Thiết lập chỉ tiêu và học phí cho ngành học')

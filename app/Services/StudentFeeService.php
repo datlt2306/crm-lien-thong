@@ -3,17 +3,14 @@
 namespace App\Services;
 
 use App\Models\Intake;
-use App\Models\Major;
-use App\Models\Program;
 use App\Models\Quota;
 use App\Models\Student;
 
 class StudentFeeService {
     /**
      * Tính "số tiền theo cấu hình" cho 1 sinh viên dựa trên:
-     * - organization_id
-     * - major (major_id hoặc tên major)
-     * - intake (ưu tiên intake_id; fallback theo intake_month + program_type)
+     * - quota_id (nếu có)
+     * - fallback: organization_id, major_name, intake_id
      *
      * Hiện tại cấu hình số tiền đang nằm ở `quotas.tuition_fee`.
      */
@@ -22,8 +19,14 @@ class StudentFeeService {
             return null;
         }
 
-        $majorId = $this->resolveMajorId($student);
-        if (!$majorId) {
+        // Ưu tiên cao nhất: Lấy từ quota_id đã lưu
+        if (!empty($student->quota_id)) {
+            $fee = Quota::where('id', $student->quota_id)->value('tuition_fee');
+            return $this->formatFee($fee);
+        }
+
+        $majorName = (string) ($student->major ?? '');
+        if ($majorName === '') {
             return null;
         }
 
@@ -34,10 +37,14 @@ class StudentFeeService {
 
         $fee = Quota::query()
             ->where('organization_id', $student->organization_id)
-            ->where('major_id', $majorId)
+            ->where('major_name', $majorName)
             ->where('intake_id', $intakeId)
             ->value('tuition_fee');
 
+        return $this->formatFee($fee);
+    }
+
+    private function formatFee($fee): ?float {
         if ($fee === null) {
             return null;
         }
@@ -50,23 +57,6 @@ class StudentFeeService {
         return $feeFloat;
     }
 
-    private function resolveMajorId(Student $student): ?int {
-        if (!empty($student->major_id)) {
-            return (int) $student->major_id;
-        }
-
-        $majorName = (string) ($student->major ?? '');
-        if ($majorName === '') {
-            return null;
-        }
-
-        $majorId = Major::query()
-            ->where('name', $majorName)
-            ->value('id');
-
-        return $majorId ? (int) $majorId : null;
-    }
-
     private function resolveIntakeId(Student $student): ?int {
         if (!empty($student->intake_id)) {
             return (int) $student->intake_id;
@@ -76,10 +66,7 @@ class StudentFeeService {
             ->where('organization_id', $student->organization_id)
             ->where('status', Intake::STATUS_ACTIVE);
 
-        $programId = $this->resolveProgramIdFromProgramType($student);
-        if ($programId) {
-            $query->where('program_id', $programId);
-        }
+        // Not joining/filtering by program_id anymore as it's dropped from intakes
 
         $intakeMonth = (int) ($student->intake_month ?? 0);
         if ($intakeMonth >= 1 && $intakeMonth <= 12) {
@@ -94,33 +81,16 @@ class StudentFeeService {
             return (int) $intakeId;
         }
 
-        // Fallback cuối: nếu không tìm được theo tháng, thử lấy intake active mới nhất theo org (+ program nếu có)
+        // Fallback cuối: nếu không tìm được theo tháng, thử lấy intake active mới nhất theo org
         $fallbackQuery = Intake::query()
             ->where('organization_id', $student->organization_id)
             ->where('status', Intake::STATUS_ACTIVE);
-
-        if ($programId) {
-            $fallbackQuery->where('program_id', $programId);
-        }
 
         $fallbackIntakeId = $fallbackQuery
             ->orderByDesc('start_date')
             ->value('id');
 
         return $fallbackIntakeId ? (int) $fallbackIntakeId : null;
-    }
-
-    private function resolveProgramIdFromProgramType(Student $student): ?int {
-        $programType = (string) ($student->program_type ?? '');
-        if ($programType === '') {
-            return null;
-        }
-
-        $programId = Program::query()
-            ->where('code', $programType)
-            ->value('id');
-
-        return $programId ? (int) $programId : null;
     }
 }
 

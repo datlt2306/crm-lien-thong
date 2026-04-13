@@ -16,7 +16,6 @@ class Intake extends Model {
         'enrollment_deadline',
         'status',
         'organization_id',
-        'program_id',
         'settings',
     ];
 
@@ -49,12 +48,6 @@ class Intake extends Model {
         return $this->belongsTo(Organization::class);
     }
 
-    /**
-     * Quan hệ: Thuộc chương trình đào tạo
-     */
-    public function program() {
-        return $this->belongsTo(Program::class);
-    }
 
     /**
      * Quan hệ: Có nhiều quotas (chỉ tiêu)
@@ -70,13 +63,7 @@ class Intake extends Model {
         return $this->hasMany(Student::class);
     }
 
-    /**
-     * Các chỉ tiêu năm được áp dụng cho đợt này
-     */
-    public function annualQuotas() {
-        return $this->belongsToMany(AnnualQuota::class, 'annual_quota_intake')
-            ->withTimestamps();
-    }
+
 
     /**
      * Scope: Lấy intakes đang active
@@ -104,9 +91,9 @@ class Intake extends Model {
      * Lấy tổng chỉ tiêu của đợt tuyển (ưu tiên từ relationship, fallback: annual_quotas theo năm)
      */
     public function getTotalTargetQuotaAttribute(): int {
-        // Ưu tiên: Lấy từ relationship (đã liên kết cụ thể)
-        $linkedQuotas = $this->annualQuotas()
-            ->where('status', AnnualQuota::STATUS_ACTIVE)
+        // Ưu tiên: Lấy từ relationship (Quotas đã tạo cho đợt này)
+        $linkedQuotas = $this->quotas()
+            ->where('status', Quota::STATUS_ACTIVE)
             ->get();
 
         if ($linkedQuotas->isNotEmpty()) {
@@ -125,9 +112,9 @@ class Intake extends Model {
      * Lấy tổng chỉ tiêu hiện tại (đã nhập học)
      */
     public function getTotalCurrentQuotaAttribute(): int {
-        // Ưu tiên: Lấy từ relationship (đã liên kết cụ thể)
-        $linkedQuotas = $this->annualQuotas()
-            ->where('status', AnnualQuota::STATUS_ACTIVE)
+        // Ưu tiên: Lấy từ relationship (Quotas đã tạo cho đợt này)
+        $linkedQuotas = $this->quotas()
+            ->where('status', Quota::STATUS_ACTIVE)
             ->get();
 
         if ($linkedQuotas->isNotEmpty()) {

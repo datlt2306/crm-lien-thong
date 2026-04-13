@@ -30,11 +30,12 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
 
 -   CTV có thể:
     -   Chủ động tạo lead sinh viên mới.
-    -   Theo dõi toàn bộ pipeline của sinh viên mình phụ trách.
+    -   Theo dõi toàn bộ pipeline của sinh viên trực tiếp do mình phụ trách.
     -   Biết rõ **khi nào được nhận hoa hồng**, số tiền dự kiến và số tiền đã chi trả.
 -   Hệ thống đảm bảo:
+    -   Tài khoản CTV được **quản lý tập trung**: CTV không thể tự do đăng ký qua form Public, mà chỉ được cấp mới từ những người có thẩm quyền (Super Admin hoặc Chủ Tổ Chức) từ bên trong Hệ thống.
     -   CTV chỉ nhìn thấy dữ liệu **cần thiết và phù hợp** (không lộ dữ liệu nhạy cảm không liên quan).
-    -   Mọi tính toán hoa hồng, ghi nhận thanh toán được xử lý tập trung, minh bạch.
+    -   Mọi tính toán hoa hồng, ghi nhận thanh toán được xử lý tập trung, minh bạch và **chỉ dựa trên mô hình hoa hồng trực tiếp (1 cấp)**.
 
 ## 3. Use Case chính cho Cộng tác viên
 
@@ -51,21 +52,17 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   Sau khi tạo:
         -   Có thể gửi link cho sinh viên tự hoàn thiện hồ sơ hoặc CTV nhập giúp.
 
-### 3.2. Xem danh sách và chi tiết sinh viên trong nhánh của CTV
+### 3.2. Xem danh sách và chi tiết sinh viên của CTV
 
 -   **Mô tả**:
-    -   CTV xem tất cả sinh viên:
-        -   Do chính mình phụ trách.
-        -   Thuộc nhánh downline của mình.
+    -   CTV xem tất cả sinh viên do chính mình trực tiếp phụ trách.
+    -   Hệ thống không còn áp dụng mô hình đa cấp (downline), CTV chỉ nhìn thấy Data của cá nhân.
 -   **Căn cứ từ code**:
     -   `StudentResource::getEloquentQuery()`:
-        -   Nếu user có role `ctv`, hệ thống:
-            -   Tìm `Collaborator` theo email của user.
-            -   Lấy danh sách ID downline (qua hàm `getDownlineIds`).
-            -   Truy vấn `Student` với `collaborator_id` nằm trong danh sách `[ctv_id + downline_ids]`.
+        -   Nếu user có role `ctv`, hệ thống chỉ truy vấn `Student` với `collaborator_id` bằng đúng ID của CTV hiện tại.
 -   **Yêu cầu hệ thống**:
     -   API trả về danh sách sinh viên:
-        -   Bị giới hạn theo nhánh CTV (không xem được sinh viên của nhánh khác).
+        -   Chỉ giới hạn ở các sinh viên do CTV trực tiếp giới thiệu.
         -   Có thể filter theo trạng thái hồ sơ, trạng thái thanh toán, đợt tuyển sinh, ngành, v.v.
     -   API chi tiết:
         -   CTV có thể xem chi tiết hồ sơ mức độ đủ dùng cho chăm sóc (thông tin liên hệ, trạng thái, ghi chú cơ bản).
@@ -115,26 +112,18 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   CTV **không được**:
         -   Tự chỉnh sửa số liệu hoa hồng.
         -   Tạo giao dịch ví thủ công; các giao dịch phải được tạo bởi hệ thống hoặc bởi Kế toán/Quản lý theo rule.
+    -   **Bảo mật Ví (Wallet Security)**:
+        -   Hệ thống nghiêm cấm và từ chối xử lý tất cả các yêu cầu Nạp (Deposit), Rút (Withdraw) hoặc Chuyển tiền (Transfer) có giá trị `< 0` hoặc `= 0`.
+        -   Không cho phép thực hiện thao tác chuyển tiền tới chính Ví của người gửi (Loop Transaction).
+        -   Xảy ra trong môi trường khoá DB (`DB::transaction` & `lockForUpdate`) nhằm tránh các lỗi Race Condition tiềm tàng dẩn đến thất thoát quỹ.
 
-### 3.6. Quản lý downline (nếu áp dụng mô hình nhiều tầng)
 
--   **Mô tả**:
-    -   CTV có thể có các **downline** (CTV tuyến dưới) trong nhánh của mình; hưởng hoa hồng từ sinh viên của downline theo chính sách.
--   **Căn cứ từ code**:
-    -   `Collaborator` có trường `upline_id`.
-    -   `StudentResource::getDownlineIds` thực hiện đệ quy để lấy toàn bộ cây downline.
--   **Yêu cầu hệ thống**:
-    -   API cho phép CTV:
-        -   Xem danh sách downline (nếu được phân quyền).
-        -   Xem số lượng sinh viên và doanh thu/hoa hồng phát sinh từ mỗi downline (tổng hợp).
-    -   Rule phân chia hoa hồng multi-level:
-        -   Do backend (CommissionPolicy / CommissionService) quyết định, phía CTV chỉ xem được kết quả.
 
 ## 4. Quy tắc quyền hạn & bảo mật cho Cộng tác viên
 
 -   CTV **chỉ được truy cập**:
-    -   Sinh viên do mình phụ trách (`collaborator_id` = CTV hiện tại) hoặc thuộc nhánh downline.
-    -   Payment, Commission, Wallet liên quan tới mình hoặc nhánh của mình.
+    -   Sinh viên do chính mình trực tiếp phụ trách (`collaborator_id` = CTV hiện tại).
+    -   Payment, Commission, Wallet liên quan trực tiếp tới mình.
 -   CTV **không được**:
     -   Xem danh sách tổ chức (Organization) đầy đủ hoặc chỉnh sửa thông tin tổ chức.
     -   Sửa trực tiếp dữ liệu thanh toán đã được xác nhận bởi Kế toán.
@@ -169,10 +158,5 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
 
 ## 7. Open Items riêng cho vai trò Cộng tác viên
 
--   Chi tiết chính sách hoa hồng nhiều tầng (nếu có):
-    -   Tỷ lệ cho CTV trực tiếp, upline 1, upline 2, v.v.
-    -   Điều kiện nhận hoa hồng (trạng thái hồ sơ, trạng thái thanh toán).
--   Phạm vi báo cáo mà CTV được phép xem:
-    -   Chỉ tổng hợp cho bản thân hay bao gồm cả downline.
 -   Quy tắc giới hạn/chặn thao tác khi:
     -   CTV cố gắng chỉnh sửa thông tin nhạy cảm sau khi hồ sơ đã ở trạng thái khoá.

@@ -45,7 +45,6 @@ class EditQuota extends EditRecord {
                 'start_date' => $data['intake_start_date'] ?? $intake->start_date,
                 'end_date' => $data['intake_end_date'] ?? $intake->end_date,
                 'organization_id' => $data['organization_id'] ?? $intake->organization_id,
-                'program_id' => $data['program_id'] ?? $intake->program_id,
             ]);
         } else {
             $newIntake = Intake::create([
@@ -53,7 +52,6 @@ class EditQuota extends EditRecord {
                 'start_date' => $data['intake_start_date'] ?? null,
                 'end_date' => $data['intake_end_date'] ?? null,
                 'organization_id' => $data['organization_id'] ?? null,
-                'program_id' => $data['program_id'] ?? null,
                 'status' => Intake::STATUS_ACTIVE,
             ]);
             $this->record->update(['intake_id' => $newIntake->id]);

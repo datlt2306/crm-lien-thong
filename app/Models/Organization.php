@@ -35,11 +35,4 @@ class Organization extends Model {
         return $this->belongsTo(User::class, 'organization_owner_id');
     }
 
-    public function majors() {
-        return $this->belongsToMany(Major::class, 'major_organization')->withPivot(['quota', 'intake_months'])->withTimestamps();
-    }
-
-    public function programs() {
-        return $this->belongsToMany(Program::class, 'organization_program')->withTimestamps();
-    }
 }

@@ -23,13 +23,12 @@ class AnnualQuotasTable {
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('major.name')
+                TextColumn::make('major_name')
                     ->label('Ngành')
                     ->searchable()
-                    ->sortable()
-                    ->getStateUsing(fn($record) => $record ? (($record->major?->code ? $record->major->code . ' - ' : '') . ($record->major?->name ?? '')) : ''),
+                    ->sortable(),
 
-                TextColumn::make('program.name')
+                TextColumn::make('program_name')
                     ->label('Hệ đào tạo')
                     ->searchable()
                     ->sortable(),
@@ -62,18 +61,6 @@ class AnnualQuotasTable {
                         'gray' => \App\Models\AnnualQuota::STATUS_FULL,
                     ]),
 
-                TextColumn::make('intakes_list')
-                    ->label('Đợt tuyển')
-                    ->getStateUsing(function ($record) {
-                        $intakes = $record->intakes()->pluck('name');
-                        if ($intakes->isEmpty()) {
-                            return 'Tất cả';
-                        }
-                        return $intakes->implode(', ');
-                    })
-                    ->wrap()
-                    ->badge()
-                    ->color(fn($state) => $state === 'Tất cả' ? 'gray' : 'info'),
 
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
@@ -87,14 +74,14 @@ class AnnualQuotasTable {
                     ->relationship('organization', 'name')
                     ->searchable()
                     ->preload(),
-                \Filament\Tables\Filters\SelectFilter::make('major_id')
+                \Filament\Tables\Filters\SelectFilter::make('major_name')
                     ->label('Ngành')
-                    ->relationship('major', 'name')
+                    ->options(fn() => \Illuminate\Support\Facades\DB::table('annual_quotas')->whereNotNull('major_name')->distinct()->pluck('major_name', 'major_name')->toArray())
                     ->searchable()
                     ->preload(),
-                \Filament\Tables\Filters\SelectFilter::make('program_id')
+                \Filament\Tables\Filters\SelectFilter::make('program_name')
                     ->label('Hệ đào tạo')
-                    ->relationship('program', 'name')
+                    ->options(fn() => \Illuminate\Support\Facades\DB::table('annual_quotas')->whereNotNull('program_name')->distinct()->pluck('program_name', 'program_name')->toArray())
                     ->searchable()
                     ->preload(),
                 \Filament\Tables\Filters\SelectFilter::make('year')

@@ -52,9 +52,20 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
 ### 3.2. Xác nhận thanh toán (verify payment)
 
 -   **Mô tả**:
-    -   Sau khi sinh viên nộp tiền (qua CTV hoặc trực tiếp), Kế toán phải:
+    -   Sau khi sinh viên nộp tiền (qua CTV hoặc **đi trực tiếp – walkin**), Kế toán phải:
         -   Đối chiếu giao dịch thực tế.
-        -   Xác nhận vào hệ thống.
+        -   Xác nhận vào hệ thống **thông qua action riêng cho Kế toán**, không sửa tay trạng thái trong form hồ sơ.
+    -   Flow chuẩn trong UI (Filament `Students`):
+        -   Bước 1 – “Đã nộp tiền”: CTV / tổ chức / văn phòng tuyển sinh dùng action **`Xác nhận đã nộp tiền`** trên màn `Students`/`EditStudent` để:
+            -   Tạo/cập nhật `Payment` với `amount` và `status = SUBMITTED`.
+            -   Cập nhật `students.status` sang `SUBMITTED`.
+        -   Bước 2 – “Kế toán xác nhận”: Kế toán dùng action riêng **`Xác nhận thanh toán`** (chỉ hiển thị cho role `accountant`/`document`/`organization_owner`/`super_admin`) để:
+            -   Kiểm tra số tiền (`amount`) và sửa nếu cần.
+            -   Gọi logic backend `markAsVerified` cho `Payment` → chuyển `status` sang `VERIFIED`.
+            -   Gọi `CommissionService::createCommissionFromPayment($payment)` để sinh commission (nếu hồ sơ có `collaborator_id` / `primary_collaborator_id`).
+    -   Quy tắc cho hồ sơ walkin:
+        -   Hồ sơ có `source = walkin` bắt buộc `collaborator_id = null` → `primary_collaborator_id` cũng null.
+        -   Kế toán vẫn xác nhận thanh toán bình thường (trừ Quota, ghi nhận doanh thu), **nhưng không sinh commission** do không có CTV.
 -   **Căn cứ từ `PaymentPolicy`**:
     -   Hàm `verify` cho phép:
         -   User có quyền `verify_payment` hoặc có role `accountant`, `document` được xác nhận thanh toán.
@@ -64,9 +75,10 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
         -   Cho phép Kế toán:
             -   Đặt trạng thái `verified` (hoặc tương đương).
             -   Ghi chú (ví dụ: mã giao dịch, kênh nhận tiền, ghi chú nội bộ).
-    -   Nếu từ chối:
+    -   Nếu từ chối / huỷ bỏ (Cancel):
         -   Ghi rõ lý do từ chối (thiếu chứng từ, sai số tiền, chuyển nhầm, v.v.).
-        -   Có thể trả về trạng thái `rejected`, đẩy thông báo cho sinh viên/CTV/Cán bộ hồ sơ.
+        -   **Quan trọng - Khôi phục Chỉ tiêu (Quota Restoration)**: Khi Payment bị chuyển khỏi trạng thái `VERIFIED` (sang `REJECTED`, `CANCELLED` hoặc trả về `PENDING`), hệ thống bắt buộc tự động **hoàn trả (auto-refund) 1 slot chỉ tiêu (Quota)** lại cho Tổ chức để tránh tình trạng rò rỉ (Quota Leak).
+        -   Có thể đẩy thông báo cho sinh viên/CTV/Cán bộ hồ sơ.
 
 ### 3.3. Upload và quản lý phiếu thu
 
@@ -99,12 +111,14 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
             -   Đợt tuyển sinh, thời gian, tổ chức, CTV.
         -   Xem chi tiết từng khoản hoa hồng gắn với hồ sơ/thanh toán.
     -   Khi thực hiện chi trả:
+        -   **Bảo mật Ví (Wallet Security)**: Hệ thống nghiêm cấm mọi giao dịch ví (Deposit, Withdraw, Transfer) có giá trị `< 0` hoặc `= 0` (Chặn Negative Amount Exploit).
+        -   Không cho phép chuyển tiền vào chính ví của người gửi (Loop Transaction).
+        -   Cập nhật số dư `Wallet` và tạo `WalletTransaction` phải diễn ra trong môi trường khoá DB (`DB::transaction` + `lockForUpdate`) nhằm chặn Race Condition.
         -   Ghi nhận giao dịch vào `WalletTransaction`:
             -   Loại giao dịch: chi hoa hồng.
             -   Số tiền.
             -   CTV nhận.
             -   Hình thức chi (nếu cần).
-        -   Cập nhật số dư `Wallet` tương ứng.
     -   Có thể lock các khoản hoa hồng đã chi trả, tránh chỉnh sửa ngược chiều không có log.
 
 ### 3.5. Báo cáo tài chính & xuất số liệu

@@ -20,7 +20,12 @@ class CreateStudent extends CreateRecord {
                 // Tìm collaborator của user hiện tại
                 $collaborator = Collaborator::where('email', $user->email)->first();
                 if ($collaborator) {
-                    $data['collaborator_id'] = $collaborator->id;
+                    // Nếu học viên "đến trực tiếp" thì không auto gán CTV
+                    if (($data['source'] ?? null) !== 'walkin') {
+                        $data['collaborator_id'] = $collaborator->id;
+                    } else {
+                        $data['collaborator_id'] = null;
+                    }
                     $data['organization_id'] = $collaborator->organization_id;
                     
                     // Tự động điền GVHD từ tên CTV nếu chưa có
@@ -31,7 +36,11 @@ class CreateStudent extends CreateRecord {
             }
 
             if (empty($data['organization_id'])) {
-                $organization = $user->getOrganization()
+                $organization = !empty($user->organization_id)
+                    ? Organization::find($user->organization_id)
+                    : null;
+
+                $organization = $organization
                     ?? Organization::where('organization_owner_id', $user->id)->first();
                 if ($organization) {
                     $data['organization_id'] = $organization->id;
@@ -78,6 +87,6 @@ class CreateStudent extends CreateRecord {
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv', 'accountant']);
+        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv', 'accountant', 'admissions']);
     }
 }

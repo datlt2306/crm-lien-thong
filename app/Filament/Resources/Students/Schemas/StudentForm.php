@@ -94,7 +94,7 @@ class StudentForm {
                                     ->searchable()
                                     ->preload()
                                     ->helperText('CTV/Đối tác giới thiệu học viên này')
-                                    ->visible(fn() => Auth::user()?->role !== 'ctv'),
+                                    ->visible(fn($get) => Auth::user()?->role !== 'ctv' && ($get('source') ?? null) === 'ref'),
                                 Select::make('organization_id')
                                     ->label('Tổ chức')
                                     ->options(fn() => Organization::orderBy('name')->pluck('name', 'id'))
@@ -112,20 +112,6 @@ class StudentForm {
                                     ->preload()
                                     ->required()
                                     ->helperText('Chọn trường/tổ chức đào tạo liên thông'),
-                                \Filament\Forms\Components\Select::make('major')
-                                    ->label('Ngành đăng ký liên thông')
-                                    ->options(\App\Models\Major::where('is_active', true)->orderBy('name')->pluck('name', 'name')->toArray())
-                                    ->searchable()
-                                    ->required(),
-
-
-                                \Filament\Forms\Components\Select::make('program_type')
-                                    ->label('Hệ đào tạo liên thông')
-                                    ->options([
-                                        'REGULAR' => 'Chính quy',
-                                        'PART_TIME' => 'Vừa học vừa làm',
-                                    ])
-                                    ->helperText('Chọn hệ dự kiến cho sinh viên'),
                                 \Filament\Forms\Components\Select::make('intake_id')
                                     ->label('Đợt đăng ký liên thông')
                                     ->options(function ($get) {
@@ -140,7 +126,28 @@ class StudentForm {
                                     })
                                     ->searchable()
                                     ->required()
+                                    ->live()
                                     ->helperText('Chọn đợt tuyển sinh'),
+
+                                \Filament\Forms\Components\Select::make('quota_id')
+                                    ->label('Chương trình tuyển sinh (Khóa học)')
+                                    ->options(function ($get) {
+                                        $intakeId = $get('intake_id');
+                                        if (!$intakeId) {
+                                            return [];
+                                        }
+                                        return \App\Models\Quota::where('intake_id', $intakeId)
+                                            ->where('status', \App\Models\Quota::STATUS_ACTIVE)
+                                            ->get()
+                                            ->mapWithKeys(function ($quota) {
+                                                $label = $quota->name . ' (Còn ' . $quota->available_slots . ' slot)';
+                                                return [$quota->id => $label];
+                                            });
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->required()
+                                    ->helperText('Chọn ngành và hệ đào tạo tương ứng (chỉ hiển thị các chỉ tiêu đang mở)'),
 
                                 \Filament\Forms\Components\Select::make('source')
                                     ->label('Hình thức tuyển sinh')
@@ -157,7 +164,14 @@ class StudentForm {
                                         'other' => 'Khác',
                                     ])
                                     ->required()
-                                    ->default('form'),
+                                    ->default('form')
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        // Nếu học viên "đến trực tiếp" thì không được gán CTV giới thiệu
+                                        if ($state === 'walkin') {
+                                            $set('collaborator_id', null);
+                                        }
+                                    }),
                                 \Filament\Forms\Components\Select::make('application_status')
                                     ->label('Tình trạng hồ sơ')
                                     ->options([

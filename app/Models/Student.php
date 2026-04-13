@@ -81,8 +81,7 @@ class Student extends Model {
         // Hệ thống & liên kết (không có trong file chuẩn nhưng cần cho app)
         'organization_id',
         'collaborator_id',
-        'major_id',
-        'program_id',
+        'quota_id',
         'intake_id',
 
         // Các tài liệu chi tiết khác (mapping mở rộng từ file chuẩn)
@@ -172,12 +171,8 @@ class Student extends Model {
         return $this->belongsTo(Collaborator::class, 'collaborator_id');
     }
 
-    public function major() {
-        return $this->belongsTo(Major::class, 'major_id');
-    }
-
-    public function program() {
-        return $this->belongsTo(Program::class, 'program_id');
+    public function quota() {
+        return $this->belongsTo(Quota::class, 'quota_id');
     }
 
     public function intake() {
@@ -194,12 +189,26 @@ class Student extends Model {
 
     protected static function booted(): void {
         static::saving(function (Student $student) {
+            // Nếu học viên "đến trực tiếp" (văn phòng tuyển sinh) thì không được gán CTV giới thiệu
+            // (kể cả khi client/UI gửi lên collaborator_id).
+            if (($student->source ?? null) === 'walkin') {
+                $student->collaborator_id = null;
+            }
+
             if (array_key_exists('intake_id', $student->getDirty())) {
                 if ($student->intake_id) {
                     $intake = Intake::find($student->intake_id);
                     $student->intake_month = $intake?->start_date?->format('n');
                 } else {
                     $student->intake_month = null;
+                }
+            }
+
+            if (array_key_exists('quota_id', $student->getDirty()) && $student->quota_id) {
+                $quota = \App\Models\Quota::find($student->quota_id);
+                if ($quota) {
+                    $student->major = $quota->major_name ?? $quota->name;
+                    $student->program_type = $quota->program_name;
                 }
             }
         });
@@ -252,6 +261,7 @@ class Student extends Model {
             'identity_card' => 'nullable|string|max:20|unique:students,identity_card,' . (request()->route('record') ?? ''),
             'organization_id' => 'required|exists:organizations,id',
             'collaborator_id' => 'nullable|exists:collaborators,id',
+            'quota_id' => 'nullable|exists:quotas,id',
             'target_university' => 'nullable|string|max:255',
             'major' => 'nullable|string|max:255',
             'intake_id' => 'nullable|exists:intakes,id',

@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Quota extends Model {
     use HasFactory;
 
+    protected $appends = [
+        'available_slots',
+    ];
+
     protected $fillable = [
+        'name',
+        'major_name',
+        'program_name',
         'intake_id',
-        'major_id',
-        'program_id',
         'organization_id',
         'target_quota',
         'current_quota',
@@ -46,19 +51,7 @@ class Quota extends Model {
         return $this->belongsTo(Intake::class);
     }
 
-    /**
-     * Quan hệ: Thuộc ngành học
-     */
-    public function major() {
-        return $this->belongsTo(Major::class);
-    }
 
-    /**
-     * Quan hệ: Thuộc chương trình đào tạo
-     */
-    public function program() {
-        return $this->belongsTo(Program::class);
-    }
 
     /**
      * Quan hệ: Thuộc tổ chức

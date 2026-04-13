@@ -49,41 +49,24 @@
             </div>
             <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
             <div class="mb-3">
-                <label class="block font-medium mb-1">Ngành muốn học <span class="text-red-500">*</span></label>
-                <select name="major_id" id="major_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
-                    <option value="">-- Chọn ngành --</option>
-                    @foreach(($majors ?? []) as $m)
-                    <option value="{{ e($m['id']) }}" {{ old('major_id') == $m['id'] ? 'selected' : '' }}
-                        @if(isset($m['quota']) && $m['quota'] <=0) disabled @endif>
-                        {{ e($m['name']) }}
-                        @if(isset($m['quota']))
-                        @if($m['quota'] > 0)
-                        (Chỉ tiêu còn lại: {{ e($m['quota']) }})
-                        @else
-                        (Hết chỉ tiêu)
-                        @endif
-                        @endif
+                <label class="block font-medium mb-1">Đợt tuyển sinh <span class="text-red-500">*</span></label>
+                <select name="intake_id" id="intake_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
+                    <option value="">-- Chọn đợt tuyển --</option>
+                    @foreach(($intakes ?? []) as $intake)
+                    <option value="{{ e($intake->id) }}" {{ old('intake_id') == $intake->id ? 'selected' : '' }}>
+                        {{ e($intake->name) }} (từ {{ $intake->start_date?->format('d/m/Y') }} đến {{ $intake->end_date?->format('d/m/Y') }})
                     </option>
                     @endforeach
                 </select>
-                <div id="major_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn ngành muốn học</div>
+                <div id="intake_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
             </div>
+
             <div class="mb-3">
-                <label class="block font-medium mb-1">Hệ đào tạo <span class="text-red-500">*</span></label>
-                <select name="program_id" id="program_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
-                    <option value="">-- Chọn hệ đào tạo --</option>
-                    @foreach(($programs ?? []) as $p)
-                    <option value="{{ e($p['id']) }}" {{ old('program_id') == $p['id'] ? 'selected' : '' }}>{{ e($p['name']) }}</option>
-                    @endforeach
+                <label class="block font-medium mb-1">Chương trình đào tạo <span class="text-red-500">*</span></label>
+                <select name="quota_id" id="quota_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required disabled>
+                    <option value="">-- Vui lòng chọn đợt tuyển trước --</option>
                 </select>
-                <div id="program_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn hệ đào tạo</div>
-            </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Đợt tuyển <span class="text-red-500">*</span></label>
-                <select name="intake_id" id="intake_select" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
-                    <option value="">-- Chọn đợt tuyển --</option>
-                </select>
-                <div id="intake_select_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
+                <div id="quota_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn chương trình đào tạo</div>
             </div>
             <div class="mb-3">
                 <label class="block font-medium mb-1">Ghi chú</label>
@@ -95,24 +78,13 @@
     </div>
 
     <script>
-        // Hiển thị thông tin chi tiết khi chọn ngành
-        const majorSelect = document.getElementById('major_id');
-        const programSelect = document.getElementById('program_id');
-        const intakeSelect = document.getElementById('intake_select');
+        const intakeSelect = document.getElementById('intake_id');
+        const quotaSelect = document.getElementById('quota_id');
         const form = document.getElementById('student-form');
 
-        function formatDateStr(s) {
-            if (!s) return '';
-            const d = new Date(s);
-            return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
-        }
+        const intakesData = @json($intakes ?? []);
+        const oldQuotaId = @json(old('quota_id'));
 
-        // Lấy dữ liệu majors từ server
-        const majorsData = @json($majors ?? []);
-        const programsData = @json($programs ?? []);
-        const oldIntakeId = @json(old('intake_id'));
-
-        // Hàm hiển thị lỗi
         function showError(fieldId, message) {
             const errorDiv = document.getElementById(fieldId + '_error');
             if (errorDiv) {
@@ -125,7 +97,6 @@
             }
         }
 
-        // Hàm ẩn lỗi
         function hideError(fieldId) {
             const errorDiv = document.getElementById(fieldId + '_error');
             if (errorDiv) {
@@ -137,42 +108,29 @@
             }
         }
 
-        // Hàm validate form
         function validateForm() {
             let isValid = true;
 
-            // Validate ngành
-            if (!majorSelect.value) {
-                showError('major_id', 'Vui lòng chọn ngành muốn học');
-                isValid = false;
-            } else {
-                hideError('major_id');
-            }
-
-            // Validate hệ đào tạo
-            if (!programSelect.value) {
-                showError('program_id', 'Vui lòng chọn hệ đào tạo');
-                isValid = false;
-            } else {
-                hideError('program_id');
-            }
-
-            // Validate đợt tuyển
             if (!intakeSelect.value) {
-                showError('intake_select', 'Vui lòng chọn đợt tuyển');
+                showError('intake_id', 'Vui lòng chọn đợt tuyển');
                 isValid = false;
             } else {
-                hideError('intake_select');
+                hideError('intake_id');
+            }
+
+            if (!quotaSelect.value) {
+                showError('quota_id', 'Vui lòng chọn chương trình đào tạo');
+                isValid = false;
+            } else {
+                hideError('quota_id');
             }
 
             return isValid;
         }
 
-        // Event listener cho form submit
         form.addEventListener('submit', function(e) {
             if (!validateForm()) {
                 e.preventDefault();
-                // Scroll đến field lỗi đầu tiên
                 const firstError = document.querySelector('.border-red-500');
                 if (firstError) {
                     firstError.scrollIntoView({
@@ -183,110 +141,55 @@
             }
         });
 
-        // Event listeners cho các field để ẩn lỗi khi user bắt đầu nhập
-        majorSelect.addEventListener('change', function() {
-            hideError('major_id');
+        intakeSelect.addEventListener('change', function() {
+            hideError('intake_id');
+            
+            const selectedIntakeId = this.value;
+            quotaSelect.innerHTML = '<option value="">-- Chọn chương trình đào tạo --</option>';
+            
+            if (!selectedIntakeId) {
+                quotaSelect.disabled = true;
+                return;
+            }
 
-            const selectedMajorId = this.value;
-            const selectedMajor = majorsData.find(function(m) {
-                return m.id == selectedMajorId;
-            });
+            const selectedIntake = intakesData.find(i => i.id == selectedIntakeId);
+            
+            if (selectedIntake && selectedIntake.quotas && selectedIntake.quotas.length > 0) {
+                quotaSelect.disabled = false;
+                selectedIntake.quotas.forEach(function(quota) {
+                    const availableSlots = Number(quota.available_slots ?? 0);
+                    const isActive = quota.status === 'active';
+                    const isOpen = isActive && availableSlots > 0;
 
-            if (selectedMajor) {
-                // Cập nhật đợt tuyển theo ngành: chỉ dùng đợt tuyển (intakes), không dùng tháng 1–12
-                intakeSelect.textContent = '';
-                const defaultIntakeOption = document.createElement('option');
-                defaultIntakeOption.value = '';
-                defaultIntakeOption.textContent = '-- Chọn đợt tuyển --';
-                intakeSelect.appendChild(defaultIntakeOption);
-                intakeSelect.setAttribute('name', 'intake_id');
-                if (selectedMajor.intakes && selectedMajor.intakes.length > 0) {
-                    selectedMajor.intakes.forEach(function(i) {
-                        const option = document.createElement('option');
-                        option.value = i.id;
-                        option.textContent = i.name + ' (từ ' + formatDateStr(i.start_date) + ' đến ' + formatDateStr(i.end_date) + ')';
-                        intakeSelect.appendChild(option);
-                    });
-                }
-                if (oldIntakeId && intakeSelect.querySelector('option[value="' + oldIntakeId + '"]')) {
-                    intakeSelect.value = oldIntakeId;
-                }
+                    let statusText = '';
+                    if (!isActive) {
+                        statusText = ' - Tạm dừng';
+                    } else if (availableSlots <= 0) {
+                        statusText = ' - Đã đủ chỉ tiêu';
+                    }
 
-                // Reset và cập nhật hệ đào tạo theo ngành đã chọn
-                programSelect.textContent = '';
-                const defaultProgramOption = document.createElement('option');
-                defaultProgramOption.value = '';
-                defaultProgramOption.textContent = '-- Chọn hệ đào tạo --';
-                programSelect.appendChild(defaultProgramOption);
-
-                if (selectedMajor.programs && selectedMajor.programs.length > 0) {
-                    selectedMajor.programs.forEach(function(program) {
-                        const option = document.createElement('option');
-                        option.value = program.id;
-                        option.textContent = program.name;
-                        programSelect.appendChild(option);
-                    });
-                } else {
-                    // Fallback: hiển thị tất cả hệ đào tạo
-                    programsData.forEach(function(program) {
-                        const option = document.createElement('option');
-                        option.value = program.id;
-                        option.textContent = program.name;
-                        programSelect.appendChild(option);
-                    });
-                }
-
-                // Hiển thị thông báo về hệ đào tạo
-                const programInfo = document.getElementById('program-info');
-                if (programInfo) {
-                    programInfo.remove();
-                }
-
-                const infoDiv = document.createElement('div');
-                infoDiv.id = 'program-info';
-                infoDiv.className = 'mb-3 p-2 bg-blue-100 text-blue-800 rounded text-sm';
-
-                let programNames = 'Tất cả hệ đào tạo';
-                if (selectedMajor.programs && selectedMajor.programs.length > 0) {
-                    programNames = selectedMajor.programs.map(p => p.name).join(', ');
-                } else {
-                    programNames = programsData.map(p => p.name).join(', ');
-                }
-
-                let dotTuyenText = 'Chưa cấu hình';
-                if (selectedMajor.intakes && selectedMajor.intakes.length > 0) {
-                    dotTuyenText = selectedMajor.intakes.map(function(i) {
-                        return i.name + ' (từ ' + formatDateStr(i.start_date) + ' đến ' + formatDateStr(i.end_date) + ')';
-                    }).join('; ');
-                }
+                    const option = document.createElement('option');
+                    option.value = quota.id;
+                    option.textContent = quota.name + ' (Chỉ tiêu còn lại: ' + availableSlots + ')' + statusText;
+                    option.disabled = !isOpen;
+                    quotaSelect.appendChild(option);
+                });
                 
-                // Tránh sử dụng innerHTML đễ ngăn XSS
-                const titleStr = document.createElement('strong');
-                titleStr.textContent = 'Thông tin ngành ' + selectedMajor.name + ':';
-                infoDiv.appendChild(titleStr);
-                infoDiv.appendChild(document.createElement('br'));
-                infoDiv.appendChild(document.createTextNode('Chỉ tiêu: ' + selectedMajor.quota + ' sinh viên'));
-                infoDiv.appendChild(document.createElement('br'));
-                infoDiv.appendChild(document.createTextNode('Đợt tuyển: ' + dotTuyenText));
-                infoDiv.appendChild(document.createElement('br'));
-                infoDiv.appendChild(document.createTextNode('Hệ đào tạo: ' + programNames));
-
-                majorSelect.parentNode.insertBefore(infoDiv, majorSelect.nextSibling);
+                if (oldQuotaId) {
+                    quotaSelect.value = oldQuotaId;
+                }
+            } else {
+                quotaSelect.disabled = true;
+                quotaSelect.innerHTML = '<option value="">-- Không có chương trình nào đang mở --</option>';
             }
         });
 
-        // Event listeners cho các field khác
-        programSelect.addEventListener('change', function() {
-            hideError('program_id');
+        quotaSelect.addEventListener('change', function() {
+            hideError('quota_id');
         });
 
-        intakeSelect.addEventListener('change', function() {
-            hideError('intake_select');
-        });
-
-        // Khi load lại (vd. sau lỗi validation), cập nhật Hệ đào tạo & Đợt tuyển theo major đã chọn
-        if (majorSelect.value) {
-            majorSelect.dispatchEvent(new Event('change'));
+        if (intakeSelect.value) {
+            intakeSelect.dispatchEvent(new Event('change'));
         }
     </script>
 </body>

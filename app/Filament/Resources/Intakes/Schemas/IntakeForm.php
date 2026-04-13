@@ -3,13 +3,15 @@
 namespace App\Filament\Resources\Intakes\Schemas;
 
 use App\Models\Organization;
-use App\Models\Program;
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Hidden;
 use Filament\Schemas\Components\Section;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class IntakeForm {
     public static function configure(Schema $schema): Schema {
@@ -42,13 +44,7 @@ class IntakeForm {
                             ->placeholder('Chọn tổ chức...')
                             ->helperText('Tổ chức sẽ quản lý đợt tuyển sinh này'),
 
-                        Select::make('program_id')
-                            ->label('🎓 Chương trình đào tạo')
-                            ->options(Program::where('is_active', true)->pluck('name', 'id'))
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn chương trình đào tạo (tùy chọn)')
-                            ->helperText('Chương trình đào tạo cho đợt tuyển sinh này'),
+
 
                         Select::make('status')
                             ->label('📋 Trạng thái')
@@ -83,12 +79,12 @@ class IntakeForm {
                             ->helperText('Ngày cuối cùng nhận hồ sơ'),
 
                         DatePicker::make('enrollment_deadline')
-                            ->label('📅 Hạn chót nhập học')
+                            ->label('📅 Hạn chót hoàn thiện hồ sơ (trước nhập học)')
                             ->displayFormat('d/m/Y')
                             ->native(false)
                             ->after('end_date')
                             ->placeholder('Chọn hạn chót nhập học...')
-                            ->helperText('Hạn chót để học viên hoàn tất nhập học'),
+                            ->helperText('Hạn cuối để học viên nộp đủ giấy tờ/hoàn tất hồ sơ trước khi chốt danh sách nhập học'),
                     ])
                     ->columns(3)
                     ->collapsible(),
@@ -97,39 +93,7 @@ class IntakeForm {
                     ->description('Tạo và liên kết chỉ tiêu năm với đợt tuyển sinh này. Chỉ tiêu năm có thể được chia sẻ giữa nhiều đợt trong cùng năm.')
                     ->icon('heroicon-o-chart-bar')
                     ->schema([
-                        Select::make('annual_quota_ids')
-                            ->label('📌 Chỉ tiêu năm đã có sẵn')
-                            ->options(function ($get, $record) {
-                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
-                                $startDate = $get('start_date') ?? ($record?->start_date ?? null);
-                                
-                                if (!$orgId || !$startDate) {
-                                    return [];
-                                }
-                                
-                                $year = \Carbon\Carbon::parse($startDate)->format('Y');
-                                
-                                return \App\Models\AnnualQuota::where('organization_id', $orgId)
-                                    ->where('year', $year)
-                                    ->with(['major', 'program'])
-                                    ->get()
-                                    ->mapWithKeys(function ($quota) {
-                                        $major = $quota->major?->name ?? 'N/A';
-                                        $program = $quota->program?->name ?? 'N/A';
-                                        $target = number_format($quota->target_quota);
-                                        $current = number_format($quota->current_quota);
-                                        $label = "{$major} ({$program}) - {$current}/{$target}";
-                                        return [$quota->id => $label];
-                                    })
-                                    ->toArray();
-                            })
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn các chỉ tiêu năm để liên kết với đợt này...')
-                            ->helperText('Chọn các chỉ tiêu năm đã tạo sẵn để áp dụng cho đợt tuyển sinh này. Để trống = áp dụng tất cả chỉ tiêu năm của tổ chức trong năm.')
-                            ->reactive()
-                            ->columnSpanFull(),
+
 
                         \Filament\Forms\Components\Placeholder::make('annual_quotas_info')
                             ->label('📋 Xem trước chỉ tiêu năm')
@@ -142,22 +106,14 @@ class IntakeForm {
                                 }
 
                                 $year = \Carbon\Carbon::parse($startDate)->format('Y');
-                                $selectedIds = $get('annual_quota_ids') ?? ($record?->annualQuotas?->pluck('id')->toArray() ?? []);
-                                
                                 $query = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                                    ->join('majors', 'annual_quotas.major_id', '=', 'majors.id')
-                                    ->join('programs', 'annual_quotas.program_id', '=', 'programs.id')
-                                    ->where('annual_quotas.organization_id', $orgId)
-                                    ->where('annual_quotas.year', $year);
-                                
-                                if (!empty($selectedIds)) {
-                                    $query->whereIn('annual_quotas.id', $selectedIds);
-                                }
+                                    ->where('organization_id', $orgId)
+                                    ->where('year', $year);
                                 
                                 $quotas = $query->select(
                                         'annual_quotas.id',
-                                        'majors.name as major_name',
-                                        'programs.name as program_name',
+                                        'annual_quotas.major_name',
+                                        'annual_quotas.program_name',
                                         'annual_quotas.target_quota',
                                         'annual_quotas.current_quota',
                                         'annual_quotas.status'
@@ -229,6 +185,87 @@ class IntakeForm {
                             })
                             ->columnSpanFull()
                             ->visible(fn($get) => $get('organization_id') && $get('start_date')),
+                    ])
+                    ->collapsible()
+                    ->collapsed(false),
+
+                Section::make('🎯 Chỉ tiêu theo đợt (ngành + hệ)')
+                    ->description('Mỗi dòng chỉ tiêu thuộc đợt này và chọn từ danh mục dùng chung Ngành/Hệ.')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->schema([
+                        Repeater::make('quotas')
+                            ->label('Danh sách chỉ tiêu')
+                            ->relationship('quotas')
+                            ->defaultItems(0)
+                            ->reorderable(false)
+                            ->collapsed()
+                            ->itemLabel(fn(array $state): ?string => $state['name'] ?? null)
+                            ->schema([
+                                Hidden::make('organization_id')
+                                    ->default(fn($get) => $get('../../organization_id')),
+
+                                TextInput::make('name')
+                                    ->label('Tên chương trình tuyển sinh')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->columnSpanFull(),
+
+                                Select::make('major_name')
+                                    ->label('Ngành')
+                                    ->options(fn() => SchemaFacade::hasTable('majors')
+                                        ? \App\Models\Major::query()
+                                            ->where('is_active', true)
+                                            ->orderBy('name')
+                                            ->pluck('name', 'name')
+                                        : [])
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+
+                                Select::make('program_name')
+                                    ->label('Hệ đào tạo')
+                                    ->options(fn() => SchemaFacade::hasTable('programs')
+                                        ? \App\Models\Program::query()
+                                            ->where('is_active', true)
+                                            ->orderBy('name')
+                                            ->pluck('name', 'name')
+                                        : [])
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+
+                                TextInput::make('target_quota')
+                                    ->label('Chỉ tiêu')
+                                    ->required()
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0),
+
+                                TextInput::make('current_quota')
+                                    ->label('Đã nhập học')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0),
+
+                                TextInput::make('pending_quota')
+                                    ->label('Đang chờ')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0),
+
+                                TextInput::make('reserved_quota')
+                                    ->label('Đặt cọc')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0),
+
+                                Select::make('status')
+                                    ->label('Trạng thái')
+                                    ->options(\App\Models\Quota::getStatusOptions())
+                                    ->required()
+                                    ->default(\App\Models\Quota::STATUS_ACTIVE),
+                            ])
+                            ->columns(2),
                     ])
                     ->collapsible()
                     ->collapsed(false),

@@ -30,24 +30,23 @@ class QuotasTable {
                     ->badge()
                     ->color('info'),
 
-                TextColumn::make('major.name')
+                TextColumn::make('name')
+                    ->label('Tên chương trình')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn($record) => trim($record->major_name . ($record->program_name ? ' - ' . $record->program_name : ''))),
+
+                TextColumn::make('major_name')
                     ->label('Ngành đào tạo')
                     ->searchable()
                     ->sortable()
-                    ->formatStateUsing(function ($record) {
-                        if ($record->major) {
-                            return $record->major->code . ' - ' . $record->major->name;
-                        }
-                        return 'Chưa chọn ngành';
-                    }),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('program.name')
+                TextColumn::make('program_name')
                     ->label('Hệ đào tạo')
                     ->searchable()
                     ->sortable()
-                    ->placeholder('Chưa chọn')
-                    ->badge()
-                    ->color('warning'),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('intake.start_date')
                     ->label('Năm')
@@ -128,17 +127,7 @@ class QuotasTable {
                     ->searchable()
                     ->preload(),
 
-                \Filament\Tables\Filters\SelectFilter::make('major_id')
-                    ->label('Ngành học')
-                    ->relationship('major', 'name')
-                    ->searchable()
-                    ->preload(),
 
-                \Filament\Tables\Filters\SelectFilter::make('program_id')
-                    ->label('Hệ đào tạo')
-                    ->relationship('program', 'name')
-                    ->searchable()
-                    ->preload(),
 
             ])
             ->recordActions([

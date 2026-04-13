@@ -41,7 +41,7 @@ class AnnualQuotaResource extends Resource {
     }
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
-        $q = parent::getEloquentQuery()->with(['organization', 'major', 'program']);
+        $q = parent::getEloquentQuery()->with(['organization']);
         $user = \Illuminate\Support\Facades\Auth::user();
         if (!$user) {
             return $q->whereNull('id');

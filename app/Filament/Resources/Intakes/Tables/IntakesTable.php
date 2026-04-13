@@ -29,13 +29,6 @@ class IntakesTable {
                     ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
                         !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
 
-                TextColumn::make('program.name')
-                    ->label('Chương trình đào tạo')
-                    ->searchable()
-                    ->sortable()
-                    ->placeholder('Chưa chọn')
-                    ->badge()
-                    ->color(fn($state) => $state ? 'success' : 'gray'),
 
                 BadgeColumn::make('status')
                     ->label('Trạng thái')
@@ -62,27 +55,26 @@ class IntakesTable {
                 TextColumn::make('majors_recruiting')
                     ->label('Ngành tuyển sinh')
                     ->getStateUsing(function ($record) {
-                        // Ưu tiên: Lấy từ relationship (đã liên kết cụ thể)
-                        $linkedQuotas = $record->annualQuotas()
-                            ->where('status', \App\Models\AnnualQuota::STATUS_ACTIVE)
-                            ->with('major')
+                        // Ưu tiên: Lấy từ relationship (Quotas đã tạo cho đợt tuyển này)
+                        $linkedQuotas = $record->quotas()
+                            ->where('status', \App\Models\Quota::STATUS_ACTIVE)
                             ->get();
 
                         if ($linkedQuotas->isNotEmpty()) {
-                            $majors = $linkedQuotas->pluck('major.name')->unique()->filter()->toArray();
-                            return implode(', ', $majors);
+                            $majors = $linkedQuotas->pluck('major_name')->unique()->filter()->toArray();
+                            return !empty($majors) ? implode(', ', $majors) : 'Chưa cấu hình';
                         }
 
                         // Fallback: Lấy tất cả annual_quotas của năm đó (chưa liên kết cụ thể)
                         $year = $record->start_date?->format('Y') ?? now()->format('Y');
                         $majors = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                            ->join('majors', 'annual_quotas.major_id', '=', 'majors.id')
-                            ->where('annual_quotas.organization_id', $record->organization_id)
-                            ->where('annual_quotas.year', $year)
-                            ->where('annual_quotas.status', \App\Models\AnnualQuota::STATUS_ACTIVE)
-                            ->select('majors.name')
+                            ->where('organization_id', $record->organization_id)
+                            ->where('year', $year)
+                            ->where('status', \App\Models\AnnualQuota::STATUS_ACTIVE)
+                            ->select('major_name')
                             ->distinct()
-                            ->pluck('name')
+                            ->pluck('major_name')
+                            ->filter()
                             ->toArray();
                         
                         if (empty($majors)) {
@@ -92,16 +84,15 @@ class IntakesTable {
                     })
                     ->wrap()
                     ->tooltip(function ($record) {
-                        $linkedQuotas = $record->annualQuotas()
-                            ->where('status', \App\Models\AnnualQuota::STATUS_ACTIVE)
-                            ->with(['major', 'program'])
+                        $linkedQuotas = $record->quotas()
+                            ->where('status', \App\Models\Quota::STATUS_ACTIVE)
                             ->get();
 
                         if ($linkedQuotas->isNotEmpty()) {
                             $lines = ['✅ Đã chỉ định đợt tuyển cụ thể:'];
                             foreach ($linkedQuotas as $q) {
                                 $remaining = $q->target_quota - $q->current_quota;
-                                $lines[] = "• {$q->major?->name} ({$q->program?->name}): {$q->current_quota}/{$q->target_quota} (còn {$remaining})";
+                                $lines[] = "• {$q->major_name} ({$q->program_name}): {$q->current_quota}/{$q->target_quota} (còn {$remaining})";
                             }
                             return implode("\n", $lines);
                         }
@@ -109,12 +100,10 @@ class IntakesTable {
                         // Fallback
                         $year = $record->start_date?->format('Y') ?? now()->format('Y');
                         $details = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                            ->join('majors', 'annual_quotas.major_id', '=', 'majors.id')
-                            ->join('programs', 'annual_quotas.program_id', '=', 'programs.id')
-                            ->where('annual_quotas.organization_id', $record->organization_id)
-                            ->where('annual_quotas.year', $year)
-                            ->where('annual_quotas.status', \App\Models\AnnualQuota::STATUS_ACTIVE)
-                            ->select('majors.name as major_name', 'programs.name as program_name', 'annual_quotas.target_quota', 'annual_quotas.current_quota')
+                            ->where('organization_id', $record->organization_id)
+                            ->where('year', $year)
+                            ->where('status', \App\Models\AnnualQuota::STATUS_ACTIVE)
+                            ->select('major_name', 'program_name', 'target_quota', 'current_quota')
                             ->get();
                         
                         if ($details->isEmpty()) {
@@ -170,11 +159,7 @@ class IntakesTable {
                     ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
                         !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
 
-                \Filament\Tables\Filters\SelectFilter::make('program_id')
-                    ->label('Chương trình đào tạo')
-                    ->relationship('program', 'name')
-                    ->searchable()
-                    ->preload(),
+
             ])
             ->recordActions([
                 EditAction::make()

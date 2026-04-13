@@ -15,9 +15,10 @@ class AnnualQuota extends Model {
     protected $table = 'annual_quotas';
 
     protected $fillable = [
+        'name',
+        'major_name',
+        'program_name',
         'organization_id',
-        'major_id',
-        'program_id',
         'year',
         'target_quota',
         'current_quota',
@@ -41,21 +42,7 @@ class AnnualQuota extends Model {
         return $this->belongsTo(Organization::class);
     }
 
-    public function major() {
-        return $this->belongsTo(Major::class);
-    }
 
-    public function program() {
-        return $this->belongsTo(Program::class);
-    }
-
-    /**
-     * Các đợt tuyển sinh áp dụng chỉ tiêu này
-     */
-    public function intakes() {
-        return $this->belongsToMany(Intake::class, 'annual_quota_intake')
-            ->withTimestamps();
-    }
 
     public function getAvailableSlotsAttribute(): int {
         return max(0, $this->target_quota - $this->current_quota);

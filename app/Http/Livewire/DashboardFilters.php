@@ -4,7 +4,7 @@ namespace App\Http\Livewire;
 
 use Livewire\Component;
 use App\Models\Organization;
-use App\Models\Major;
+
 
 class DashboardFilters extends Component {
     public array $filters = [
@@ -33,7 +33,12 @@ class DashboardFilters extends Component {
 
     public function render() {
         $organizations = Organization::query()->orderBy('name')->get(['id', 'name']);
-        $majors = Major::query()->orderBy('name')->get(['id', 'name']);
+        $majors = \Illuminate\Support\Facades\DB::table('quotas')
+            ->select('major_name as id', 'major_name as name')
+            ->whereNotNull('major_name')
+            ->distinct()
+            ->orderBy('major_name')
+            ->get();
         return view('livewire.dashboard-filters', compact('organizations', 'majors'));
     }
 }

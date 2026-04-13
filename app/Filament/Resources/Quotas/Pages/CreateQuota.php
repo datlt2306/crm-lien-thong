@@ -39,7 +39,6 @@ class CreateQuota extends CreateRecord {
                 'start_date' => $start,
                 'end_date' => $end,
                 'organization_id' => $orgId,
-                'program_id' => $data['program_id'] ?? null,
                 'status' => Intake::STATUS_ACTIVE,
             ]);
         }
