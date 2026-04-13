@@ -106,7 +106,7 @@ class StudentResource extends Resource {
     }
 
     public static function getNavigationBadgeTooltip(): ?string {
-        return 'The number of students';
+        return 'Số lượng học viên';
     }
 
     public static function getEloquentQuery(): Builder {
