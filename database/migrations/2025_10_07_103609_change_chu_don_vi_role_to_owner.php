@@ -57,22 +57,6 @@ return new class extends Migration {
 
             // Cập nhật dữ liệu trong bảng roles (Spatie Permission)
             DB::table('roles')->where('name', 'chủ đơn vị')->update(['name' => 'owner']);
-
-            // Cập nhật dữ liệu trong bảng model_has_roles
-            DB::table('model_has_roles')->where('role_id', function ($query) {
-                $query->select('id')->from('roles')->where('name', 'chủ đơn vị');
-            })->update(['role_id' => function ($query) {
-                $query->select('id')->from('roles')->where('name', 'owner');
-            }]);
-
-            // Sau đó sử dụng cách thông thường
-            Schema::table('users', function (Blueprint $table) {
-                $table->dropColumn('role');
-            });
-
-            Schema::table('users', function (Blueprint $table) {
-                $table->enum('role', ['super_admin', 'owner', 'ctv', 'kế toán'])->default('ctv');
-            });
         }
     }
 
@@ -85,13 +69,6 @@ return new class extends Migration {
 
         // Cập nhật dữ liệu trong bảng roles (Spatie Permission) - rollback
         DB::table('roles')->where('name', 'owner')->update(['name' => 'chủ đơn vị']);
-
-        // Cập nhật dữ liệu trong bảng model_has_roles - rollback
-        DB::table('model_has_roles')->where('role_id', function ($query) {
-            $query->select('id')->from('roles')->where('name', 'owner');
-        })->update(['role_id' => function ($query) {
-            $query->select('id')->from('roles')->where('name', 'chủ đơn vị');
-        }]);
 
         if (DB::getDriverName() === 'sqlite') {
             // Tạo lại bảng với constraint cũ
@@ -114,13 +91,7 @@ return new class extends Migration {
             DB::statement('ALTER TABLE users_old RENAME TO users');
             DB::statement('CREATE UNIQUE INDEX "users_email_unique" on "users" ("email")');
         } else {
-            Schema::table('users', function (Blueprint $table) {
-                $table->dropColumn('role');
-            });
-
-            Schema::table('users', function (Blueprint $table) {
-                $table->enum('role', ['super_admin', 'chủ đơn vị', 'ctv', 'kế toán'])->default('ctv');
-            });
+            // Với MySQL/PostgreSQL, rollback dữ liệu là đủ vì role_id không đổi.
         }
     }
 };

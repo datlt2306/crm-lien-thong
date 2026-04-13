@@ -9,6 +9,11 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void {
+        if (Schema::hasTable('wallets')) {
+            // Tránh drop/recreate vì wallets đang được bảng khác tham chiếu.
+            return;
+        }
+
         // Tạo lại bảng wallets với cấu trúc đúng
         Schema::dropIfExists('wallets');
 

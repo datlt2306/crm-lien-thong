@@ -12,7 +12,7 @@ return new class extends Migration {
             ->select('email', DB::raw('COUNT(*) as cnt'))
             ->whereNotNull('email')
             ->groupBy('email')
-            ->having('cnt', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->exists();
 
         if (!$hasDuplicates && Schema::hasColumn('students', 'email')) {

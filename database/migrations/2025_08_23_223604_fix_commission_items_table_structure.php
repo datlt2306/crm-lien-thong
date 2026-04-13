@@ -9,6 +9,12 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void {
+        if (Schema::hasTable('commission_items')) {
+            // Bảng đã tồn tại và đang được tham chiếu bởi FK khác.
+            // Tránh drop/recreate để không phá vỡ migrate trên PostgreSQL.
+            return;
+        }
+
         // Tạo lại bảng commission_items với cấu trúc đúng
         Schema::dropIfExists('commission_items');
 

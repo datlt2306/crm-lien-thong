@@ -12,13 +12,23 @@ return new class extends Migration {
     public function up(): void {
         // Sửa lỗi index trong commission_items
         // Kiểm tra xem index có tồn tại không trước khi xóa
-        $indexes = DB::select("PRAGMA index_list(commission_items)");
         $indexExists = false;
 
-        foreach ($indexes as $index) {
-            if ($index->name === 'commission_items_status_recipient_id_index') {
-                $indexExists = true;
-                break;
+        if (DB::getDriverName() === 'pgsql') {
+            $indexes = DB::select("SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'commission_items'");
+            foreach ($indexes as $index) {
+                if ($index->indexname === 'commission_items_status_recipient_id_index') {
+                    $indexExists = true;
+                    break;
+                }
+            }
+        } else {
+            $indexes = DB::select("PRAGMA index_list(commission_items)");
+            foreach ($indexes as $index) {
+                if ($index->name === 'commission_items_status_recipient_id_index') {
+                    $indexExists = true;
+                    break;
+                }
             }
         }
 

@@ -11,7 +11,7 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('wallets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('collaborator_id')->constrained('collaborators')->onDelete('cascade');
+            $table->unsignedBigInteger('collaborator_id');
             $table->decimal('balance', 15, 2)->default(0);
             $table->decimal('total_received', 15, 2)->default(0);
             $table->decimal('total_paid', 15, 2)->default(0);

@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->string('description');
             $table->json('meta')->nullable(); // Lưu thông tin bổ sung
             $table->foreignId('related_wallet_id')->nullable()->constrained('wallets')->onDelete('set null'); // Wallet liên quan (cho transfer)
-            $table->foreignId('commission_item_id')->nullable()->constrained('commission_items')->onDelete('set null'); // Liên kết với commission
+            $table->unsignedBigInteger('commission_item_id')->nullable(); // Liên kết với commission
             $table->timestamps();
         });
     }

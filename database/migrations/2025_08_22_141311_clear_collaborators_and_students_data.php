@@ -12,8 +12,10 @@ return new class extends Migration {
     public function up(): void {
         // Xóa dữ liệu theo thứ tự để tránh lỗi foreign key constraint
 
-        // 1. Xóa commission items liên quan đến students
-        DB::table('commission_items')->whereNotNull('student_id')->delete();
+        // 1. Xóa commission items liên quan đến students (schema cũ)
+        if (Schema::hasColumn('commission_items', 'student_id')) {
+            DB::table('commission_items')->whereNotNull('student_id')->delete();
+        }
 
         // 2. Xóa payments liên quan đến students
         DB::table('payments')->whereNotNull('student_id')->delete();
@@ -22,7 +24,11 @@ return new class extends Migration {
         DB::table('students')->delete();
 
         // 4. Xóa commission items liên quan đến collaborators
-        DB::table('commission_items')->whereNotNull('recipient_id')->delete();
+        if (Schema::hasColumn('commission_items', 'recipient_collaborator_id')) {
+            DB::table('commission_items')->whereNotNull('recipient_collaborator_id')->delete();
+        } elseif (Schema::hasColumn('commission_items', 'recipient_id')) {
+            DB::table('commission_items')->whereNotNull('recipient_id')->delete();
+        }
 
         // 5. Xóa wallets liên quan đến collaborators
         DB::table('wallets')->whereNotNull('collaborator_id')->delete();

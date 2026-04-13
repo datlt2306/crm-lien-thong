@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
@@ -9,9 +10,17 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE commission_items DROP CONSTRAINT IF EXISTS commission_items_status_check");
+            DB::statement("ALTER TABLE commission_items ADD CONSTRAINT commission_items_status_check CHECK (status IN ('pending', 'payable', 'paid', 'cancelled', 'payment_confirmed', 'received_confirmed'))");
+            DB::statement("ALTER TABLE commission_items ALTER COLUMN status SET DEFAULT 'pending'");
+        }
+
         Schema::table('commission_items', function (Blueprint $table) {
             // Thêm trạng thái mới cho quy trình 2 bước
-            $table->enum('status', ['pending', 'payable', 'paid', 'cancelled', 'payment_confirmed', 'received_confirmed'])->default('pending')->change();
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->enum('status', ['pending', 'payable', 'paid', 'cancelled', 'payment_confirmed', 'received_confirmed'])->default('pending')->change();
+            }
 
             // Thêm trường cho bill thanh toán
             $table->string('payment_bill_path')->nullable()->after('status')->comment('Đường dẫn bill thanh toán');
@@ -34,7 +43,15 @@ return new class extends Migration {
             $table->dropForeign(['payment_confirmed_by']);
             $table->dropForeign(['received_confirmed_by']);
             $table->dropColumn(['payment_bill_path', 'payment_confirmed_at', 'payment_confirmed_by', 'received_confirmed_at', 'received_confirmed_by']);
-            $table->enum('status', ['pending', 'payable', 'paid', 'cancelled'])->default('pending')->change();
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->enum('status', ['pending', 'payable', 'paid', 'cancelled'])->default('pending')->change();
+            }
         });
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE commission_items DROP CONSTRAINT IF EXISTS commission_items_status_check");
+            DB::statement("ALTER TABLE commission_items ADD CONSTRAINT commission_items_status_check CHECK (status IN ('pending', 'payable', 'paid', 'cancelled'))");
+            DB::statement("ALTER TABLE commission_items ALTER COLUMN status SET DEFAULT 'pending'");
+        }
     }
 };

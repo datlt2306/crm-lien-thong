@@ -12,7 +12,15 @@ return new class extends Migration {
         Schema::table('students', function (Blueprint $table) {
             $table->unsignedBigInteger('intake_id')->nullable()->after('major_id');
             $table->foreign('intake_id')->references('id')->on('intakes')->onDelete('set null');
-            $table->index(['intake_id', 'major_id']);
+        });
+
+        Schema::table('students', function (Blueprint $table) {
+            if (Schema::hasColumn('students', 'major_id')) {
+                $table->index(['intake_id', 'major_id']);
+                return;
+            }
+
+            $table->index('intake_id');
         });
     }
 
@@ -22,7 +30,6 @@ return new class extends Migration {
     public function down(): void {
         Schema::table('students', function (Blueprint $table) {
             $table->dropForeign(['intake_id']);
-            $table->dropIndex(['intake_id', 'major_id']);
             $table->dropColumn('intake_id');
         });
     }

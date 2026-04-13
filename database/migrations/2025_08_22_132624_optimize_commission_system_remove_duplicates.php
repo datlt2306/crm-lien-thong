@@ -11,7 +11,7 @@ return new class extends Migration {
     public function up(): void {
         // 1. Thêm index để tối ưu performance
         Schema::table('commission_items', function (Blueprint $table) {
-            $table->index(['status', 'recipient_id']);
+            $table->index(['status', 'recipient_collaborator_id']);
             $table->index(['status', 'trigger']);
             $table->index(['payable_at']);
         });
@@ -23,7 +23,7 @@ return new class extends Migration {
 
         Schema::table('wallet_transactions', function (Blueprint $table) {
             $table->index(['wallet_id', 'created_at']);
-            $table->index(['transaction_type']);
+            $table->index(['type']);
         });
 
         Schema::table('downline_commission_configs', function (Blueprint $table) {
@@ -85,7 +85,7 @@ return new class extends Migration {
 
         Schema::table('wallet_transactions', function (Blueprint $table) {
             $table->dropIndex(['wallet_id', 'created_at']);
-            $table->dropIndex(['transaction_type']);
+            $table->dropIndex(['type']);
         });
 
         Schema::table('payments', function (Blueprint $table) {
@@ -94,7 +94,7 @@ return new class extends Migration {
         });
 
         Schema::table('commission_items', function (Blueprint $table) {
-            $table->dropIndex(['status', 'recipient_id']);
+            $table->dropIndex(['status', 'recipient_collaborator_id']);
             $table->dropIndex(['status', 'trigger']);
             $table->dropIndex(['payable_at']);
         });

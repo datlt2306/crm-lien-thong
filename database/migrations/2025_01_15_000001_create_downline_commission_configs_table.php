@@ -11,8 +11,8 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('downline_commission_configs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('upline_collaborator_id')->constrained('collaborators')->onDelete('cascade');
-            $table->foreignId('downline_collaborator_id')->constrained('collaborators')->onDelete('cascade');
+            $table->unsignedBigInteger('upline_collaborator_id');
+            $table->unsignedBigInteger('downline_collaborator_id');
             $table->decimal('cq_amount', 10, 2)->default(0); // Số tiền cho hệ Chính quy
             $table->decimal('vhvlv_amount', 10, 2)->default(0); // Số tiền cho hệ VHVLV
             $table->enum('payment_type', ['immediate', 'on_enrollment'])->default('immediate'); // Trả ngay hoặc trả khi nhập học
