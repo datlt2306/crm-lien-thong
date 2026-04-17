@@ -123,6 +123,7 @@ class CommissionPoliciesTable {
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy'),
                 ]),
-            ]);
+            ])
+            ->defaultSort('id', 'desc');
     }
 }

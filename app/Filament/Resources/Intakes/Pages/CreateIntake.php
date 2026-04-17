@@ -61,6 +61,26 @@ class CreateIntake extends CreateRecord {
                 ->sum('target_quota');
 
             $remainingTarget = max(0, (int) $annual->target_quota - (int) $allocatedToOtherIntakes);
+            $requestedTarget = data_get($intake->settings, 'intake_target_quota');
+            $requestedTarget = is_numeric($requestedTarget) ? max(0, (int) $requestedTarget) : null;
+            $targetForIntake = $remainingTarget;
+
+            if (!is_null($requestedTarget)) {
+                if ($requestedTarget > $remainingTarget) {
+                    Notification::make()
+                        ->title('Chỉ tiêu đợt vượt mức còn lại')
+                        ->body("Bạn nhập {$requestedTarget}, nhưng chỉ còn {$remainingTarget} theo chỉ tiêu năm. Hệ thống tự giới hạn về {$remainingTarget}.")
+                        ->warning()
+                        ->send();
+                } else {
+                    $targetForIntake = $requestedTarget;
+                }
+            }
+
+            $settings = (array) ($intake->settings ?? []);
+            data_set($settings, 'intake_target_quota', $targetForIntake);
+            $intake->forceFill(['settings' => $settings])->saveQuietly();
+
             $mappedStatus = match ($annual->status) {
                 AnnualQuota::STATUS_FULL => Quota::STATUS_FULL,
                 AnnualQuota::STATUS_INACTIVE => Quota::STATUS_INACTIVE,
@@ -76,7 +96,7 @@ class CreateIntake extends CreateRecord {
                 ],
                 [
                     'name' => $annual->name ?: ($annual->major_name ?? 'Chỉ tiêu tuyển sinh'),
-                    'target_quota' => $remainingTarget,
+                    'target_quota' => $targetForIntake,
                     'status' => $mappedStatus,
                     'notes' => $annual->notes,
                 ]

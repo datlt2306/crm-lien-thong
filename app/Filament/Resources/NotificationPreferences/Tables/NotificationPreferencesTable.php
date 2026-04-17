@@ -9,6 +9,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Table;
 
 class NotificationPreferencesTable {
@@ -81,6 +83,16 @@ class NotificationPreferencesTable {
                     ->button()
                     ->size('sm')
                     ->tooltip('Các hành động khả dụng')
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa tùy chọn thông báo đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các tùy chọn đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy'),
+                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }

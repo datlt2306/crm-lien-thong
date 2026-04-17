@@ -11,8 +11,6 @@ use App\Services\CollaboratorValidationService;
 class CreateUser extends CreateRecord {
     protected static string $resource = UserResource::class;
 
-    protected $selectedOrganizationId = null;
-
     public function mount(): void {
         parent::mount();
 
@@ -43,20 +41,8 @@ class CreateUser extends CreateRecord {
             $data['role'] = 'ctv';
         }
 
-        // Lưu organization_id trực tiếp vào users
-        $currentUser = \Illuminate\Support\Facades\Auth::user();
-        if ($currentUser && $currentUser->role === 'organization_owner') {
-            // Owner: luôn gán user mới vào đơn vị của owner
-            $org = \App\Models\Organization::where('organization_owner_id', $currentUser->id)->first();
-            if ($org) {
-                $data['organization_id'] = $org->id;
-                $this->selectedOrganizationId = $org->id;
-            }
-        } else {
-            if (isset($data['organization_id'])) {
-                $this->selectedOrganizationId = $data['organization_id'];
-            }
-        }
+        // Single-organization: luôn gán tổ chức mặc định.
+        $data['organization_id'] = \App\Models\Organization::query()->value('id');
 
         // Loại bỏ password_confirmation khỏi data
         unset($data['password_confirmation']);
@@ -73,6 +59,20 @@ class CreateUser extends CreateRecord {
             $file = request()->file('components.avatar');
             $path = $file->store('avatars', 'public');
             $user->update(['avatar' => $path]);
+        }
+
+        // Đồng bộ collaborator cho user CTV trong mô hình single-organization.
+        if (($user->role ?? null) === 'ctv') {
+            CollaboratorValidationService::validateForCreation($user->email, $user->phone);
+            \App\Models\Collaborator::updateOrCreate(
+                ['email' => $user->email],
+                [
+                    'full_name' => $user->name,
+                    'phone' => $user->phone,
+                    'organization_id' => \App\Models\Organization::query()->value('id'),
+                    'status' => 'active',
+                ]
+            );
         }
 
         return $user;

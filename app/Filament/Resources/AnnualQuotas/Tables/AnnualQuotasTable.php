@@ -27,11 +27,6 @@ class AnnualQuotasTable {
         return $table
             ->recordUrl(fn($r) => ($canEdit && $r) ? \App\Filament\Resources\AnnualQuotas\AnnualQuotaResource::getUrl('edit', ['record' => $r]) : null)
             ->columns([
-                TextColumn::make('organization.name')
-                    ->label('Tổ chức')
-                    ->searchable()
-                    ->sortable(),
-
                 TextColumn::make('major_name')
                     ->label('Ngành')
                     ->searchable()
@@ -79,11 +74,6 @@ class AnnualQuotasTable {
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload(),
                 \Filament\Tables\Filters\SelectFilter::make('major_name')
                     ->label('Ngành')
                     ->options(fn() => \Illuminate\Support\Facades\DB::table('annual_quotas')->whereNotNull('major_name')->distinct()->pluck('major_name', 'major_name')->toArray())

@@ -33,6 +33,7 @@ class IntakeQuotasTable {
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('id', 'desc');
     }
 }

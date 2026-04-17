@@ -6,18 +6,117 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký xét tuyển - Liên thông Đại học</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            background: linear-gradient(to bottom, #f8fafc, #eef2ff);
+            color: #0f172a;
+            min-height: 100vh;
+            padding: 24px 14px;
+        }
+        .wrap { max-width: 760px; margin: 0 auto; }
+        .card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, .08);
+        }
+        .hero {
+            padding: 22px 24px;
+            background: #0f172a;
+            color: #fff;
+        }
+        .hero h1 { margin: 0 0 6px; font-size: 28px; }
+        .hero p { margin: 0; font-size: 14px; color: #cbd5e1; }
+        .content { padding: 20px; }
+        .alert {
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            font-size: 14px;
+        }
+        .alert-success { background: #ecfdf5; border: 1px solid #86efac; color: #166534; }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+        .alert-error ul { margin: 0; padding-left: 18px; }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .field { margin-bottom: 2px; }
+        .field.full { grid-column: 1 / -1; }
+        .label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .req { color: #dc2626; }
+        .field-input, .field-select, .field-textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 11px 12px;
+            font-size: 15px;
+            background: #fff;
+            outline: none;
+        }
+        .field-textarea { min-height: 104px; resize: vertical; }
+        .field-input:focus, .field-select:focus, .field-textarea:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .16);
+        }
+        .helper { margin-top: 5px; font-size: 12px; color: #64748b; }
+        .submit {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(to right, #2563eb, #4f46e5);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .submit:hover { filter: brightness(1.05); }
+        .footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 14px;
+        }
+        .hidden { display: none; }
+        .text-red-500 { color: #dc2626; }
+        .text-sm { font-size: 12px; }
+        .mt-1 { margin-top: 4px; }
+        .border-red-500 { border-color: #dc2626 !important; box-shadow: 0 0 0 3px rgba(220, 38, 38, .14) !important; }
+        @media (max-width: 720px) {
+            .grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 24px; }
+            .content { padding: 16px; }
+        }
+    </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
-        <h1 class="text-2xl font-bold mb-4 text-center">Đăng ký <span class="font-semibold text-green-600">{{ e($collaborator->organization->name ?? 'N/A') }}</span></h1>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <div class="hero">
+                <h1>Đăng ký xét tuyển liên thông</h1>
+                <p>Điền thông tin để gửi hồ sơ đăng ký nhanh cho bộ phận tuyển sinh.</p>
+            </div>
+            <div class="content">
         @if($success)
-        <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center">{{ $success }}</div>
+        <div class="alert alert-success">{{ $success }}</div>
         @endif
         @if($errors->any())
-        <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
-            <ul class="list-disc pl-5">
+        <div class="alert alert-error">
+            <ul>
                 @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
                 @endforeach
@@ -26,31 +125,33 @@
         @endif
         <form id="student-form" method="POST" action="">
             @csrf
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Họ và tên *</label>
-                <input type="text" name="full_name" value="{{ old('full_name') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
-            </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Số điện thoại *</label>
-                <input type="text" name="phone" value="{{ old('phone') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
-            </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Email</label>
-                <input type="email" name="email" value="{{ old('email') }}" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
+            <div class="grid">
+                <div class="field">
+                    <label class="label">Họ và tên <span class="req">*</span></label>
+                    <input type="text" name="full_name" value="{{ old('full_name') }}" required class="field-input" />
+                </div>
+                <div class="field">
+                    <label class="label">Số điện thoại <span class="req">*</span></label>
+                    <input type="text" name="phone" value="{{ old('phone') }}" required class="field-input" />
+                </div>
+                <div class="field">
+                    <label class="label">Email</label>
+                    <input type="email" name="email" value="{{ old('email') }}" class="field-input" />
+                </div>
+                <div class="field">
+                    <label class="label">Ngày tháng năm sinh <span class="req">*</span></label>
+                    <input type="date" name="dob" value="{{ old('dob') }}" required class="field-input" />
+                </div>
+                <div class="field full">
+                    <label class="label">Địa chỉ <span class="req">*</span></label>
+                    <input type="text" name="address" value="{{ old('address') }}" required class="field-input" />
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Ngày tháng năm sinh *</label>
-                <input type="date" name="dob" value="{{ old('dob') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
-            </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Địa chỉ *</label>
-                <input type="text" name="address" value="{{ old('address') }}" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" />
-            </div>
             <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Đợt tuyển sinh <span class="text-red-500">*</span></label>
-                <select name="intake_id" id="intake_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required>
+            <div class="field" style="margin-top: 10px;">
+                <label class="label">Đợt tuyển sinh <span class="req">*</span></label>
+                <select name="intake_id" id="intake_id" class="field-select" required>
                     <option value="">-- Chọn đợt tuyển --</option>
                     @foreach(($intakes ?? []) as $intake)
                     <option value="{{ e($intake->id) }}" {{ old('intake_id') == $intake->id ? 'selected' : '' }}>
@@ -61,20 +162,22 @@
                 <div id="intake_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
             </div>
 
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Chương trình đào tạo <span class="text-red-500">*</span></label>
-                <select name="quota_id" id="quota_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" required disabled>
+            <div class="field">
+                <label class="label">Chương trình đào tạo <span class="req">*</span></label>
+                <select name="quota_id" id="quota_id" class="field-select" required disabled>
                     <option value="">-- Vui lòng chọn đợt tuyển trước --</option>
                 </select>
                 <div id="quota_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn chương trình đào tạo</div>
             </div>
-            <div class="mb-3">
-                <label class="block font-medium mb-1">Ghi chú</label>
-                <textarea name="notes" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">{{ old('notes') }}</textarea>
+            <div class="field">
+                <label class="label">Ghi chú</label>
+                <textarea name="notes" class="field-textarea">{{ old('notes') }}</textarea>
             </div>
-            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition">Gửi đăng ký</button>
+            <button type="submit" class="submit">Gửi đăng ký</button>
         </form>
-        <p class="mt-4 text-center text-gray-500 text-xs">&copy; {{ date('Y') }} Liên thông Đại học</p>
+        <p class="footer">&copy; {{ date('Y') }} Liên thông Đại học</p>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -84,6 +187,24 @@
 
         const intakesData = @json($intakes ?? []);
         const oldQuotaId = @json(old('quota_id'));
+
+        function getProgramLabel(programCode) {
+            const code = String(programCode || '').trim().toUpperCase();
+
+            if (code === 'REGULAR') {
+                return 'Chính quy';
+            }
+
+            if (code === 'PART_TIME') {
+                return 'Vừa học vừa làm';
+            }
+
+            if (code === 'DISTANCE') {
+                return 'Đào tạo từ xa';
+            }
+
+            return programCode || 'Chưa xác định';
+        }
 
         function showError(fieldId, message) {
             const errorDiv = document.getElementById(fieldId + '_error');
@@ -160,6 +281,8 @@
                     const availableSlots = Number(quota.available_slots ?? 0);
                     const isActive = quota.status === 'active';
                     const isOpen = isActive && availableSlots > 0;
+                    const majorName = quota.major_name || quota.name || 'Chưa xác định';
+                    const programLabel = getProgramLabel(quota.program_name);
 
                     let statusText = '';
                     if (!isActive) {
@@ -170,7 +293,7 @@
 
                     const option = document.createElement('option');
                     option.value = quota.id;
-                    option.textContent = quota.name + ' (Chỉ tiêu còn lại: ' + availableSlots + ')' + statusText;
+                    option.textContent = majorName + ' - ' + programLabel + ' (Chỉ tiêu còn lại: ' + availableSlots + ')' + statusText;
                     option.disabled = !isOpen;
                     quotaSelect.appendChild(option);
                 });

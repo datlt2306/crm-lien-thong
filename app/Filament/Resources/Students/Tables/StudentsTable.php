@@ -869,6 +869,7 @@ class StudentsTable {
                         ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner'])),
                 ]),
             ])
-            ->emptyStateHeading('Không có học viên');
+            ->emptyStateHeading('Không có học viên')
+            ->defaultSort('id', 'desc');
     }
 }

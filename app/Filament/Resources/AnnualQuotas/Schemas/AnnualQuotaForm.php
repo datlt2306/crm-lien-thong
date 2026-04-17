@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AnnualQuotas\Schemas;
 
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
@@ -10,6 +11,30 @@ use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class AnnualQuotaForm {
+    private static function normalizeProgramValue(?string $value): ?string {
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return match (mb_strtolower($normalized)) {
+            'regular', 'chính quy', 'he chinh quy', 'hệ chính quy' => 'REGULAR',
+            'part_time', 'part-time', 'vừa học vừa làm', 'he vua hoc vua lam', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
+            'distance', 'đào tạo từ xa', 'he dao tao tu xa', 'hệ đào tạo từ xa' => 'DISTANCE',
+            default => strtoupper($normalized),
+        };
+    }
+
+    private static function getProgramLabel(?string $value): string {
+        return match (self::normalizeProgramValue($value)) {
+            'REGULAR' => 'Chính quy',
+            'PART_TIME' => 'Vừa học vừa làm',
+            'DISTANCE' => 'Đào tạo từ xa',
+            default => (string) $value,
+        };
+    }
+
     public static function configure(Schema $schema): Schema {
         $year = (int) now()->format('Y');
         return $schema
@@ -17,12 +42,9 @@ class AnnualQuotaForm {
                 Section::make('Chỉ tiêu năm (ngành + hệ)')
                     ->description('Một năm có target (vd 100 CNTT chính quy); chia linh hoạt cho các đợt. Đợt 1 đủ → hết; chưa đủ → chuyển đợt sau.')
                     ->schema([
-                        Select::make('organization_id')
-                            ->label('Tổ chức')
-                            ->relationship('organization', 'name')
-                            ->required()
-                            ->searchable()
-                            ->preload(),
+                        Hidden::make('organization_id')
+                            ->default(fn() => \App\Models\Organization::query()->value('id'))
+                            ->required(),
 
                         Select::make('major_name')
                             ->label('Ngành học')
@@ -43,9 +65,6 @@ class AnnualQuotaForm {
                                     'REGULAR' => 'Chính quy',
                                     'PART_TIME' => 'Vừa học vừa làm',
                                     'DISTANCE' => 'Đào tạo từ xa',
-                                    'Chính quy' => 'Chính quy',
-                                    'Vừa học vừa làm' => 'Vừa học vừa làm',
-                                    'Đào tạo từ xa' => 'Đào tạo từ xa',
                                 ];
 
                                 if (!SchemaFacade::hasTable('programs')) {
@@ -56,10 +75,15 @@ class AnnualQuotaForm {
                                     ->where('is_active', true)
                                     ->orderBy('name')
                                     ->get()
-                                    ->mapWithKeys(fn($program) => [$program->code => $program->name])
+                                    ->mapWithKeys(function ($program) {
+                                        $key = self::normalizeProgramValue($program->code ?: $program->name);
+                                        $label = self::getProgramLabel($program->name ?: $program->code);
+
+                                        return $key ? [$key => $label] : [];
+                                    })
                                     ->toArray();
 
-                                return array_merge($base, $fromPrograms);
+                                return array_replace($base, $fromPrograms);
                             })
                             ->searchable()
                             ->preload()

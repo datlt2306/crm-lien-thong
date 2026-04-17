@@ -41,7 +41,7 @@ class AnnualQuotaResource extends Resource {
     }
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
-        $q = parent::getEloquentQuery()->with(['organization']);
+        $q = parent::getEloquentQuery();
         $user = \Illuminate\Support\Facades\Auth::user();
         if (!$user) {
             return $q->whereNull('id');
@@ -50,12 +50,10 @@ class AnnualQuotaResource extends Resource {
             return $q;
         }
         if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            return $org ? $q->where('organization_id', $org->id) : $q->whereNull('id');
+            return $q;
         }
         if ($user->role === 'ctv') {
-            $c = \App\Models\Collaborator::where('email', $user->email)->first();
-            return ($c && $c->organization) ? $q->where('organization_id', $c->organization_id) : $q->whereNull('id');
+            return $q;
         }
         return $q->whereNull('id');
     }

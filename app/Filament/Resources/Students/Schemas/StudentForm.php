@@ -11,6 +11,7 @@ use App\Models\Collaborator;
 use App\Services\StudentFeeService;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -41,6 +42,12 @@ class StudentForm {
                         Tabs\Tab::make('Thông tin cơ bản')
                             ->icon('heroicon-o-identification')
                             ->schema([
+                                TextInput::make('profile_code')
+                                    ->label('Mã hồ sơ')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->visible(fn(?Student $record) => filled($record?->profile_code))
+                                    ->helperText('Mã hồ sơ được hệ thống tự sinh, không chỉnh sửa thủ công.'),
                                 TextInput::make('full_name')
                                     ->label('Họ và tên')
                                     ->required(),
@@ -104,23 +111,9 @@ class StudentForm {
                                     ->preload()
                                     ->helperText('CTV/Đối tác giới thiệu học viên này')
                                     ->visible(fn($get) => Auth::user()?->role !== 'ctv' && ($get('source') ?? null) === 'ref'),
-                                Select::make('organization_id')
-                                    ->label('Tổ chức')
-                                    ->options(fn() => Organization::orderBy('name')->pluck('name', 'id'))
-                                    ->searchable()
-                                    ->preload()
-                                    ->default(fn() => Auth::user()?->organization_id)
-                                    ->visible(false)
-                                    ->required(false)
-                                    ->helperText('Tổ chức quản lý học viên')
-                                    ->columnSpanFull(),
-                                Select::make('target_university')
-                                    ->label('Trường đăng ký liên thông')
-                                    ->options(fn() => Organization::orderBy('name')->pluck('name', 'name'))
-                                    ->searchable()
-                                    ->preload()
-                                    ->required()
-                                    ->helperText('Chọn trường/tổ chức đào tạo liên thông'),
+                                Hidden::make('organization_id')
+                                    ->default(fn(?Student $record) => $record?->organization_id ?? Organization::query()->value('id'))
+                                    ->dehydrated(true),
                                 \Filament\Forms\Components\Select::make('intake_id')
                                     ->label('Đợt đăng ký liên thông')
                                     ->options(function ($get) {
@@ -136,19 +129,10 @@ class StudentForm {
                                             ->orderBy('start_date')
                                             ->get()
                                             ->mapWithKeys(function ($intake) {
-                                                $programs = $intake->quotas
-                                                    ->pluck('program_name')
-                                                    ->filter()
-                                                    ->unique()
-                                                    ->map(fn($p) => self::getProgramLabel($p))
-                                                    ->values()
-                                                    ->toArray();
-
-                                                $programText = empty($programs)
-                                                    ? 'Chưa cấu hình hệ'
-                                                    : implode(', ', $programs);
-
-                                                $label = "{$intake->name} ({$programText})";
+                                                $start = $intake->start_date?->format('d/m/Y');
+                                                $end = $intake->end_date?->format('d/m/Y');
+                                                $timeText = ($start && $end) ? " ({$start} - {$end})" : '';
+                                                $label = "{$intake->name}{$timeText}";
                                                 return [$intake->id => $label];
                                             });
                                     })

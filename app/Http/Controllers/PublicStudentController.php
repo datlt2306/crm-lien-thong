@@ -41,12 +41,11 @@ class PublicStudentController extends Controller {
             abort(404, 'Cộng tác viên chưa được gán vào tổ chức!');
         }
 
-        $today = now()->toDateString();
-
-        // Lấy danh sách đợt tuyển đang active của đơn vị
+        // Lấy danh sách đợt tuyển có thể đăng ký của đơn vị.
+        // Không khóa cứng theo end_date để tránh trường hợp dữ liệu trạng thái chưa được đồng bộ,
+        // khiến form public bị rỗng dù vẫn còn quota mở.
         $intakes = Intake::where('organization_id', $organization->id)
-            ->where('end_date', '>=', $today)
-            ->where('status', Intake::STATUS_ACTIVE)
+            ->whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING])
             ->with(['quotas' => function ($q) {
                 // List toàn bộ quota thuộc đợt để user nhìn đầy đủ ngành/hệ đang có.
                 // Việc "có đăng ký được hay không" sẽ được thể hiện ở UI (disabled) + validate backend.
@@ -244,5 +243,72 @@ class PublicStudentController extends Controller {
         // Quota sẽ được trừ khi payment được verify (trong PaymentObserver)
 
         return redirect()->back()->with('success', 'Tải lên hóa đơn thành công! Chờ chủ đơn vị xác nhận.');
+    }
+
+    public function showProfileTracking(Request $request, ?string $profile_code = null) {
+        $inputCode = trim((string) ($profile_code ?: $request->query('profile_code', '')));
+        $normalizedCode = strtoupper($inputCode);
+        $student = null;
+
+        if ($normalizedCode !== '') {
+            $student = Student::query()
+                ->with(['intake', 'payment', 'quota', 'collaborator'])
+                ->whereRaw('UPPER(profile_code) = ?', [$normalizedCode])
+                ->first();
+        }
+
+        return view('profile-tracking', [
+            'profileCode' => $normalizedCode,
+            'student' => $student,
+            'statusLabel' => $student ? Student::getStatusOptions()[$student->status] ?? $student->status : null,
+            'applicationStatusLabel' => $student ? $this->mapApplicationStatusLabel($student->application_status) : null,
+            'paymentStatusLabel' => $student?->payment ? $this->mapPaymentStatusLabel($student->payment->status) : null,
+            'programTypeLabel' => $student ? $this->mapProgramTypeLabel($student->program_type ?: $student?->quota?->program_name) : null,
+            'paymentAmountLabel' => $student?->payment ? number_format((float) $student->payment->amount, 0, ',', '.') . ' VNĐ' : 'Chưa cập nhật',
+            'isPaymentVerified' => $student?->payment?->status === Payment::STATUS_VERIFIED,
+        ]);
+    }
+
+    private function mapApplicationStatusLabel(?string $status): string {
+        if (!$status) {
+            return 'Chưa cập nhật';
+        }
+
+        return match ($status) {
+            'draft' => 'Đang nhập',
+            'pending_documents' => 'Thiếu giấy tờ',
+            'submitted' => 'Đã nộp hồ sơ',
+            'verified' => 'Đã xác minh',
+            'eligible' => 'Đủ điều kiện',
+            'ineligible' => 'Không đủ điều kiện',
+            default => $status,
+        };
+    }
+
+    private function mapPaymentStatusLabel(?string $status): string {
+        if (!$status) {
+            return 'Chưa cập nhật';
+        }
+
+        return match ($status) {
+            Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
+            Payment::STATUS_SUBMITTED => 'Chờ xác minh',
+            Payment::STATUS_VERIFIED => 'Đã xác nhận',
+            Payment::STATUS_REVERTED => 'Đã hoàn trả',
+            default => $status,
+        };
+    }
+
+    private function mapProgramTypeLabel(?string $program): string {
+        if (!$program) {
+            return 'Chưa cập nhật';
+        }
+
+        return match (strtoupper(trim($program))) {
+            'REGULAR' => 'Chính quy',
+            'PART_TIME' => 'Vừa học vừa làm',
+            'DISTANCE' => 'Đào tạo từ xa',
+            default => $program,
+        };
     }
 }

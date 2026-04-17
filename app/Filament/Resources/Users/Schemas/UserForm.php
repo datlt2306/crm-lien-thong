@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Schemas\Schema;
 
 class UserForm {
@@ -46,29 +47,9 @@ class UserForm {
                     ])
                     ->validationAttribute('Số điện thoại')
                     ->helperText('Bắt buộc với vai trò CTV. Số điện thoại phải là duy nhất.'),
-                \Filament\Forms\Components\Select::make('organization_id')
-                    ->label('Tổ chức')
-                    ->options(function () {
-                        return \App\Models\Organization::orderBy('name')->pluck('name', 'id')->toArray();
-                    })
-                    ->required()
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->role === 'super_admin')
-                    ->helperText(function ($context) {
-                        return $context === 'create' ? 'Chọn tổ chức cho người dùng mới' : 'Chọn tổ chức cho người dùng';
-                    })
-                    ->default(function ($record) {
-                        if (!$record) return null;
-                        // Ưu tiên users.organization_id nếu đã có
-                        if (!empty($record->organization_id)) {
-                            return $record->organization_id;
-                        }
-                        // Fallback: lấy từ collaborator theo email
-                        if (!empty($record->email)) {
-                            $collaborator = \App\Models\Collaborator::where('email', $record->email)->first();
-                            return $collaborator?->organization_id;
-                        }
-                        return null;
-                    }),
+                Hidden::make('organization_id')
+                    ->default(fn() => \App\Models\Organization::query()->value('id'))
+                    ->required(),
                 \Filament\Forms\Components\Select::make('role')
                     ->label('Vai trò')
                     ->options(function () {

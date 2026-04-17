@@ -31,6 +31,42 @@ class EditIntake extends EditRecord {
         ];
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array {
+        $queryMajor = trim((string) request()->query('major_name', ''));
+        $queryProgram = trim((string) request()->query('program_name', ''));
+        $queryYear = trim((string) request()->query('year', ''));
+
+        if ($queryMajor !== '') {
+            data_set($data, 'settings.annual_quota_major_name', $queryMajor);
+        }
+
+        if ($queryProgram !== '') {
+            data_set($data, 'settings.annual_quota_program_name', $queryProgram);
+        }
+
+        if ($queryYear !== '' && preg_match('/^\d{4}$/', $queryYear) === 1) {
+            data_set($data, 'settings.annual_quota_year', $queryYear);
+        }
+
+        $major = data_get($data, 'settings.annual_quota_major_name');
+        $program = data_get($data, 'settings.annual_quota_program_name');
+        $existingTarget = data_get($data, 'settings.intake_target_quota');
+
+        if ((is_null($existingTarget) || $existingTarget === '') && !empty($major) && !empty($program) && !empty($this->record?->id)) {
+            $quotaTarget = Quota::query()
+                ->where('intake_id', $this->record->id)
+                ->where('major_name', $major)
+                ->where('program_name', $program)
+                ->value('target_quota');
+
+            if (!is_null($quotaTarget)) {
+                data_set($data, 'settings.intake_target_quota', (int) $quotaTarget);
+            }
+        }
+
+        return $data;
+    }
+
     protected function afterSave(): void {
         $intake = $this->record;
         $year = (int) (data_get($intake->settings, 'annual_quota_year')
@@ -69,6 +105,26 @@ class EditIntake extends EditRecord {
                 ->sum('target_quota');
 
             $remainingTarget = max(0, (int) $annual->target_quota - (int) $allocatedToOtherIntakes);
+            $requestedTarget = data_get($intake->settings, 'intake_target_quota');
+            $requestedTarget = is_numeric($requestedTarget) ? max(0, (int) $requestedTarget) : null;
+            $targetForIntake = $remainingTarget;
+
+            if (!is_null($requestedTarget)) {
+                if ($requestedTarget > $remainingTarget) {
+                    Notification::make()
+                        ->title('Chỉ tiêu đợt vượt mức còn lại')
+                        ->body("Bạn nhập {$requestedTarget}, nhưng chỉ còn {$remainingTarget} theo chỉ tiêu năm. Hệ thống tự giới hạn về {$remainingTarget}.")
+                        ->warning()
+                        ->send();
+                } else {
+                    $targetForIntake = $requestedTarget;
+                }
+            }
+
+            $settings = (array) ($intake->settings ?? []);
+            data_set($settings, 'intake_target_quota', $targetForIntake);
+            $intake->forceFill(['settings' => $settings])->saveQuietly();
+
             $mappedStatus = match ($annual->status) {
                 AnnualQuota::STATUS_FULL => Quota::STATUS_FULL,
                 AnnualQuota::STATUS_INACTIVE => Quota::STATUS_INACTIVE,
@@ -84,7 +140,7 @@ class EditIntake extends EditRecord {
                 ],
                 [
                     'name' => $annual->name ?: ($annual->major_name ?? 'Chỉ tiêu tuyển sinh'),
-                    'target_quota' => $remainingTarget,
+                    'target_quota' => $targetForIntake,
                     'status' => $mappedStatus,
                     'notes' => $annual->notes,
                 ]

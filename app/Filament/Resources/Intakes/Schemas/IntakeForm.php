@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources\Intakes\Schemas;
 
-use App\Models\Organization;
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Hidden;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 
 class IntakeForm {
@@ -41,14 +42,10 @@ class IntakeForm {
                             ->helperText('Mô tả về mục tiêu, đối tượng tuyển sinh hoặc yêu cầu đặc biệt')
                             ->columnSpanFull(),
 
-                        Select::make('organization_id')
-                            ->label('🏢 Tổ chức')
-                            ->relationship('organization', 'name')
+                        Hidden::make('organization_id')
                             ->required()
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn tổ chức...')
-                            ->helperText('Tổ chức sẽ quản lý đợt tuyển sinh này'),
+                            ->default(fn($record) => $record?->organization_id ?? \App\Models\Organization::query()->value('id'))
+                            ->dehydrated(true),
 
 
 
@@ -236,6 +233,64 @@ class IntakeForm {
                             ->preload()
                             ->placeholder('Chọn hệ đào tạo...')
                             ->helperText('Chọn hệ tương ứng để xem đúng chỉ tiêu'),
+
+                        TextInput::make('settings.intake_target_quota')
+                            ->label('🎯 Chỉ tiêu theo đợt')
+                            ->numeric()
+                            ->minValue(0)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, callable $set, callable $get, $record): void {
+                                if (!is_numeric($state)) {
+                                    return;
+                                }
+
+                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
+                                $year = (int) ($get('settings.annual_quota_year') ?? 0);
+                                $major = $get('settings.annual_quota_major_name');
+                                $program = $get('settings.annual_quota_program_name');
+
+                                if (!$orgId || !$year || empty($major) || empty($program)) {
+                                    return;
+                                }
+
+                                $annualTarget = (int) \App\Models\AnnualQuota::query()
+                                    ->where('organization_id', $orgId)
+                                    ->where('year', $year)
+                                    ->where('major_name', $major)
+                                    ->where('program_name', $program)
+                                    ->value('target_quota');
+
+                                if ($annualTarget <= 0) {
+                                    $set('settings.intake_target_quota', 0);
+                                    return;
+                                }
+
+                                $allocatedToOtherIntakes = \App\Models\Quota::query()
+                                    ->where('organization_id', $orgId)
+                                    ->when(
+                                        !empty($record?->id),
+                                        fn($query) => $query->where('intake_id', '!=', $record->id)
+                                    )
+                                    ->where('major_name', $major)
+                                    ->where('program_name', $program)
+                                    ->whereHas('intake', fn($query) => $query->whereYear('start_date', $year))
+                                    ->sum('target_quota');
+
+                                $remainingTarget = max(0, $annualTarget - (int) $allocatedToOtherIntakes);
+                                $requested = max(0, (int) $state);
+
+                                if ($requested > $remainingTarget) {
+                                    $set('settings.intake_target_quota', $remainingTarget);
+
+                                    Notification::make()
+                                        ->title('Chỉ tiêu đợt vượt mức còn lại')
+                                        ->body("Bạn nhập {$requested}, nhưng chỉ còn {$remainingTarget} theo chỉ tiêu năm. Hệ thống tự giới hạn về {$remainingTarget}.")
+                                        ->warning()
+                                        ->send();
+                                }
+                            })
+                            ->placeholder('Nhập chỉ tiêu cho riêng đợt này')
+                            ->helperText('Nếu để trống, hệ thống tự lấy phần chỉ tiêu còn lại của năm cho Ngành/Hệ đã chọn.'),
 
 
                         \Filament\Forms\Components\Placeholder::make('annual_quotas_info')

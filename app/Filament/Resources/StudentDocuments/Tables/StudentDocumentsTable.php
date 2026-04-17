@@ -33,6 +33,7 @@ class StudentDocumentsTable {
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('id', 'desc');
     }
 }

@@ -13,8 +13,6 @@ use App\Services\CollaboratorValidationService;
 class EditUser extends EditRecord {
     protected static string $resource = UserResource::class;
 
-    protected $selectedOrganizationId = null;
-
     public function mount(int | string $record): void {
         parent::mount($record);
 
@@ -63,20 +61,8 @@ class EditUser extends EditRecord {
             $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
         }
 
-        // Lưu organization_id trực tiếp vào users
-        $currentUser = \Illuminate\Support\Facades\Auth::user();
-        if ($currentUser && $currentUser->role === 'organization_owner') {
-            // Owner: cưỡng chế user thuộc đơn vị của owner
-            $org = \App\Models\Organization::where('organization_owner_id', $currentUser->id)->first();
-            if ($org) {
-                $this->selectedOrganizationId = $org->id;
-                $data['organization_id'] = $org->id;
-            }
-        } else {
-            if (isset($data['organization_id'])) {
-                $this->selectedOrganizationId = $data['organization_id'];
-            }
-        }
+        // Single-organization: luôn gán tổ chức mặc định.
+        $data['organization_id'] = \App\Models\Organization::query()->value('id');
 
         // Loại bỏ password_confirmation khỏi data
         unset($data['password_confirmation']);
@@ -93,51 +79,39 @@ class EditUser extends EditRecord {
     }
 
     protected function afterSave(): void {
-        // Cập nhật Collaborator record nếu có thay đổi organization_id
-        if ($this->selectedOrganizationId !== null) {
-            $user = $this->record;
-            // Đồng bộ users.organization_id
-            $user->organization_id = $this->selectedOrganizationId;
-            $user->save();
+        $user = $this->record;
+        $defaultOrganizationId = \App\Models\Organization::query()->value('id');
 
-            // Tìm Collaborator record hiện tại
-            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+        $user->organization_id = $defaultOrganizationId;
+        $user->save();
 
-            if ($collaborator) {
-                // Cập nhật organization_id của Collaborator
-                $updatePayload = [
-                    'organization_id' => $this->selectedOrganizationId,
-                    'full_name' => $user->name,
-                ];
-                // Validate email and phone using service
-                CollaboratorValidationService::validateForUpdate($user->email, $user->phone, $collaborator->id);
+        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
 
-                // Update payload with validated data
-                if (!empty($user->phone)) {
-                    $updatePayload['phone'] = $user->phone;
-                }
-                if (!empty($user->email) && $user->email !== $collaborator->email) {
-                    $updatePayload['email'] = $user->email;
-                }
-                $collaborator->update($updatePayload);
-            } else {
-                // Nếu chưa có Collaborator record, chỉ tạo mới khi user là CTV và có phone hợp lệ
-                if ($user->role === 'ctv') {
-                    // Validate email and phone using service
-                    CollaboratorValidationService::validateForCreation($user->email, $user->phone);
+        if ($collaborator) {
+            $updatePayload = [
+                'organization_id' => $defaultOrganizationId,
+                'full_name' => $user->name,
+            ];
 
-                    \App\Models\Collaborator::create([
-                        'full_name' => $user->name,
-                        'email' => $user->email,
-                        'phone' => $user->phone,
-                        'organization_id' => $this->selectedOrganizationId,
-                        'status' => 'active',
-                    ]);
-                }
+            CollaboratorValidationService::validateForUpdate($user->email, $user->phone, $collaborator->id);
+
+            if (!empty($user->phone)) {
+                $updatePayload['phone'] = $user->phone;
             }
+            if (!empty($user->email) && $user->email !== $collaborator->email) {
+                $updatePayload['email'] = $user->email;
+            }
+            $collaborator->update($updatePayload);
+        } elseif ($user->role === 'ctv') {
+            CollaboratorValidationService::validateForCreation($user->email, $user->phone);
 
-            // Reset selectedOrganizationId sau khi xử lý
-            $this->selectedOrganizationId = null;
+            \App\Models\Collaborator::create([
+                'full_name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'organization_id' => $defaultOrganizationId,
+                'status' => 'active',
+            ]);
         }
     }
 }

@@ -25,6 +25,46 @@ class IntakesTable {
         };
     }
 
+    private static function getMajorBadgeColor(?string $majorName): string {
+        $palette = ['primary', 'success', 'warning', 'danger', 'info', 'gray'];
+        $normalized = trim(mb_strtolower((string) $majorName));
+
+        if ($normalized === '') {
+            return 'gray';
+        }
+
+        $index = crc32($normalized) % count($palette);
+
+        return $palette[$index];
+    }
+
+    private static function getEditUrlForQuota(Quota $record): ?string {
+        if (!$record?->intake_id) {
+            return null;
+        }
+
+        $baseUrl = \App\Filament\Resources\Intakes\IntakeResource::getUrl('edit', ['record' => $record->intake_id]);
+        $year = null;
+
+        if (!empty($record->intake_start_date)) {
+            $year = (int) Carbon::parse($record->intake_start_date)->format('Y');
+        } elseif (!empty($record->intake?->start_date)) {
+            $year = (int) Carbon::parse($record->intake->start_date)->format('Y');
+        }
+
+        $query = array_filter([
+            'major_name' => $record->major_name,
+            'program_name' => $record->program_name,
+            'year' => $year,
+        ], fn($value) => !is_null($value) && $value !== '');
+
+        if (empty($query)) {
+            return $baseUrl;
+        }
+
+        return $baseUrl . '?' . http_build_query($query);
+    }
+
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
         $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
@@ -54,7 +94,7 @@ class IntakesTable {
 
         return $table
             ->query($query)
-            ->recordUrl(fn($r) => ($canEdit && $r?->intake_id) ? \App\Filament\Resources\Intakes\IntakeResource::getUrl('edit', ['record' => $r->intake_id]) : null)
+            ->recordUrl(fn($r) => ($canEdit && $r?->intake_id) ? self::getEditUrlForQuota($r) : null)
             ->columns([
                 TextColumn::make('intake.name')
                     ->label('Tên đợt tuyển sinh')
@@ -63,16 +103,17 @@ class IntakesTable {
 
                 BadgeColumn::make('status')
                     ->label('Trạng thái')
-                    ->getStateUsing(function (Quota $record) {
-                        $intakeStatus = $record->intake_status ?: $record->intake?->status;
-                        return Intake::getStatusOptions()[$intakeStatus] ?? ($intakeStatus ?: 'Chưa cấu hình');
-                    })
-                    ->colors([
-                        'warning' => Intake::STATUS_UPCOMING,
-                        'success' => Intake::STATUS_ACTIVE,
-                        'danger' => Intake::STATUS_CLOSED,
-                        'gray' => Intake::STATUS_CANCELLED,
-                    ]),
+                    ->getStateUsing(fn(Quota $record) => $record->intake_status ?: $record->intake?->status ?: null)
+                    ->formatStateUsing(fn(?string $state) => Intake::getStatusOptions()[$state] ?? ($state ?: 'Chưa cấu hình'))
+                    ->color(function (?string $state): string {
+                        return match ($state) {
+                            Intake::STATUS_ACTIVE => 'success',   // Đang tuyển sinh
+                            Intake::STATUS_UPCOMING => 'warning', // Sắp mở
+                            Intake::STATUS_CLOSED => 'gray',      // Đã đóng
+                            Intake::STATUS_CANCELLED => 'danger', // Đã hủy
+                            default => 'gray',
+                        };
+                    }),
 
                 TextColumn::make('window_range')
                     ->label('Thời gian')
@@ -87,8 +128,10 @@ class IntakesTable {
                         return "{$start} - {$end}";
                     }),
 
-                TextColumn::make('major_name')
+                BadgeColumn::make('major_name')
                     ->label('Ngành tuyển sinh')
+                    ->formatStateUsing(fn(?string $state) => $state ?: 'Chưa xác định')
+                    ->color(fn(?string $state) => self::getMajorBadgeColor($state))
                     ->searchable()
                     ->sortable(),
 
@@ -144,7 +187,7 @@ class IntakesTable {
                     Action::make('edit_intake')
                         ->label('Chỉnh sửa')
                         ->icon('heroicon-o-pencil-square')
-                        ->url(fn(Quota $record) => \App\Filament\Resources\Intakes\IntakeResource::getUrl('edit', ['record' => $record->intake_id]))
+                        ->url(fn(Quota $record) => self::getEditUrlForQuota($record))
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
                             in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
                 ])
@@ -156,7 +199,16 @@ class IntakesTable {
                     ->tooltip('Các hành động khả dụng'),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([]),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa các dòng đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các dòng đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
+                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }

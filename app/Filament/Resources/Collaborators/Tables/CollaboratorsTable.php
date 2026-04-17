@@ -266,6 +266,7 @@ class CollaboratorsTable {
                             }
                         }),
                 ]),
-            ]);
+            ])
+            ->defaultSort('id', 'desc');
     }
 }

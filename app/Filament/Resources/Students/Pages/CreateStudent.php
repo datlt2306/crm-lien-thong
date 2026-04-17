@@ -79,11 +79,14 @@ class CreateStudent extends CreateRecord {
 
     protected function getCreatedNotification(): ?Notification {
         $profileCode = $this->record?->profile_code ?? 'Đang cập nhật';
+        $trackingUrl = $this->record?->profile_code
+            ? route('public.profile.track', ['profile_code' => $this->record->profile_code])
+            : route('public.profile.track.form');
 
         return Notification::make()
             ->success()
             ->title('Tạo học viên thành công')
-            ->body("Mã hồ sơ: {$profileCode}");
+            ->body("Mã hồ sơ: {$profileCode}\nLink tra cứu: {$trackingUrl}");
     }
 
     protected function getFormActions(): array {
