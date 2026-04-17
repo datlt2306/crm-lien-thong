@@ -202,6 +202,8 @@
                             <div class="info-card">
                                 <strong style="color:#475569; text-transform:uppercase; letter-spacing:.08em; font-size:12px;">Thông tin hồ sơ</strong>
                                 <div class="kv"><span class="muted">Họ và tên</span><span class="strong">{{ $student->full_name }}</span></div>
+                                <div class="kv"><span class="muted">Ngày sinh</span><span class="strong">{{ $student->dob ? \Carbon\Carbon::parse($student->dob)->format('d/m/Y') : 'Chưa cập nhật' }}</span></div>
+                                <div class="kv"><span class="muted">Địa chỉ</span><span class="strong" style="max-width: 60%; text-align: right;">{{ $student->address ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Đợt tuyển sinh</span><span class="strong">{{ $student->intake?->name ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Ngành - Hệ</span><span class="strong">{{ $student->quota?->major_name ?? $student->major ?? 'Chưa cập nhật' }} - {{ $programTypeLabel ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Tình trạng xử lý</span><span class="strong">{{ $applicationStatusLabel }}</span></div>
@@ -212,7 +214,7 @@
                                 <strong style="color:#475569; text-transform:uppercase; letter-spacing:.08em; font-size:12px;">Thanh toán</strong>
                                 <div class="payment-note {{ $isPaymentVerified ? 'ok' : '' }}">
                                     <strong>{{ $isPaymentVerified ? 'Đã xác nhận thanh toán' : 'Chưa xác nhận thanh toán' }}</strong><br>
-                                    {{ $isPaymentVerified ? 'Hệ thống đã ghi nhận tiền học phí.' : 'Đang chờ kế toán/chủ đơn vị xác nhận.' }}
+                                    {{ $isPaymentVerified ? 'Hệ thống đã ghi nhận phí đăng ký tuyển sinh.' : 'Đang chờ kế toán/chủ đơn vị xác nhận.' }}
                                 </div>
                                 <div class="kv"><span class="muted">Trạng thái thanh toán</span><span class="strong">{{ $paymentStatusLabel }}</span></div>
                                 <div class="kv"><span class="muted">Số tiền</span><span class="strong">{{ $paymentAmountLabel }}</span></div>

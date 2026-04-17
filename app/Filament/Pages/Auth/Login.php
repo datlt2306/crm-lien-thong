@@ -17,4 +17,11 @@ class Login extends BaseLogin
     {
         return 'Đăng nhập hệ thống CRM';
     }
+
+    protected function throwFailureValidationException(): never
+    {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'data.password' => 'Mật khẩu không chính xác. Vui lòng kiểm tra lại.',
+        ]);
+    }
 }

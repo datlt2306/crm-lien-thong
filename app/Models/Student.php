@@ -102,6 +102,15 @@ class Student extends Model {
         'document_checklist' => 'array',
     ];
 
+    public function getProgramTypeLabelAttribute(): string {
+        return match (strtoupper((string) $this->program_type)) {
+            'REGULAR' => 'Chính quy',
+            'PART_TIME' => 'Vừa học vừa làm',
+            'DISTANCE' => 'Đào tạo từ xa',
+            default => $this->program_type ?: 'Chưa xác định',
+        };
+    }
+
     // Enum StudentStatus - Pipeline quản lý hành trình nhập học
     public const STATUS_NEW = 'new';                    // Mới
     public const STATUS_CONTACTED = 'contacted';        // Đã liên hệ

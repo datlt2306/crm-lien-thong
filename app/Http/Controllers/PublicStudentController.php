@@ -119,7 +119,7 @@ class PublicStudentController extends Controller {
         }
 
         try {
-            DB::transaction(function () use ($validated, $selectedOrg, $collaborator, $quota, $notes) {
+            $student = DB::transaction(function () use ($validated, $selectedOrg, $collaborator, $quota, $notes) {
                 $student = Student::create([
                     'full_name' => $validated['full_name'],
                     'dob' => $validated['dob'],
@@ -157,7 +157,28 @@ class PublicStudentController extends Controller {
                         'status' => \App\Models\Payment::STATUS_NOT_PAID,
                     ]
                 );
+                
+                return $student;
             });
+
+            // Gửi qua API của Resend (Không cần cài SDK)
+            if ($student && !empty($validated['email'])) {
+                try {
+                    $student->refresh();
+                    $htmlContent = view('emails.student.registration_successful', ['student' => $student])->render();
+                    
+                    \Illuminate\Support\Facades\Http::withToken('re_JwHwMoP7_DRd15sFgzganuCwivQVyCr5R')
+                        ->post('https://api.resend.com/emails', [
+                            'from' => 'onboarding@resend.dev', // Lưu ý: khi chưa add domain mới chỉ gửi được vào mail datlt2306@gmail.com
+                            'to' => $validated['email'], // Có thể tạm gán là 'datlt2306@gmail.com' nếu test
+                            'subject' => 'Đăng Ký Liên thông GTVT Thành Công - Mã Hồ Sơ: ' . $student->profile_code,
+                            'html' => $htmlContent
+                        ]);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Lỗi gửi email đăng ký: ' . $e->getMessage());
+                }
+            }
+
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra trong quá trình lưu hồ sơ, vui lòng thử lại!'])->withInput();
         }
@@ -165,7 +186,15 @@ class PublicStudentController extends Controller {
         // Xóa cookie sau khi đăng ký thành công
         $this->refTrackingService->clearRefCookie();
 
-        return redirect()->back()->with('success', 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
+        return redirect()->back()->with([
+            'success' => 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.',
+            'registered_student' => [
+                'full_name' => $student->full_name,
+                'profile_code' => $student->profile_code,
+                'program_type' => $student->program_type_label,
+                'target_university' => $student->target_university ?? 'Trường',
+            ]
+        ]);
     }
 
     /**
@@ -263,7 +292,7 @@ class PublicStudentController extends Controller {
             'statusLabel' => $student ? Student::getStatusOptions()[$student->status] ?? $student->status : null,
             'applicationStatusLabel' => $student ? $this->mapApplicationStatusLabel($student->application_status) : null,
             'paymentStatusLabel' => $student?->payment ? $this->mapPaymentStatusLabel($student->payment->status) : null,
-            'programTypeLabel' => $student ? $this->mapProgramTypeLabel($student->program_type ?: $student?->quota?->program_name) : null,
+            'programTypeLabel' => $student?->program_type_label,
             'paymentAmountLabel' => $student?->payment ? number_format((float) $student->payment->amount, 0, ',', '.') . ' VNĐ' : 'Chưa cập nhật',
             'isPaymentVerified' => $student?->payment?->status === Payment::STATUS_VERIFIED,
         ]);

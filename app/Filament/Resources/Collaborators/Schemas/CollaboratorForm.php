@@ -91,10 +91,6 @@ class CollaboratorForm {
                     })
                     ->copyable()
                     ->helperText('Click vào field hoặc icon để copy link'),
-                \Filament\Forms\Components\Select::make('organization_id')
-                    ->required()
-                    ->default(fn() => \App\Models\Organization::query()->value('id'))
-                    ->hidden(),
                 // Đã loại bỏ chọn CTV cấp trên - hệ thống chỉ còn 1 cấp
                 \Filament\Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')

@@ -114,67 +114,87 @@
         @if($success)
         <div class="alert alert-success">{{ $success }}</div>
         @endif
-        @if($errors->any())
-        <div class="alert alert-error">
-            <ul>
-                @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-        @endif
-        <form id="student-form" method="POST" action="">
-            @csrf
-            <div class="grid">
-                <div class="field">
-                    <label class="label">Họ và tên <span class="req">*</span></label>
-                    <input type="text" name="full_name" value="{{ old('full_name') }}" required class="field-input" />
+        @if(session('registered_student'))
+            @php($st = session('registered_student'))
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
+                <div style="width: 64px; height: 64px; background-color: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 32px;">
+                    ✓
                 </div>
-                <div class="field">
-                    <label class="label">Số điện thoại <span class="req">*</span></label>
-                    <input type="text" name="phone" value="{{ old('phone') }}" required class="field-input" />
+                <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Kính gửi {{ $st['full_name'] }},</h2>
+                <p style="color: #475569; margin-bottom: 12px; line-height: 1.5;">Chúng tôi đã tiếp nhận thông tin hồ sơ của bạn cho chương trình <strong>{{ $st['program_type'] }}</strong> liên thông dự kiến tại <strong>{{ $st['target_university'] }}</strong>.</p>
+                <p style="color: #475569; margin-bottom: 16px;">Dưới đây là <strong>MÃ HỒ SƠ</strong> của bạn dùng để tra cứu trạng thái và làm các thủ tục tiếp theo:</p>
+                
+                <div style="font-size: 24px; font-weight: 800; letter-spacing: 1px; color: #2563eb; background-color: #eef2ff; padding: 16px 32px; border-radius: 8px; margin: 0 auto 20px; display: inline-block; border: 2px dashed #a5b4fc;">
+                    {{ $st['profile_code'] }}
                 </div>
-                <div class="field">
-                    <label class="label">Email</label>
-                    <input type="email" name="email" value="{{ old('email') }}" class="field-input" />
-                </div>
-                <div class="field">
-                    <label class="label">Ngày tháng năm sinh <span class="req">*</span></label>
-                    <input type="date" name="dob" value="{{ old('dob') }}" required class="field-input" />
-                </div>
-                <div class="field full">
-                    <label class="label">Địa chỉ <span class="req">*</span></label>
-                    <input type="text" name="address" value="{{ old('address') }}" required class="field-input" />
-                </div>
+                
+                <p style="color: #475569; font-size: 14px; margin-bottom: 24px;">Vui lòng ghi nhớ mã này hoặc kiểm tra email của bạn để lưu lại thông tin.</p>
+                
+                <a href="{{ url('/track-profile?profile_code=' . $st['profile_code']) }}" class="submit" style="display: inline-block; width: auto; padding: 12px 32px; text-decoration: none;">Tra cứu hồ sơ ngay</a>
             </div>
-
-            <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
-            <div class="field" style="margin-top: 10px;">
-                <label class="label">Đợt tuyển sinh <span class="req">*</span></label>
-                <select name="intake_id" id="intake_id" class="field-select" required>
-                    <option value="">-- Chọn đợt tuyển --</option>
-                    @foreach(($intakes ?? []) as $intake)
-                    <option value="{{ e($intake->id) }}" {{ old('intake_id') == $intake->id ? 'selected' : '' }}>
-                        {{ e($intake->name) }} (từ {{ $intake->start_date?->format('d/m/Y') }} đến {{ $intake->end_date?->format('d/m/Y') }})
-                    </option>
+        @else
+            @if($errors->any())
+            <div class="alert alert-error">
+                <ul>
+                    @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
                     @endforeach
-                </select>
-                <div id="intake_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
+                </ul>
             </div>
+            @endif
+            <form id="student-form" method="POST" action="">
+                @csrf
+                <div class="grid">
+                    <div class="field">
+                        <label class="label">Họ và tên <span class="req">*</span></label>
+                        <input type="text" name="full_name" value="{{ old('full_name') }}" required class="field-input" />
+                    </div>
+                    <div class="field">
+                        <label class="label">Số điện thoại <span class="req">*</span></label>
+                        <input type="text" name="phone" value="{{ old('phone') }}" required class="field-input" />
+                    </div>
+                    <div class="field">
+                        <label class="label">Email</label>
+                        <input type="email" name="email" value="{{ old('email') }}" class="field-input" />
+                    </div>
+                    <div class="field">
+                        <label class="label">Ngày tháng năm sinh <span class="req">*</span></label>
+                        <input type="date" name="dob" value="{{ old('dob') }}" required class="field-input" />
+                    </div>
+                    <div class="field full">
+                        <label class="label">Địa chỉ <span class="req">*</span></label>
+                        <input type="text" name="address" value="{{ old('address') }}" required class="field-input" />
+                    </div>
+                </div>
 
-            <div class="field">
-                <label class="label">Chương trình đào tạo <span class="req">*</span></label>
-                <select name="quota_id" id="quota_id" class="field-select" required disabled>
-                    <option value="">-- Vui lòng chọn đợt tuyển trước --</option>
-                </select>
-                <div id="quota_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn chương trình đào tạo</div>
-            </div>
-            <div class="field">
-                <label class="label">Ghi chú</label>
-                <textarea name="notes" class="field-textarea">{{ old('notes') }}</textarea>
-            </div>
-            <button type="submit" class="submit">Gửi đăng ký</button>
-        </form>
+                <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
+                <div class="field" style="margin-top: 10px;">
+                    <label class="label">Đợt tuyển sinh <span class="req">*</span></label>
+                    <select name="intake_id" id="intake_id" class="field-select" required>
+                        <option value="">-- Chọn đợt tuyển --</option>
+                        @foreach(($intakes ?? []) as $intake)
+                        <option value="{{ e($intake->id) }}" {{ old('intake_id') == $intake->id ? 'selected' : '' }}>
+                            {{ e($intake->name) }} (từ {{ $intake->start_date?->format('d/m/Y') }} đến {{ $intake->end_date?->format('d/m/Y') }})
+                        </option>
+                        @endforeach
+                    </select>
+                    <div id="intake_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn đợt tuyển</div>
+                </div>
+
+                <div class="field">
+                    <label class="label">Chương trình đào tạo <span class="req">*</span></label>
+                    <select name="quota_id" id="quota_id" class="field-select" required disabled>
+                        <option value="">-- Vui lòng chọn đợt tuyển trước --</option>
+                    </select>
+                    <div id="quota_id_error" class="text-red-500 text-sm mt-1 hidden">Vui lòng chọn chương trình đào tạo</div>
+                </div>
+                <div class="field">
+                    <label class="label">Ghi chú</label>
+                    <textarea name="notes" class="field-textarea">{{ old('notes') }}</textarea>
+                </div>
+                <button type="submit" class="submit">Gửi đăng ký</button>
+            </form>
+        @endif
         <p class="footer">&copy; {{ date('Y') }} Liên thông Đại học</p>
             </div>
         </div>

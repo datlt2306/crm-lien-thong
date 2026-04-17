@@ -74,16 +74,6 @@ class Collaborator extends Model {
                 } while (self::where('ref_id', $ref)->exists());
                 $model->ref_id = $ref;
             }
-            // organization_id
-            if (empty($model->organization_id)) {
-                $user = \Illuminate\Support\Facades\Auth::user();
-                if ($user && $user->role !== 'super_admin') {
-                    $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-                    if ($org) {
-                        $model->organization_id = $org->id;
-                    }
-                }
-            }
         });
     }
 }

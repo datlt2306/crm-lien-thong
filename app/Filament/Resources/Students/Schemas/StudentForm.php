@@ -52,7 +52,7 @@ class StudentForm {
                                     ->label('Họ và tên')
                                     ->required(),
                                 TextInput::make('instructor')
-                                    ->label('GVHD')
+                                    ->label('Người giới thiệu')
                                     ->default(function (?Student $record) {
                                         $user = Auth::user();
 
@@ -73,8 +73,12 @@ class StudentForm {
                                         return $user?->name ?? '';
                                     })
                                     ->afterStateHydrated(function (TextInput $component, $state, ?Student $record) {
+                                        // Nếu edit và instructor rỗng nhưng có collaborator_id thì hiển thị tên collab
+                                        if (empty($state) && $record && $record->collaborator) {
+                                            $component->state($record->collaborator->full_name);
+                                        }
                                         // Nếu state rỗng và đang tạo mới, tự động điền từ collaborator
-                                        if (empty($state) && !$record) {
+                                        elseif (empty($state) && !$record) {
                                             $user = Auth::user();
                                             if ($user && in_array($user->role, ['ctv', 'organization_owner'])) {
                                                 $collaborator = Collaborator::where('email', $user->email)->first();
@@ -105,7 +109,7 @@ class StudentForm {
                                         'unique' => 'Email đã được sử dụng bởi học viên khác.',
                                     ]),
                                 Select::make('collaborator_id')
-                                    ->label('Người giới thiệu')
+                                    ->label('CTV / Đối tác giới thiệu')
                                     ->relationship('collaborator', 'full_name')
                                     ->searchable()
                                     ->preload()
@@ -226,6 +230,26 @@ class StudentForm {
                                     ->helperText('Nhập địa chỉ của sinh viên'),
                                 \Filament\Forms\Components\TextInput::make('fee')
                                     ->label('Lệ phí (VNĐ)')
+                                    ->required(function (?Student $record, $get) {
+                                        $appStatus = $get('application_status');
+                                        if (in_array($appStatus, ['submitted', 'verified', 'eligible'])) {
+                                            return true;
+                                        }
+
+                                        if ($record) {
+                                            if (in_array($record->status, [\App\Models\Student::STATUS_SUBMITTED, \App\Models\Student::STATUS_APPROVED, \App\Models\Student::STATUS_ENROLLED])) {
+                                                return true;
+                                            }
+                                            if ($record->payment && in_array($record->payment->status, [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED])) {
+                                                return true;
+                                            }
+                                        }
+
+                                        return false;
+                                    })
+                                    ->validationMessages([
+                                        'required' => 'Bắt buộc nhập khoản lệ phí đăng ký khi hồ sơ đã chuyển sang các trạng thái: Đã thu hồ sơ, Chờ xác minh, hoặc Đã nhập học.'
+                                    ])
                                     ->default(function (?Student $record) {
                                         // Ưu tiên lấy từ payment->amount
                                         if ($record?->payment && $record->payment->amount) {

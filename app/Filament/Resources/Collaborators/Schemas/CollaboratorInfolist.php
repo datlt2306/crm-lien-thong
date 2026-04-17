@@ -23,8 +23,6 @@ class CollaboratorInfolist {
                     ->label('Ngân hàng'),
                 TextEntry::make('bank_account')
                     ->label('Tài khoản ngân hàng'),
-                TextEntry::make('organization.name')
-                    ->label('Tổ chức'),
                 TextEntry::make('ref_id')
                     ->label('Mã giới thiệu'),
                 TextEntry::make('status')

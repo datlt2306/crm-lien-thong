@@ -74,14 +74,9 @@ class CollaboratorResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị: thấy TẤT CẢ CTV trong tổ chức của mình
+        // Chủ đơn vị
         if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query->where('organization_id', $org->id);
-            }
-            // Không có tổ chức -> không trả về gì
-            return $query->whereNull('id');
+            return $query;
         }
 
         if ($user->role === 'ctv') {
@@ -104,12 +99,7 @@ class CollaboratorResource extends Resource {
             }
 
             if ($user->role === 'organization_owner') {
-                // Chủ đơn vị thấy số CTV cấp 1 trong tổ chức (upline_id = null)
-                $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-                if ($org) {
-                    return (string) Collaborator::where('organization_id', $org->id)
-                        ->count();
-                }
+                return (string) Collaborator::count();
             }
 
             if ($user->role === 'ctv') {
@@ -132,7 +122,7 @@ class CollaboratorResource extends Resource {
         }
 
         if ($user->role === 'organization_owner') {
-            return 'Số cộng tác viên trong tổ chức';
+            return 'Tổng số cộng tác viên';
         }
 
         if ($user->role === 'ctv') {

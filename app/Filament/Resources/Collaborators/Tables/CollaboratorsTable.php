@@ -49,9 +49,6 @@ class CollaboratorsTable {
                     })
                     ->sortable(),
                 // Đã loại bỏ cột CTV cấp trên và số CTV con - hệ thống chỉ còn 1 cấp
-                TextColumn::make('organization.name')
-                    ->label('Tổ chức')
-                    ->searchable(),
                 TextColumn::make('identity_card')
                     ->label('CCCD')
                     ->searchable()
@@ -96,9 +93,6 @@ class CollaboratorsTable {
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name'),
                 \Filament\Tables\Filters\SelectFilter::make('status')
                     ->label('Trạng thái')
                     ->options([
