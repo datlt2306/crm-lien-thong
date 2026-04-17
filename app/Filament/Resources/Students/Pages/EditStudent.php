@@ -66,7 +66,7 @@ class EditStudent extends EditRecord {
                         return false;
                     }
 
-                    if (!in_array($user->role, ['super_admin', 'organization_owner', 'ctv'])) {
+                    if (!in_array($user->role, ['super_admin', 'ctv'])) {
                         return false;
                     }
 
@@ -98,7 +98,7 @@ class EditStudent extends EditRecord {
                         Payment::create([
                             'student_id' => $record->id,
                             'primary_collaborator_id' => $record->collaborator_id,
-                            'organization_id' => $record->organization_id,
+                            'primary_collaborator_id' => $record->collaborator_id,
                             'program_type' => $record->program_type ?? 'REGULAR',
                             'amount' => $amount,
                             'status' => Payment::STATUS_SUBMITTED,
@@ -215,7 +215,6 @@ class EditStudent extends EditRecord {
                         $payment = Payment::create([
                             'student_id' => $record->id,
                             'primary_collaborator_id' => $record->collaborator_id,
-                            'organization_id' => $record->organization_id,
                             'amount' => $data['amount'],
                             'program_type' => $data['program_type'],
                             'bill_path' => $data['bill'],
@@ -550,8 +549,8 @@ class EditStudent extends EditRecord {
             return false;
         }
 
-        // Nếu là super_admin, organization_owner, admissions, document thì luôn được phép
-        if (in_array($user->role, ['super_admin', 'organization_owner', 'admissions', 'document'])) {
+        // Nếu là super_admin, admissions, document thì luôn được phép
+        if (in_array($user->role, ['super_admin', 'admissions', 'document'])) {
             return true;
         }
 

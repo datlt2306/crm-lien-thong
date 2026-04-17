@@ -15,7 +15,7 @@ use App\Filament\Resources\Quotas\QuotaResource;
 class QuotasTable {
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
+        $canEdit = $user && in_array($user->role, ['super_admin', ]);
 
         return $table
             ->recordUrl(fn($record) => $canEdit ? QuotaResource::getUrl('edit', ['record' => $record]) : null)
@@ -139,7 +139,7 @@ class QuotasTable {
                     EditAction::make()
                         ->label('Chỉnh sửa')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ])),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -157,7 +157,7 @@ class QuotasTable {
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ])),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

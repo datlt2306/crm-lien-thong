@@ -54,7 +54,7 @@ class UsersTable {
                     ->formatStateUsing(function ($state) {
                         return match ($state) {
                             'super_admin' => 'Super Admin',
-                            'organization_owner' => 'Chủ đơn vị',
+
                             'ctv' => 'Cộng tác viên',
                             default => $state
                         };
@@ -63,33 +63,12 @@ class UsersTable {
                     ->color(function ($state) {
                         return match ($state) {
                             'super_admin' => 'danger',
-                            'organization_owner' => 'warning',
+
                             'ctv' => 'info',
                             default => 'gray'
                         };
                     })
                     ->searchable(),
-                TextColumn::make('organization')
-                    ->label('Tổ chức')
-                    ->state(function ($record) {
-                        // Lấy tổ chức từ quan hệ (owner -> ownedOrganization, ctv -> collaborator.organization)
-                        $org = $record->getOrganization();
-                        return $org?->name ?? '—';
-                    })
-                    ->sortable()
-                    ->searchable(query: function ($query, $search) {
-                        // Tìm theo tên tổ chức bằng cách join linh hoạt
-                        return $query->where(function ($q) use ($search) {
-                            // Tìm theo email CTV -> join sang collaborators -> organizations
-                            $q->orWhereIn('email', \App\Models\Collaborator::whereHas('organization', function ($oq) use ($search) {
-                                $oq->where('name', 'like', "%$search%");
-                            })->pluck('email'))
-                                // Tìm theo owner -> organizations.organization_owner_id
-                                ->orWhereIn('id', \App\Models\Organization::where('name', 'like', "%$search%")->pluck('organization_owner_id'));
-                        });
-                    })
-                    ->toggleable(isToggledHiddenByDefault: false)
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->role === 'super_admin'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')

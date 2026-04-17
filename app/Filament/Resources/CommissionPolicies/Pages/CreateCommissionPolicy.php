@@ -26,15 +26,4 @@ class CreateCommissionPolicy extends CreateRecord {
         ];
     }
 
-    protected function mutateFormDataBeforeCreate(array $data): array {
-        // Tự động gán organization_id cho organization_owner
-        if (Auth::user()->role === 'organization_owner') {
-            $organization = \App\Models\Organization::where('organization_owner_id', Auth::user()->id)->first();
-            if ($organization) {
-                $data['organization_id'] = $organization->id;
-            }
-        }
-
-        return $data;
-    }
 }

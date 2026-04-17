@@ -53,22 +53,9 @@ class QuotaResource extends Resource {
             return $query;
         }
 
-        // Organization owner thấy chỉ tiêu của tổ chức mình
-        if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query->where('organization_id', $org->id);
-            }
-            return $query->whereNull('id');
-        }
-
-        // CTV thấy chỉ tiêu của tổ chức (read-only)
-        if ($user->role === 'ctv') {
-            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-            if ($collaborator && $collaborator->organization) {
-                return $query->where('organization_id', $collaborator->organization_id);
-            }
-            return $query->whereNull('id');
+        // Quản trị viên và CTV thấy tất cả chỉ tiêu
+        if (in_array($user->role, ['super_admin', 'ctv'])) {
+            return $query;
         }
 
         // Các role khác không thấy gì
@@ -88,7 +75,7 @@ class QuotaResource extends Resource {
         if (!$user) {
             return false;
         }
-        return in_array($user->role, ['super_admin', 'organization_owner', 'ctv']);
+        return in_array($user->role, ['super_admin', 'ctv']);
     }
 
     public static function canCreate(): bool {
@@ -96,7 +83,7 @@ class QuotaResource extends Resource {
         if (!$user) {
             return false;
         }
-        return in_array($user->role, ['super_admin', 'organization_owner']);
+        return in_array($user->role, ['super_admin', ]);
     }
 
     public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool {
@@ -104,7 +91,7 @@ class QuotaResource extends Resource {
         if (!$user) {
             return false;
         }
-        return in_array($user->role, ['super_admin', 'organization_owner']);
+        return in_array($user->role, ['super_admin', ]);
     }
 
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool {
@@ -112,7 +99,7 @@ class QuotaResource extends Resource {
         if (!$user) {
             return false;
         }
-        return in_array($user->role, ['super_admin', 'organization_owner']);
+        return in_array($user->role, ['super_admin', ]);
     }
 
     public static function getModalWidth(): string {

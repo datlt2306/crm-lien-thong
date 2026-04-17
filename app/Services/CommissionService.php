@@ -22,7 +22,6 @@ class CommissionService {
             $commission = Commission::firstOrCreate(
                 ['payment_id' => $payment->id],
                 [
-                    'organization_id' => $payment->organization_id,
                     'student_id' => $payment->student_id,
                     'rule' => [
                         'program_type' => $payment->program_type,
@@ -121,10 +120,6 @@ class CommissionService {
             ->where(function ($query) use ($now) {
                 $query->whereNull('effective_to')
                     ->orWhere('effective_to', '>=', $now);
-            })
-            ->where(function ($query) use ($payment) {
-                $query->whereNull('organization_id')
-                    ->orWhere('organization_id', $payment->organization_id);
             })
             ->where(function ($query) use ($collaboratorId) {
                 $query->whereNull('collaborator_id')

@@ -59,14 +59,6 @@ class CollaboratorRegistrationResource extends Resource {
             return $query;
         }
 
-        // Organization owner thấy đăng ký của tổ chức mình
-        if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query->where('organization_id', $org->id);
-            }
-            return $query->whereNull('id');
-        }
 
         // CTV và các role khác không thấy gì
         return $query->whereNull('id');
@@ -86,13 +78,6 @@ class CollaboratorRegistrationResource extends Resource {
         $count = 0;
         if ($user->role === 'super_admin') {
             $count = CollaboratorRegistration::where('status', 'pending')->count();
-        } elseif ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                $count = CollaboratorRegistration::where('status', 'pending')
-                    ->where('organization_id', $org->id)
-                    ->count();
-            }
         }
 
         return $count > 0 ? (string)$count : null;

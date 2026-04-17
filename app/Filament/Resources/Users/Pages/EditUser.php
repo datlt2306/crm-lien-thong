@@ -61,8 +61,6 @@ class EditUser extends EditRecord {
             $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
         }
 
-        // Single-organization: luôn gán tổ chức mặc định.
-        $data['organization_id'] = \App\Models\Organization::query()->value('id');
 
         // Loại bỏ password_confirmation khỏi data
         unset($data['password_confirmation']);
@@ -80,16 +78,11 @@ class EditUser extends EditRecord {
 
     protected function afterSave(): void {
         $user = $this->record;
-        $defaultOrganizationId = \App\Models\Organization::query()->value('id');
-
-        $user->organization_id = $defaultOrganizationId;
-        $user->save();
 
         $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
 
         if ($collaborator) {
             $updatePayload = [
-                'organization_id' => $defaultOrganizationId,
                 'full_name' => $user->name,
             ];
 
@@ -109,7 +102,6 @@ class EditUser extends EditRecord {
                 'full_name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
-                'organization_id' => $defaultOrganizationId,
                 'status' => 'active',
             ]);
         }

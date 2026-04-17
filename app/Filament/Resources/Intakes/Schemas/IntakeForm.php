@@ -42,12 +42,6 @@ class IntakeForm {
                             ->helperText('Mô tả về mục tiêu, đối tượng tuyển sinh hoặc yêu cầu đặc biệt')
                             ->columnSpanFull(),
 
-                        Hidden::make('organization_id')
-                            ->required()
-                            ->default(fn($record) => $record?->organization_id ?? \App\Models\Organization::query()->value('id'))
-                            ->dehydrated(true),
-
-
 
                         Select::make('status')
                             ->label('📋 Trạng thái')
@@ -102,14 +96,7 @@ class IntakeForm {
                         Select::make('settings.annual_quota_year')
                             ->label('🗓️ Năm chỉ tiêu')
                             ->options(function ($get, $record) {
-                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
-
-                                if (!$orgId) {
-                                    return [];
-                                }
-
                                 $years = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                                    ->where('organization_id', $orgId)
                                     ->whereNotNull('year')
                                     ->distinct()
                                     ->orderByDesc('year')
@@ -144,15 +131,13 @@ class IntakeForm {
                         Select::make('settings.annual_quota_major_name')
                             ->label('🎓 Ngành')
                             ->options(function ($get, $record) {
-                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
                                 $year = $get('settings.annual_quota_year');
 
-                                if (!$orgId || !$year) {
+                                if (!$year) {
                                     return [];
                                 }
 
                                 return \Illuminate\Support\Facades\DB::table('annual_quotas')
-                                    ->where('organization_id', $orgId)
                                     ->where('year', $year)
                                     ->whereNotNull('major_name')
                                     ->distinct()
@@ -187,16 +172,14 @@ class IntakeForm {
                         Select::make('settings.annual_quota_program_name')
                             ->label('🏫 Hệ đào tạo')
                             ->options(function ($get, $record) {
-                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
                                 $year = $get('settings.annual_quota_year');
                                 $major = $get('settings.annual_quota_major_name');
 
-                                if (!$orgId || !$year) {
+                                if (!$year) {
                                     return [];
                                 }
 
                                 $query = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                                    ->where('organization_id', $orgId)
                                     ->where('year', $year)
                                     ->whereNotNull('program_name');
 
@@ -244,17 +227,15 @@ class IntakeForm {
                                     return;
                                 }
 
-                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
                                 $year = (int) ($get('settings.annual_quota_year') ?? 0);
                                 $major = $get('settings.annual_quota_major_name');
                                 $program = $get('settings.annual_quota_program_name');
 
-                                if (!$orgId || !$year || empty($major) || empty($program)) {
+                                if (!$year || empty($major) || empty($program)) {
                                     return;
                                 }
 
                                 $annualTarget = (int) \App\Models\AnnualQuota::query()
-                                    ->where('organization_id', $orgId)
                                     ->where('year', $year)
                                     ->where('major_name', $major)
                                     ->where('program_name', $program)
@@ -266,7 +247,6 @@ class IntakeForm {
                                 }
 
                                 $allocatedToOtherIntakes = \App\Models\Quota::query()
-                                    ->where('organization_id', $orgId)
                                     ->when(
                                         !empty($record?->id),
                                         fn($query) => $query->where('intake_id', '!=', $record->id)
@@ -296,13 +276,12 @@ class IntakeForm {
                         \Filament\Forms\Components\Placeholder::make('annual_quotas_info')
                             ->label('📋 Xem trước chỉ tiêu năm')
                             ->content(function ($get, $record) {
-                                $orgId = $get('organization_id') ?? ($record?->organization_id ?? null);
                                 $selectedYear = $get('settings.annual_quota_year');
                                 $selectedMajor = $get('settings.annual_quota_major_name');
                                 $selectedProgram = $get('settings.annual_quota_program_name');
-                                
-                                if (!$orgId || !$selectedYear) {
-                                    return new \Illuminate\Support\HtmlString('<p class="text-gray-500 text-sm">Vui lòng chọn tổ chức và năm chỉ tiêu để xem dữ liệu.</p>');
+
+                                if (!$selectedYear) {
+                                    return new \Illuminate\Support\HtmlString('<p class="text-gray-500 text-sm">Vui lòng chọn năm chỉ tiêu để xem dữ liệu.</p>');
                                 }
 
                                 if (!$selectedMajor || !$selectedProgram) {
@@ -311,7 +290,6 @@ class IntakeForm {
 
                                 $year = (string) $selectedYear;
                                 $query = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                                    ->where('organization_id', $orgId)
                                     ->where('year', $year)
                                     ->where('major_name', $selectedMajor)
                                     ->where('program_name', $selectedProgram);
@@ -374,7 +352,7 @@ class IntakeForm {
                                 }
 
                                 $totalPercent = $totalTarget > 0 ? round(($totalCurrent / $totalTarget) * 100, 1) : 0;
-                                $url = route('filament.admin.resources.annual-quotas.index') . "?tableFilters[organization_id][value]={$orgId}&tableFilters[year][value]={$year}";
+                                $url = route('filament.admin.resources.annual-quotas.index') . "?tableFilters[year][value]={$year}";
 
                                 $programLabel = self::getProgramLabel($selectedProgram);
                                 $html .= "
@@ -392,7 +370,7 @@ class IntakeForm {
                                 return new \Illuminate\Support\HtmlString($html);
                             })
                             ->columnSpanFull()
-                            ->visible(fn($get) => $get('organization_id') && $get('settings.annual_quota_year')),
+                            ->visible(fn($get) => $get('settings.annual_quota_year')),
                     ])
                     ->columns(2)
                     ->collapsible()

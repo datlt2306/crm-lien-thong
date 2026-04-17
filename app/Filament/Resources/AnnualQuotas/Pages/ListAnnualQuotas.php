@@ -11,7 +11,7 @@ class ListAnnualQuotas extends ListRecords {
 
     protected function getHeaderActions(): array {
         $user = \Illuminate\Support\Facades\Auth::user();
-        if ($user && in_array($user->role, ['super_admin', 'organization_owner'])) {
+        if ($user && in_array($user->role, ['super_admin', ])) {
             return [CreateAction::make()->label('Thêm chỉ tiêu năm')];
         }
         return [];

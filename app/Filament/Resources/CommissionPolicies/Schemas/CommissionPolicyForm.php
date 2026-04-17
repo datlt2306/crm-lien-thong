@@ -14,14 +14,6 @@ class CommissionPolicyForm {
     public static function configure(Schema $schema): Schema {
         return $schema
             ->components([
-                Select::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->helperText('Để trống để áp dụng cho tất cả tổ chức')
-                    ->nullable()
-                    ->visible(fn() => Auth::user()->role === 'super_admin'),
                 Select::make('collaborator_id')
                     ->label('Cộng tác viên')
                     ->relationship('collaborator', 'full_name')
@@ -100,7 +92,6 @@ class CommissionPolicyForm {
                     ->label('Hiển thị')
                     ->options([
                         'INTERNAL' => 'Nội bộ (chỉ admin)',
-                        'ORG_ONLY' => 'Tổ chức (admin + chủ tổ chức)',
                     ])
                     ->helperText('Để trống để sử dụng mặc định')
                     ->nullable(),

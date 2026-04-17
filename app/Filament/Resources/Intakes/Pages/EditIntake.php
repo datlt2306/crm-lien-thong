@@ -17,8 +17,8 @@ class EditIntake extends EditRecord {
     public function mount(int | string $record): void {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        // Chỉ super_admin và organization_owner mới có thể truy cập
-        if (!$user || !in_array($user->role, ['super_admin', 'organization_owner'])) {
+        // Chỉ super_admin mới có thể truy cập
+        if (!$user || !in_array($user->role, ['super_admin'])) {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 
@@ -80,7 +80,6 @@ class EditIntake extends EditRecord {
         }
 
         $annual = AnnualQuota::query()
-            ->where('organization_id', $intake->organization_id)
             ->where('year', $year)
             ->where('major_name', $major)
             ->where('program_name', $program)
@@ -97,7 +96,6 @@ class EditIntake extends EditRecord {
 
         DB::transaction(function () use ($intake, $annual, $year): void {
             $allocatedToOtherIntakes = Quota::query()
-                ->where('organization_id', $intake->organization_id)
                 ->where('intake_id', '!=', $intake->id)
                 ->where('major_name', $annual->major_name)
                 ->where('program_name', $annual->program_name)
@@ -134,7 +132,6 @@ class EditIntake extends EditRecord {
             Quota::query()->updateOrCreate(
                 [
                     'intake_id' => $intake->id,
-                    'organization_id' => $intake->organization_id,
                     'major_name' => $annual->major_name,
                     'program_name' => $annual->program_name,
                 ],

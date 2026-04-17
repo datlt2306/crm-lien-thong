@@ -67,9 +67,21 @@ class RecentPayments extends BaseWidget {
     }
 
     protected function recentPaymentsQuery() {
-        return Payment::query()
+        $user = Auth::user();
+        $query = Payment::query()
             ->with(['student'])
             ->latest('created_at')
             ->limit(10);
+
+        if ($user && $user->role === 'ctv') {
+            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+            if ($collaborator) {
+                $query->where('primary_collaborator_id', $collaborator->id);
+            } else {
+                $query->whereNull('id');
+            }
+        }
+
+        return $query;
     }
 }

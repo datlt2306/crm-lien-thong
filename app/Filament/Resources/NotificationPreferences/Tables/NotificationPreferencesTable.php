@@ -30,14 +30,13 @@ class NotificationPreferencesTable {
                     ->label('Vai trò')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'super_admin' => 'Super Admin',
-                        'organization_owner' => 'Chủ đơn vị',
+
                         'ctv' => 'CTV',
                         'accountant' => 'Kế toán',
                         default => $state,
                     })
                     ->colors([
                         'danger' => 'super_admin',
-                        'warning' => 'organization_owner',
                         'success' => 'ctv',
                         'info' => 'accountant',
                     ]),
@@ -65,7 +64,7 @@ class NotificationPreferencesTable {
                     ->relationship('user', 'role')
                     ->options([
                         'super_admin' => 'Super Admin',
-                        'organization_owner' => 'Chủ đơn vị',
+
                         'ctv' => 'CTV',
                         'accountant' => 'Kế toán',
                     ]),

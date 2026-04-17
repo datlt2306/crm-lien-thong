@@ -12,8 +12,8 @@ class CreateQuota extends CreateRecord {
     public function mount(): void {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        // Chỉ super_admin và organization_owner mới có thể truy cập
-        if (!$user || !in_array($user->role, ['super_admin', 'organization_owner'])) {
+        // Chỉ super_admin mới có thể truy cập
+        if (!$user || !in_array($user->role, ['super_admin'])) {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 
@@ -24,13 +24,11 @@ class CreateQuota extends CreateRecord {
         $name = $data['intake_name'] ?? '';
         $start = $data['intake_start_date'] ?? null;
         $end = $data['intake_end_date'] ?? null;
-        $orgId = $data['organization_id'] ?? null;
 
         $intake = Intake::query()
             ->where('name', $name)
             ->where('start_date', $start)
             ->where('end_date', $end)
-            ->where('organization_id', $orgId)
             ->first();
 
         if (!$intake) {
@@ -38,7 +36,6 @@ class CreateQuota extends CreateRecord {
                 'name' => $name,
                 'start_date' => $start,
                 'end_date' => $end,
-                'organization_id' => $orgId,
                 'status' => Intake::STATUS_ACTIVE,
             ]);
         }

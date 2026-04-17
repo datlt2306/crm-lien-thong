@@ -3,18 +3,12 @@
 namespace Database\Seeders;
 
 use App\Models\Student;
-use App\Models\Organization;
 use App\Models\Collaborator;
 use App\Models\Quota;
 use Illuminate\Database\Seeder;
 
 class StudentSeeder extends Seeder {
     public function run(): void {
-        $organization = Organization::first();
-        if (!$organization) {
-            $this->command->error('Chưa có Organization nào. Chạy OrganizationSeeder trước.');
-            return;
-        }
 
         $collaborators = Collaborator::where('status', 'active')->get();
         if ($collaborators->isEmpty()) {
@@ -22,7 +16,7 @@ class StudentSeeder extends Seeder {
             return;
         }
 
-        $quotas = Quota::where('organization_id', $organization->id)->with('intake')->get();
+        $quotas = Quota::with('intake')->get();
         if ($quotas->isEmpty()) {
             $this->command->error('Chưa có quota nào. Chạy IntakeQuotaSeeder trước.');
             return;
@@ -33,7 +27,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Nguyễn Thị Anh',
                 'phone' => '0123456789',
                 'email' => 'anh.nguyen@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'University of Melbourne',
@@ -48,7 +42,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Trần Văn Bình',
                 'phone' => '0123456790',
                 'email' => 'binh.tran@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'University of Sydney',
@@ -63,7 +57,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Lê Thị Cẩm',
                 'phone' => '0123456791',
                 'email' => 'cam.le@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'Monash University',
@@ -78,7 +72,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Phạm Văn Dũng',
                 'phone' => '0123456792',
                 'email' => 'dung.pham@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'RMIT University',
@@ -93,7 +87,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Hoàng Thị Em',
                 'phone' => '0123456793',
                 'email' => 'em.hoang@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'University of Queensland',
@@ -108,7 +102,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Vũ Văn Phúc',
                 'phone' => '0123456794',
                 'email' => 'phuc.vu@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'University of New South Wales',
@@ -123,7 +117,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Đỗ Thị Giang',
                 'phone' => '0123456795',
                 'email' => 'giang.do@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'University of Western Australia',
@@ -138,7 +132,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Nguyễn Văn Hùng',
                 'phone' => '0123456796',
                 'email' => 'hung.nguyen@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'Australian National University',
@@ -153,7 +147,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Trần Thị Hương',
                 'phone' => '0123456797',
                 'email' => 'huong.tran@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'University of Adelaide',
@@ -168,7 +162,7 @@ class StudentSeeder extends Seeder {
                 'full_name' => 'Lê Văn Khoa',
                 'phone' => '0123456798',
                 'email' => 'khoa.le@example.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
 
                 'target_university' => 'Griffith University',

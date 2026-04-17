@@ -29,7 +29,7 @@ class AnnualQuotaResource extends Resource {
         if (!$user) {
             return false;
         }
-        return in_array($user->role, ['super_admin', 'organization_owner', 'ctv']);
+        return in_array($user->role, ['super_admin', 'ctv']);
     }
 
     public static function form(Schema $schema): Schema {
@@ -49,9 +49,6 @@ class AnnualQuotaResource extends Resource {
         if ($user->role === 'super_admin') {
             return $q;
         }
-        if ($user->role === 'organization_owner') {
-            return $q;
-        }
         if ($user->role === 'ctv') {
             return $q;
         }
@@ -68,21 +65,21 @@ class AnnualQuotaResource extends Resource {
 
     public static function canViewAny(): bool {
         $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin', 'organization_owner', 'ctv']);
+        return $u && in_array($u->role, ['super_admin', 'ctv']);
     }
 
     public static function canCreate(): bool {
         $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin', 'organization_owner']);
+        return $u && in_array($u->role, ['super_admin']);
     }
 
     public static function canEdit($record): bool {
         $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin', 'organization_owner']);
+        return $u && in_array($u->role, ['super_admin']);
     }
 
     public static function canDelete($record): bool {
         $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin', 'organization_owner']);
+        return $u && in_array($u->role, ['super_admin']);
     }
 }

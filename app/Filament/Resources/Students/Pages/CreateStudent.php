@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Students\Pages;
 
 use App\Filament\Resources\Students\StudentResource;
 use App\Models\Collaborator;
-use App\Models\Organization;
 use App\Models\Student;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -17,7 +16,7 @@ class CreateStudent extends CreateRecord {
         $user = Auth::user();
 
         if ($user) {
-            if (in_array($user->role, ['organization_owner', 'ctv'])) {
+            if (in_array($user->role, ['ctv'])) {
                 // Tìm collaborator của user hiện tại
                 $collaborator = Collaborator::where('email', $user->email)->first();
                 if ($collaborator) {
@@ -27,7 +26,6 @@ class CreateStudent extends CreateRecord {
                     } else {
                         $data['collaborator_id'] = null;
                     }
-                    $data['organization_id'] = $collaborator->organization_id;
                     
                     // Tự động điền GVHD từ tên CTV nếu chưa có
                     if (empty($data['instructor']) && !empty($collaborator->full_name)) {
@@ -36,17 +34,6 @@ class CreateStudent extends CreateRecord {
                 }
             }
 
-            if (empty($data['organization_id'])) {
-                $organization = !empty($user->organization_id)
-                    ? Organization::find($user->organization_id)
-                    : null;
-
-                $organization = $organization
-                    ?? Organization::where('organization_owner_id', $user->id)->first();
-                if ($organization) {
-                    $data['organization_id'] = $organization->id;
-                }
-            }
             
             // Nếu chưa có instructor và có user name, điền từ user name
             if (empty($data['instructor']) && !empty($user->name)) {
@@ -55,9 +42,6 @@ class CreateStudent extends CreateRecord {
         }
 
         // Fallback cuối cùng để tránh lỗi NOT NULL
-        if (empty($data['organization_id'])) {
-            $data['organization_id'] = Organization::query()->value('id');
-        }
 
         // Tự động set status mặc định
         $data['status'] = Student::STATUS_NEW;
@@ -100,6 +84,6 @@ class CreateStudent extends CreateRecord {
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv', 'accountant', 'admissions']);
+        return $user && in_array($user->role, ['super_admin', 'ctv', 'accountant', 'admissions']);
     }
 }

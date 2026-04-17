@@ -14,8 +14,7 @@ class QuotaWarningNotification extends Notification implements ShouldQueue {
     public function __construct(
         public string $majorName,
         public int $remainingQuota,
-        public int $totalQuota,
-        public ?int $organizationId = null
+        public int $totalQuota
     ) {
     }
 
@@ -73,7 +72,6 @@ class QuotaWarningNotification extends Notification implements ShouldQueue {
             'remaining_quota' => $this->remainingQuota,
             'total_quota' => $this->totalQuota,
             'percentage' => $percentage,
-            'organization_id' => $this->organizationId,
         ];
     }
 

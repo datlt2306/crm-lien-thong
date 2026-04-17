@@ -67,12 +67,12 @@ class NotificationService {
     /**
      * Send quota warning notification to relevant users.
      */
-    public function notifyQuotaWarning(string $majorName, int $remainingQuota, int $totalQuota, ?int $organizationId = null): void {
-        $users = $this->getUsersForQuotaWarning($organizationId);
+    public function notifyQuotaWarning(string $majorName, int $remainingQuota, int $totalQuota): void {
+        $users = $this->getUsersForQuotaWarning();
 
         foreach ($users as $user) {
             if ($user->wantsNotification('quota_warning')) {
-                $user->notify(new QuotaWarningNotification($majorName, $remainingQuota, $totalQuota, $organizationId));
+                $user->notify(new QuotaWarningNotification($majorName, $remainingQuota, $totalQuota));
                 $this->sendFilamentNotification($user, 'quota_warning', null, [
                     'major_name' => $majorName,
                     'remaining_quota' => $remainingQuota,
@@ -104,10 +104,6 @@ class NotificationService {
             }
         }
 
-        // Add organization owner
-        if ($payment->organization && $payment->organization->organization_owner) {
-            $users[] = $payment->organization->organization_owner;
-        }
 
         // Add super admins
         $superAdmins = User::where('role', 'super_admin')->get();
@@ -127,7 +123,7 @@ class NotificationService {
     /**
      * Get users who should be notified about quota warnings.
      */
-    private function getUsersForQuotaWarning(?int $organizationId = null): array {
+    private function getUsersForQuotaWarning(): array {
         $users = [];
 
         // Add super admins
@@ -136,13 +132,6 @@ class NotificationService {
             $users[] = $admin;
         }
 
-        // Add organization owner if specified
-        if ($organizationId) {
-            $organization = \App\Models\Organization::find($organizationId);
-            if ($organization && $organization->organization_owner) {
-                $users[] = $organization->organization_owner;
-            }
-        }
 
         return array_unique($users, SORT_REGULAR);
     }

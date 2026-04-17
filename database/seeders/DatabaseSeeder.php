@@ -32,7 +32,6 @@ class DatabaseSeeder extends Seeder {
             $superAdmin->assignRole('super_admin');
         }
 
-        $this->call(OrganizationSeeder::class);
 
         // Seed chương trình đào tạo
         $this->call(ProgramSeeder::class);

@@ -41,8 +41,6 @@ class CreateUser extends CreateRecord {
             $data['role'] = 'ctv';
         }
 
-        // Single-organization: luôn gán tổ chức mặc định.
-        $data['organization_id'] = \App\Models\Organization::query()->value('id');
 
         // Loại bỏ password_confirmation khỏi data
         unset($data['password_confirmation']);
@@ -69,7 +67,6 @@ class CreateUser extends CreateRecord {
                 [
                     'full_name' => $user->name,
                     'phone' => $user->phone,
-                    'organization_id' => \App\Models\Organization::query()->value('id'),
                     'status' => 'active',
                 ]
             );

@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Organization;
 use App\Models\Major;
 use App\Models\Intake;
 use App\Models\Quota;
@@ -16,11 +15,6 @@ class IntakeQuotaSeeder extends Seeder {
     public function run(): void {
         echo "=== TẠO DỮ LIỆU MẪU CHO INTAKE & QUOTA ===\n";
 
-        $organization = Organization::first();
-        if (!$organization) {
-            echo "❌ Không tìm thấy organization nào. Vui lòng chạy OrganizationSeeder trước.\n";
-            return;
-        }
 
         $majors = Major::all();
         if ($majors->isEmpty()) {
@@ -58,7 +52,6 @@ class IntakeQuotaSeeder extends Seeder {
 
         $createdIntakes = [];
         foreach ($intakes as $intakeData) {
-            $intakeData['organization_id'] = $organization->id;
             $intake = Intake::create($intakeData);
             $createdIntakes[] = $intake;
             echo "✓ Đã tạo đợt tuyển sinh: {$intake->name}\n";
@@ -72,7 +65,7 @@ class IntakeQuotaSeeder extends Seeder {
         foreach ($majors as $major) {
             $annualTarget = rand(120, 300);
             $annual = AnnualQuota::create([
-                'organization_id' => $organization->id,
+                
                 'name' => $major->name . ' - REGULAR',
                 'major_name' => $major->name,
                 'program_name' => 'REGULAR',
@@ -92,7 +85,7 @@ class IntakeQuotaSeeder extends Seeder {
 
                 $quota = Quota::create([
                     'intake_id' => $intake->id,
-                    'organization_id' => $organization->id,
+                    
                     'name' => $major->name . ' - REGULAR',
                     'major_name' => $major->name,
                     'program_name' => 'REGULAR',

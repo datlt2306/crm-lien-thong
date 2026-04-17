@@ -15,10 +15,6 @@ class CommissionPoliciesTable {
     public static function configure(Table $table): Table {
         return $table
             ->columns([
-                TextColumn::make('organization.name')
-                    ->label('Tổ chức')
-                    ->searchable()
-                    ->default('Tất cả'),
                 TextColumn::make('collaborator.full_name')
                     ->label('CTV')
                     ->searchable()
@@ -74,9 +70,6 @@ class CommissionPoliciesTable {
 
             ])
             ->filters([
-                SelectFilter::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name'),
                 SelectFilter::make('program_type')
                     ->label('Chương trình')
                     ->options([

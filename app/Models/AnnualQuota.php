@@ -18,7 +18,6 @@ class AnnualQuota extends Model {
         'name',
         'major_name',
         'program_name',
-        'organization_id',
         'year',
         'target_quota',
         'current_quota',
@@ -38,9 +37,6 @@ class AnnualQuota extends Model {
         ];
     }
 
-    public function organization() {
-        return $this->belongsTo(Organization::class);
-    }
 
 
 

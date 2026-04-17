@@ -9,7 +9,6 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Gate;
-use App\Models\Organization;
 
 class CreateCollaborator extends CreateRecord {
     protected static string $resource = CollaboratorResource::class;
@@ -41,22 +40,6 @@ class CreateCollaborator extends CreateRecord {
             );
         }
 
-        $user = Auth::user();
-        if ($user->role === 'super_admin') {
-            // Nếu là super_admin, cho phép chọn organization_id
-        } else {
-            // Nếu là chủ tổ chức hoặc CTV, tự động gán organization_id
-            $org = Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                $data['organization_id'] = $org->id;
-            } else {
-                // Nếu không phải chủ tổ chức, tìm collaborator của user hiện tại
-                $collaborator = Collaborator::where('email', $user->email)->first();
-                if ($collaborator) {
-                    $data['organization_id'] = $collaborator->organization_id;
-                }
-            }
-        }
 
         // Lưu mật khẩu để tạo User trong afterCreate. KHÔNG tạo User ở đây:
         // UserObserver khi tạo User (role=ctv) sẽ tạo Collaborator → trùng email với
@@ -91,12 +74,6 @@ class CreateCollaborator extends CreateRecord {
             $userAccount = $existingUser;
         }
 
-        if (isset($this->record->organization_id)) {
-            $org = Organization::find($this->record->organization_id);
-            if ($org && !$org->organization_owner_id && $existingUser) {
-                $org->update(['organization_owner_id' => $userAccount->id]);
-            }
-        }
 
         $this->pendingUserPassword = null;
     }

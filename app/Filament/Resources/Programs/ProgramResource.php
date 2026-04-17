@@ -26,7 +26,7 @@ class ProgramResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         $user = \Illuminate\Support\Facades\Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'organization_owner']);
+        return $user && in_array($user->role, ['super_admin', ]);
     }
 
     public static function form(Schema $schema): Schema

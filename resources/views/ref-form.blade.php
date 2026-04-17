@@ -107,7 +107,7 @@
     <div class="wrap">
         <div class="card">
             <div class="hero">
-                <h1>Đăng ký xét tuyển liên thông</h1>
+                <h1>Đăng ký xét tuyển liên thông GTVT</h1>
                 <p>Điền thông tin để gửi hồ sơ đăng ký nhanh cho bộ phận tuyển sinh.</p>
             </div>
             <div class="content">
@@ -167,7 +167,6 @@
                     </div>
                 </div>
 
-                <input type="hidden" name="organization_id" value="{{ $collaborator->organization_id }}" />
                 <div class="field" style="margin-top: 10px;">
                     <label class="label">Đợt tuyển sinh <span class="req">*</span></label>
                     <select name="intake_id" id="intake_id" class="field-select" required>

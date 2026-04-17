@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Payment extends Model {
     use HasFactory;
     protected $fillable = [
-        'organization_id',
         'student_id',
         'primary_collaborator_id',
         'program_type',
@@ -96,9 +95,6 @@ class Payment extends Model {
         ]);
     }
 
-    public function organization(): BelongsTo {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function student(): BelongsTo {
         return $this->belongsTo(Student::class);

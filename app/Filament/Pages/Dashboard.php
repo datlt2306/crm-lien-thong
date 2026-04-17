@@ -7,9 +7,7 @@ use App\Filament\Widgets\AdminKpiStats;
 use App\Filament\Widgets\RevenueOverTime;
 use App\Filament\Widgets\RecentPayments;
 use App\Filament\Widgets\CollaboratorRevenueChart;
-use App\Filament\Widgets\CtvPersonalStats;
-use App\Filament\Widgets\CtvWalletWidget;
-use App\Filament\Widgets\CtvStudentsWidget;
+use App\Filament\Widgets\CtvUnifiedStats;
 use App\Filament\Widgets\AccountantPendingReceipts;
 use App\Filament\Widgets\AccountantCashFlow;
 use App\Filament\Widgets\AccountantFinancialSummary;
@@ -51,9 +49,7 @@ class Dashboard extends BaseDashboard {
 
         if ($role === 'ctv') {
             return [
-                CtvPersonalStats::class,
-                CtvWalletWidget::class,
-                CtvStudentsWidget::class,
+                CtvUnifiedStats::class,
                 RecentPayments::class,
             ];
         }

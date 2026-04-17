@@ -60,9 +60,6 @@ class RevenueOverTime extends ChartWidget {
         if (!empty($filters['program_type'])) {
             $query->where('program_type', $filters['program_type']);
         }
-        if (!empty($filters['organization_id'])) {
-            $query->where('organization_id', $filters['organization_id']);
-        }
 
         $payments = $query->get(['verified_at', 'amount']);
 
@@ -73,9 +70,6 @@ class RevenueOverTime extends ChartWidget {
                 ->where('status', Payment::STATUS_VERIFIED);
             if (!empty($filters['program_type'])) {
                 $fallback->where('program_type', $filters['program_type']);
-            }
-            if (!empty($filters['organization_id'])) {
-                $fallback->where('organization_id', $filters['organization_id']);
             }
             $payments = $fallback->get(['verified_at', 'amount']);
         }

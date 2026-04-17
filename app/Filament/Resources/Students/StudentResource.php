@@ -68,17 +68,6 @@ class StudentResource extends Resource {
                 return (string) Student::count();
             }
 
-            // Chủ đơn vị chỉ đếm học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
-            if ($user->role === 'organization_owner') {
-                $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-                if ($org) {
-                    return (string) Student::where('organization_id', $org->id)
-                        ->whereHas('payment', function ($query) {
-                            $query->whereIn('status', ['submitted', 'verified']);
-                        })
-                        ->count();
-                }
-            }
 
             // CTV đếm học viên của mình và downline
             if ($user->role === 'ctv') {
@@ -122,16 +111,6 @@ class StudentResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị chỉ thấy học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
-        if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query->where('organization_id', $org->id)
-                    ->whereHas('payment', function ($paymentQuery) {
-                        $paymentQuery->whereIn('status', ['submitted', 'verified']);
-                    });
-            }
-        }
 
         // CTV thấy student của mình
         if ($user->role === 'ctv') {

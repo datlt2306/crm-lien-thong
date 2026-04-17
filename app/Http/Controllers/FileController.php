@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Payment;
 use App\Models\Student;
-use App\Models\Organization;
 use App\Models\Collaborator;
 
 class FileController extends Controller {
@@ -27,13 +26,6 @@ class FileController extends Controller {
             return $this->serveFile($payment->bill_path);
         }
 
-        // Chủ đơn vị có thể xem payment của tổ chức mình
-        if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_organization_owner_id', $user->id)->first();
-            if ($org && $payment->organization_id === $org->id) {
-                return $this->serveFile($payment->bill_path);
-            }
-        }
 
         // CTV có thể xem payment của mình
         if ($user->role === 'ctv') {
@@ -63,13 +55,6 @@ class FileController extends Controller {
             return $this->serveFile($commissionItem->payment_bill_path);
         }
 
-        // Chủ đơn vị có thể xem commission bill của tổ chức mình
-        if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_organization_owner_id', $user->id)->first();
-            if ($org && $commissionItem->recipient->organization_id === $org->id) {
-                return $this->serveFile($commissionItem->payment_bill_path);
-            }
-        }
 
         // CTV có thể xem commission bill của mình
         if ($user->role === 'ctv') {
@@ -100,13 +85,6 @@ class FileController extends Controller {
             return $this->serveFile($payment->receipt_path);
         }
 
-        // Chủ đơn vị (organization_owner) chỉ được xem receipt của học viên trong trường
-        if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_owner_id', $user->id)->first();
-            if ($org && $payment->organization_id === $org->id) {
-                return $this->serveFile($payment->receipt_path);
-            }
-        }
 
         // CTV chỉ được xem receipt của học viên do chính CTV đó quản lý (Chống IDOR tải chênh lệch)
         if ($user->role === 'ctv') {

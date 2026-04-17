@@ -3,7 +3,6 @@
 namespace App\Filament\Widgets;
 
 use Filament\Widgets\Widget;
-use App\Models\Organization;
 
 
 class DashboardFiltersWidget extends Widget {
@@ -16,20 +15,18 @@ class DashboardFiltersWidget extends Widget {
         'from' => null,
         'to' => null,
         'program_type' => null,
-        'organization_id' => null,
         'major' => null,
         'group' => 'day',
     ];
 
     protected function getViewData(): array {
-        $organizations = Organization::query()->orderBy('name')->get(['id', 'name']);
         $majors = \Illuminate\Support\Facades\DB::table('quotas')
             ->select('major_name as id', 'major_name as name')
             ->whereNotNull('major_name')
             ->distinct()
             ->orderBy('major_name')
             ->get();
-        return compact('organizations', 'majors');
+        return compact('majors');
     }
 
     public function updatedFilters(): void {

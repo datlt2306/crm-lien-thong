@@ -61,9 +61,6 @@ class CollaboratorRevenueChart extends ChartWidget {
                 if (!empty($filters['program_type'])) {
                     $q->where('program_type', $filters['program_type']);
                 }
-                if (!empty($filters['organization_id'])) {
-                    $q->where('organization_id', $filters['organization_id']);
-                }
             });
 
         $items = $itemsQuery->get(['recipient_collaborator_id', 'amount']);
@@ -77,9 +74,6 @@ class CollaboratorRevenueChart extends ChartWidget {
                         ->where('status', Payment::STATUS_VERIFIED);
                     if (!empty($filters['program_type'])) {
                         $q->where('program_type', $filters['program_type']);
-                    }
-                    if (!empty($filters['organization_id'])) {
-                        $q->where('organization_id', $filters['organization_id']);
                     }
                 })
                 ->get(['recipient_collaborator_id', 'amount']);

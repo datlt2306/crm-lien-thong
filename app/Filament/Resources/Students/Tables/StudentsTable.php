@@ -26,8 +26,8 @@ class StudentsTable {
             ->recordUrl(function (Student $record) {
                 $user = Auth::user();
 
-                // Super admin, organization_owner, admissions, document luôn được phép
-                if (in_array($user->role, ['super_admin', 'organization_owner', 'admissions', 'document'])) {
+                // Super admin, admissions, document luôn được phép
+                if (in_array($user->role, ['super_admin', 'admissions', 'document'])) {
                     return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
                 }
 
@@ -358,12 +358,6 @@ class StudentsTable {
                     ->searchable()
                     ->preload(),
 
-                \Filament\Tables\Filters\SelectFilter::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->visible(fn() => Auth::user()?->role === 'super_admin'),
 
                 \Filament\Tables\Filters\SelectFilter::make('status')
                     ->label('Trạng thái')
@@ -383,8 +377,8 @@ class StudentsTable {
                         ->visible(function (Student $record) {
                             $user = Auth::user();
 
-                            // Super admin, organization_owner, admissions, document luôn được phép
-                            if (in_array($user->role, ['super_admin', 'organization_owner', 'admissions', 'document'])) {
+                            // Super admin, admissions, document luôn được phép
+                            if (in_array($user->role, ['super_admin', 'admissions', 'document'])) {
                                 return true;
                             }
 
@@ -448,7 +442,7 @@ class StudentsTable {
                                 return false;
                             }
 
-                            if (!in_array($user->role, ['super_admin', 'organization_owner', 'ctv'])) {
+                            if (!in_array($user->role, ['super_admin', 'ctv'])) {
                                 return false;
                             }
 
@@ -480,7 +474,6 @@ class StudentsTable {
                                 \App\Models\Payment::create([
                                     'student_id' => $record->id,
                                     'primary_collaborator_id' => $record->collaborator_id,
-                                    'organization_id' => $record->organization_id,
                                     'program_type' => $record->program_type ?? 'REGULAR',
                                     'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
@@ -511,10 +504,7 @@ class StudentsTable {
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(
-                            fn(Student $record): bool =>
-                            $record->status !== Student::STATUS_ENROLLED &&
-                                ($record->payment?->status === Payment::STATUS_VERIFIED) &&
-                                in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
+                                in_array(Auth::user()->role, ['super_admin'])
                         )
                         ->action(function (Student $record) {
                             // Kiểm tra checklist hồ sơ
@@ -577,10 +567,7 @@ class StudentsTable {
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(
-                            fn(Student $record): bool =>
-                            $record->status !== Student::STATUS_ENROLLED &&
-                                ($record->payment?->status === Payment::STATUS_VERIFIED) &&
-                                in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
+                                in_array(Auth::user()->role, ['super_admin'])
                         )
                         ->action(function (Student $record) {
                             $record->update([
@@ -670,7 +657,7 @@ class StudentsTable {
                         ->visible(
                             fn(Student $record): bool =>
                             // Kế toán, cán bộ hồ sơ, chủ đơn vị, super_admin được phép xác nhận thanh toán
-                            (in_array(Auth::user()->role, ['accountant', 'document', 'organization_owner', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                            (in_array(Auth::user()->role, ['accountant', 'document', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
                                 // Sinh viên phải có payment record
                                 $record->payment &&
                                 // Payment phải ở trạng thái chờ xác minh hoặc đã hoàn trả (có thể xác nhận lại)
@@ -814,7 +801,6 @@ class StudentsTable {
                                 $payment = \App\Models\Payment::create([
                                     'student_id' => $record->id,
                                     'primary_collaborator_id' => $record->collaborator_id,
-                                    'organization_id' => $record->organization_id,
                                     'amount' => $data['amount'],
                                     'program_type' => $data['program_type'],
                                     'bill_path' => $data['bill'],
@@ -851,6 +837,7 @@ class StudentsTable {
                     ->label('Xuất Excel')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
+                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'admissions', 'document', 'accountant']))
                     ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
                         // Lấy query đã áp dụng filter và search từ bảng hiện tại thay vì lấy full
                         $query = $livewire->getFilteredTableQuery();
@@ -866,7 +853,7 @@ class StudentsTable {
                         ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Hành động này không thể hoàn tác.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'organization_owner'])),
+                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin'])),
                 ]),
             ])
             ->emptyStateHeading('Không có học viên')

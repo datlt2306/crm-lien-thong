@@ -20,7 +20,7 @@ class StudentFactory extends Factory {
             'address' => $this->faker->address(),
             'phone' => $this->faker->unique()->numerify('0#########'),
             'email' => $this->faker->unique()->safeEmail(),
-            'organization_id' => null,
+            
             'collaborator_id' => null,
             'target_university' => $this->faker->company(),
             'major' => $this->faker->randomElement(['Công nghệ thông tin', 'Quản trị kinh doanh', 'Kế toán']),

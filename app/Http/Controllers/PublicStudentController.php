@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Models\Collaborator;
-use App\Models\Organization;
 
 use App\Models\Student;
 use App\Models\Payment;
@@ -35,20 +34,10 @@ class PublicStudentController extends Controller {
             abort(404, 'Liên kết không hợp lệ!');
         }
 
-        // Lấy organization của collaborator
-        $organization = $collaborator->organization;
-        if (!$organization) {
-            abort(404, 'Cộng tác viên chưa được gán vào tổ chức!');
-        }
-
-        // Lấy danh sách đợt tuyển có thể đăng ký của đơn vị.
-        // Không khóa cứng theo end_date để tránh trường hợp dữ liệu trạng thái chưa được đồng bộ,
-        // khiến form public bị rỗng dù vẫn còn quota mở.
-        $intakes = Intake::where('organization_id', $organization->id)
-            ->whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING])
+        // Lấy danh sách đợt tuyển có thể đăng ký.
+        $intakes = Intake::whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING])
             ->with(['quotas' => function ($q) {
                 // List toàn bộ quota thuộc đợt để user nhìn đầy đủ ngành/hệ đang có.
-                // Việc "có đăng ký được hay không" sẽ được thể hiện ở UI (disabled) + validate backend.
                 $q->orderBy('major_name')->orderBy('program_name')->orderBy('name');
             }])
             ->orderBy('start_date')
@@ -74,17 +63,8 @@ class PublicStudentController extends Controller {
             'address' => 'required|string|max:255',
             'phone' => 'required|string|max:20|unique:students,phone',
             'email' => 'nullable|email|max:255|unique:students,email',
-            'organization_id' => 'required|exists:organizations,id',
-            'intake_id' => [
-                'required',
-                Rule::exists('intakes', 'id')->where('organization_id', $collaborator->organization_id),
-            ],
-            'quota_id' => [
-                'required',
-                Rule::exists('quotas', 'id')
-                    ->where('organization_id', $collaborator->organization_id)
-                    ->where('status', Quota::STATUS_ACTIVE),
-            ],
+            'intake_id' => 'required|exists:intakes,id',
+            'quota_id' => 'required|exists:quotas,id',
             'notes' => 'nullable|string',
         ], [
             'intake_id.required' => 'Vui lòng chọn đợt tuyển',
@@ -95,12 +75,6 @@ class PublicStudentController extends Controller {
             'email.unique' => 'Email đã tồn tại',
         ]);
 
-        // Xác thực organization phải là của collaborator
-        if ($validated['organization_id'] != $collaborator->organization_id) {
-            return back()->withErrors(['organization_id' => 'Bạn không được chọn đơn vị này.'])->withInput();
-        }
-
-        $selectedOrg = Organization::find($validated['organization_id']);
         $quota = Quota::find($validated['quota_id']);
 
         // Check if the quota belongs to the given intake 
@@ -119,18 +93,17 @@ class PublicStudentController extends Controller {
         }
 
         try {
-            $student = DB::transaction(function () use ($validated, $selectedOrg, $collaborator, $quota, $notes) {
+            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes) {
                 $student = Student::create([
                     'full_name' => $validated['full_name'],
                     'dob' => $validated['dob'],
                     'address' => $validated['address'],
                     'phone' => $validated['phone'],
                     'email' => $validated['email'] ?? null,
-                    'organization_id' => $selectedOrg?->id,
                     'collaborator_id' => $collaborator->id,
                     'instructor' => $collaborator->full_name ?? null,
 
-                    'target_university' => $selectedOrg?->name,
+                    'target_university' => $quota->intake?->name, // Dùng tên đợt tuyển làm mục tiêu nếu không có org
                     'quota_id' => $quota->id,
                     'intake_id' => $validated['intake_id'],
                     'source' => 'ref',
@@ -150,7 +123,6 @@ class PublicStudentController extends Controller {
                         'student_id' => $student->id,
                     ],
                     [
-                        'organization_id' => $student->organization_id,
                         'primary_collaborator_id' => $collaborator->id,
                         'program_type' => $programTypeMap,
                         'amount' => 0,
@@ -169,8 +141,8 @@ class PublicStudentController extends Controller {
                     
                     \Illuminate\Support\Facades\Http::withToken('re_JwHwMoP7_DRd15sFgzganuCwivQVyCr5R')
                         ->post('https://api.resend.com/emails', [
-                            'from' => 'onboarding@resend.dev', // Lưu ý: khi chưa add domain mới chỉ gửi được vào mail datlt2306@gmail.com
-                            'to' => $validated['email'], // Có thể tạm gán là 'datlt2306@gmail.com' nếu test
+                            'from' => config('mail.from.name') . ' <' . config('mail.from.address') . '>',
+                            'to' => $validated['email'],
                             'subject' => 'Đăng Ký Liên thông GTVT Thành Công - Mã Hồ Sơ: ' . $student->profile_code,
                             'html' => $htmlContent
                         ]);
@@ -257,7 +229,6 @@ class PublicStudentController extends Controller {
         $payment = Payment::updateOrCreate(
             ['student_id' => $student->id],
             [
-                'organization_id' => $student->organization_id,
                 'primary_collaborator_id' => $collaborator->id,
                 'program_type' => $validated['program_type'],
                 'amount' => $validated['amount'],

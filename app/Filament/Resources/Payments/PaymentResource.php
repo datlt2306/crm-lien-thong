@@ -12,7 +12,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use App\Models\Payment;
 use App\Filament\Resources\Payments\Pages\ListPayments;
-use App\Models\Organization;
 use App\Models\Collaborator;
 use App\Models\Student;
 use App\Models\User;
@@ -66,7 +65,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin', 'organization_owner']))
+                    ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin']))
                     ->formatStateUsing(function ($record) {
                         $studentCtv = $record->student->collaborator;
                         return $studentCtv ? $studentCtv->full_name : '—';
@@ -292,7 +291,7 @@ class PaymentResource extends Resource {
                     ->visible(
                         fn(Payment $record): bool =>
                         $record->status === Payment::STATUS_SUBMITTED &&
-                            in_array(Auth::user()->role, ['super_admin', 'organization_owner'])
+                            in_array(Auth::user()->role, ['super_admin'])
                     )
                     ->action(function (Payment $record) {
                         \Illuminate\Support\Facades\DB::transaction(function () use ($record) {
@@ -377,15 +376,6 @@ class PaymentResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị thấy payments của tổ chức mình
-        if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query
-                    ->where('organization_id', $org->id)
-                    ->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]); // Thấy bill đã nộp & đã xác nhận
-            }
-        }
 
         // Kế toán thấy các payment cần xác minh và đã xác nhận (để xác minh và upload phiếu thu)
         if (self::isAccountant()) {

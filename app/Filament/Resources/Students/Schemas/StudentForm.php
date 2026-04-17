@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Students\Schemas;
 
 use App\Models\Intake;
-use App\Models\Organization;
 use App\Models\Student;
 use App\Models\Payment;
 use App\Models\StudentUpdateLog;
@@ -62,7 +61,7 @@ class StudentForm {
                                         }
 
                                         // Nếu user là CTV hoặc organization_owner, lấy từ collaborator
-                                        if ($user && in_array($user->role, ['ctv', 'organization_owner'])) {
+                                        if ($user && in_array($user->role, ['ctv', ])) {
                                             $collaborator = Collaborator::where('email', $user->email)->first();
                                             if ($collaborator && !empty($collaborator->full_name)) {
                                                 return $collaborator->full_name;
@@ -80,7 +79,7 @@ class StudentForm {
                                         // Nếu state rỗng và đang tạo mới, tự động điền từ collaborator
                                         elseif (empty($state) && !$record) {
                                             $user = Auth::user();
-                                            if ($user && in_array($user->role, ['ctv', 'organization_owner'])) {
+                                            if ($user && in_array($user->role, ['ctv', ])) {
                                                 $collaborator = Collaborator::where('email', $user->email)->first();
                                                 if ($collaborator && !empty($collaborator->full_name)) {
                                                     $component->state($collaborator->full_name);
@@ -108,24 +107,10 @@ class StudentForm {
                                     ->validationMessages([
                                         'unique' => 'Email đã được sử dụng bởi học viên khác.',
                                     ]),
-                                Select::make('collaborator_id')
-                                    ->label('CTV / Đối tác giới thiệu')
-                                    ->relationship('collaborator', 'full_name')
-                                    ->searchable()
-                                    ->preload()
-                                    ->helperText('CTV/Đối tác giới thiệu học viên này')
-                                    ->visible(fn($get) => Auth::user()?->role !== 'ctv' && ($get('source') ?? null) === 'ref'),
-                                Hidden::make('organization_id')
-                                    ->default(fn(?Student $record) => $record?->organization_id ?? Organization::query()->value('id'))
-                                    ->dehydrated(true),
                                 \Filament\Forms\Components\Select::make('intake_id')
                                     ->label('Đợt đăng ký liên thông')
                                     ->options(function ($get) {
-                                        $orgId = $get('organization_id') ?? Auth::user()?->organization_id;
-                                        if (!$orgId) {
-                                            return [];
-                                        }
-                                        return Intake::where('organization_id', $orgId)
+                                        return Intake::query()
                                             ->whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING, Intake::STATUS_CLOSED])
                                             ->with(['quotas' => function ($query) {
                                                 $query->where('status', \App\Models\Quota::STATUS_ACTIVE);

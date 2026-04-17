@@ -49,7 +49,7 @@ class SyncUserRolesSeeder extends Seeder {
                     'full_name' => $user->name,
                     'email' => $user->email,
                     'phone' => $phone,
-                    'organization_id' => $organization?->id,
+                    
                     'upline_id' => null, // CTV cấp 1
                     'status' => 'active'
                 ]);

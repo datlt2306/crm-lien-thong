@@ -18,7 +18,7 @@ class CollaboratorFactory extends Factory {
             'full_name' => $this->faker->name(),
             'phone' => $this->faker->unique()->numerify('0#########'),
             'email' => $this->faker->unique()->safeEmail(),
-            'organization_id' => null,
+            
             'ref_id' => $this->faker->unique()->regexify('[A-Z]{8}'),
             'upline_id' => null,
             'note' => null,

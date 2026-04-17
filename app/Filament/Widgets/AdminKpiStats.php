@@ -35,9 +35,6 @@ class AdminKpiStats extends BaseWidget {
         if (!empty($filters['program_type'])) {
             $query->where('program_type', $filters['program_type']);
         }
-        if (!empty($filters['organization_id'])) {
-            $query->where('organization_id', $filters['organization_id']);
-        }
         return $query;
     }
 

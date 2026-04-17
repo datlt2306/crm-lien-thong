@@ -47,44 +47,20 @@ class UserForm {
                     ])
                     ->validationAttribute('Số điện thoại')
                     ->helperText('Bắt buộc với vai trò CTV. Số điện thoại phải là duy nhất.'),
-                Hidden::make('organization_id')
-                    ->default(fn() => \App\Models\Organization::query()->value('id'))
-                    ->required(),
                 \Filament\Forms\Components\Select::make('role')
                     ->label('Vai trò')
-                    ->options(function () {
-                        $user = \Illuminate\Support\Facades\Auth::user();
-                        if ($user && $user->role === 'super_admin') {
-                            // Super admin có thể chọn tất cả vai trò
-                            return [
-                                'super_admin' => 'Super Admin',
-                                'organization_owner' => 'Chủ đơn vị',
-                                'ctv' => 'Cộng tác viên',
-                                'accountant' => 'Kế toán',
-                                'admissions' => 'Cán bộ tuyển sinh',
-                                'document' => 'Cán bộ hồ sơ',
-                            ];
-                        } elseif ($user && $user->role === 'organization_owner') {
-                            // Owner chỉ có thể chọn các vai trò phù hợp trong tổ chức
-                            return [
-                                'ctv' => 'Cộng tác viên',
-                                'accountant' => 'Kế toán',
-                                'admissions' => 'Cán bộ tuyển sinh',
-                                'document' => 'Cán bộ hồ sơ',
-                            ];
-                        }
-                        return [];
-                    })
+                    ->options([
+                        'super_admin' => 'Super Admin',
+
+                        'ctv' => 'Cộng tác viên',
+                        'accountant' => 'Kế toán',
+                        'admissions' => 'Cán bộ tuyển sinh',
+                        'document' => 'Cán bộ hồ sơ',
+                    ])
                     ->required()
                     ->default('ctv')
-                    ->visible(fn() => in_array(\Illuminate\Support\Facades\Auth::user()?->role, ['super_admin', 'organization_owner']))
-                    ->helperText(function () {
-                        $user = \Illuminate\Support\Facades\Auth::user();
-                        if ($user && $user->role === 'organization_owner') {
-                            return 'Chọn vai trò cho người dùng trong tổ chức của bạn';
-                        }
-                        return 'Chọn vai trò cho người dùng mới';
-                    }),
+                    ->visible(fn() => in_array(\Illuminate\Support\Facades\Auth::user()?->role, ['super_admin', ]))
+                    ->helperText('Chọn vai trò cho người dùng'),
                 \Filament\Forms\Components\TextInput::make('password')
                     ->password()
                     ->label('Mật khẩu')

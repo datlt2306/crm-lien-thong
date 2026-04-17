@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CommissionPolicy extends Model {
     protected $fillable = [
-        'organization_id',
         'collaborator_id',
         'program_type',
         'role',
@@ -33,9 +32,6 @@ class CommissionPolicy extends Model {
         'meta' => 'array',
     ];
 
-    public function organization(): BelongsTo {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function collaborator(): BelongsTo {
         return $this->belongsTo(Collaborator::class);

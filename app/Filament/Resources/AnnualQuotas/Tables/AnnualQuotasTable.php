@@ -22,7 +22,7 @@ class AnnualQuotasTable {
 
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
+        $canEdit = $user && in_array($user->role, ['super_admin', ]);
 
         return $table
             ->recordUrl(fn($r) => ($canEdit && $r) ? \App\Filament\Resources\AnnualQuotas\AnnualQuotaResource::getUrl('edit', ['record' => $r]) : null)

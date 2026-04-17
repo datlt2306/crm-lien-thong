@@ -8,7 +8,6 @@ trait WithDashboardFilters {
         'from' => null,
         'to' => null,
         'program_type' => null,
-        'organization_id' => null,
         'major' => null,
         'group' => 'day', // day | month | year
     ];
@@ -21,7 +20,6 @@ trait WithDashboardFilters {
                 'from' => null,
                 'to' => null,
                 'program_type' => null,
-                'organization_id' => null,
                 'major' => null,
                 'group' => 'day',
             ];

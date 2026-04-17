@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\CollaboratorRegistrations\Schemas;
 
 use App\Models\Collaborator;
-use App\Models\Organization;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -36,19 +35,6 @@ class CollaboratorRegistrationForm {
                     ])
                     ->columns(2),
 
-                Section::make('Thông tin tổ chức')
-                    ->schema([
-                        Select::make('organization_id')
-                            ->label('Tổ chức')
-                            ->options(Organization::where('status', 'active')->pluck('name', 'id'))
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->visible(fn() => \Illuminate\Support\Facades\Auth::user()->role === 'super_admin'),
-
-
-                    ])
-                    ->columns(2),
 
                 Section::make('Thông tin bổ sung')
                     ->schema([

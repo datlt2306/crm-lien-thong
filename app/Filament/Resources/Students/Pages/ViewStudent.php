@@ -15,7 +15,7 @@ class ViewStudent extends ViewRecord {
         $actions = [];
 
         // Super_admin, organization_owner, CTV và kế toán đều có thể chỉnh sửa
-        if (in_array(Auth::user()?->role, ['super_admin', 'organization_owner', 'ctv', 'accountant'])) {
+        if (in_array(Auth::user()?->role, ['super_admin', 'ctv', 'accountant'])) {
             $actions[] = EditAction::make()
                 ->label('Chỉnh sửa học viên');
         }

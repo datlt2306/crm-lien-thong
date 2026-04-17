@@ -87,12 +87,6 @@ class WalletResource extends Resource {
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('collaborator.organization.name')
-                    ->label('Tổ chức')
-                    ->searchable()
-                    ->sortable()
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                        !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
 
                 Tables\Columns\TextColumn::make('balance')
                     ->label('Số dư')
@@ -127,17 +121,6 @@ class WalletResource extends Resource {
                     ->visible(fn(): bool => \Illuminate\Support\Facades\Auth::user()->role === 'super_admin'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('collaborator.organization_id')
-                    ->label('Tổ chức')
-                    ->options(function () {
-                        $user = \Illuminate\Support\Facades\Auth::user();
-                        if ($user->role === 'super_admin') {
-                            return \App\Models\Organization::pluck('name', 'id');
-                        }
-                        return [];
-                    })
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                        !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
             ])
             ->actions([
                 ViewAction::make(),

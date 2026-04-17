@@ -10,14 +10,11 @@ class StudentFeeService {
     /**
      * Tính "số tiền theo cấu hình" cho 1 sinh viên dựa trên:
      * - quota_id (nếu có)
-     * - fallback: organization_id, major_name, intake_id
+     * - fallback: major_name, intake_id
      *
      * Hiện tại cấu hình số tiền đang nằm ở `quotas.tuition_fee`.
      */
     public function getExpectedFeeForStudent(Student $student): ?float {
-        if (!$student->organization_id) {
-            return null;
-        }
 
         // Ưu tiên cao nhất: Lấy từ quota_id đã lưu
         if (!empty($student->quota_id)) {
@@ -36,7 +33,6 @@ class StudentFeeService {
         }
 
         $fee = Quota::query()
-            ->where('organization_id', $student->organization_id)
             ->where('major_name', $majorName)
             ->where('intake_id', $intakeId)
             ->value('tuition_fee');
@@ -63,7 +59,6 @@ class StudentFeeService {
         }
 
         $query = Intake::query()
-            ->where('organization_id', $student->organization_id)
             ->where('status', Intake::STATUS_ACTIVE);
 
         // Not joining/filtering by program_id anymore as it's dropped from intakes
@@ -83,7 +78,6 @@ class StudentFeeService {
 
         // Fallback cuối: nếu không tìm được theo tháng, thử lấy intake active mới nhất theo org
         $fallbackQuery = Intake::query()
-            ->where('organization_id', $student->organization_id)
             ->where('status', Intake::STATUS_ACTIVE);
 
         $fallbackIntakeId = $fallbackQuery

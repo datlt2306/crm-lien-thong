@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\Collaborator;
-use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\Builder;
@@ -83,7 +82,7 @@ class StudentApiController extends Controller {
         }
 
         // Load relationships
-        $student->load(['organization', 'collaborator', 'major', 'intake', 'payment']);
+        $student->load(['collaborator', 'major', 'intake', 'payment']);
 
         return response()->json([
             'success' => true,
@@ -105,16 +104,6 @@ class StudentApiController extends Controller {
             return $query;
         }
 
-        // Chủ đơn vị chỉ thấy học viên đã nộp tiền (SUBMITTED) hoặc đã xác nhận (VERIFIED)
-        if ($user->role === 'organization_owner') {
-            $org = Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query->where('organization_id', $org->id)
-                    ->whereHas('payment', function ($paymentQuery) {
-                        $paymentQuery->whereIn('status', ['submitted', 'verified']);
-                    });
-            }
-        }
 
         // CTV chỉ thấy student của chính mình (hệ thống chỉ còn 1 cấp CTV)
         if ($user->role === 'ctv') {
@@ -153,10 +142,6 @@ class StudentApiController extends Controller {
             $query->where('status', $request->get('status'));
         }
 
-        // Filter theo organization_id
-        if ($request->has('organization_id')) {
-            $query->where('organization_id', $request->get('organization_id'));
-        }
 
         // Filter theo collaborator_id
         if ($request->has('collaborator_id')) {
@@ -263,11 +248,6 @@ class StudentApiController extends Controller {
             'major' => $student->major,
             'target_university' => $student->target_university,
             'notes' => $student->notes,
-            'organization' => $student->organization ? [
-                'id' => $student->organization->id,
-                'name' => $student->organization->name,
-                'code' => $student->organization->code,
-            ] : null,
             'collaborator' => $student->collaborator ? [
                 'id' => $student->collaborator->id,
                 'full_name' => $student->collaborator->full_name,

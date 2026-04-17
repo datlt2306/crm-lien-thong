@@ -15,7 +15,6 @@ class CollaboratorRegistration extends Model {
         'full_name',
         'phone',
         'email',
-        'organization_id',
         'ref_id',
         'password',
         'note',
@@ -32,12 +31,6 @@ class CollaboratorRegistration extends Model {
         'status' => 'string',
     ];
 
-    /**
-     * Quan hệ: Thuộc tổ chức
-     */
-    public function organization(): BelongsTo {
-        return $this->belongsTo(Organization::class, 'organization_id');
-    }
 
     /**
      * Quan hệ: Admin đã review
@@ -94,7 +87,6 @@ class CollaboratorRegistration extends Model {
                 'full_name' => $this->full_name,
                 'phone' => $this->phone,
                 'email' => $this->email,
-                'organization_id' => $this->organization_id,
                 'ref_id' => $this->ref_id,
                 'note' => $this->note,
                 'status' => 'active',
@@ -116,7 +108,6 @@ class CollaboratorRegistration extends Model {
                         'phone' => $this->phone,
                         'password' => $this->password, // Đã hash trước lúc lưu
                         'role' => 'ctv',
-                        'organization_id' => $this->organization_id,
                     ]);
                 }
             }
@@ -173,10 +164,4 @@ class CollaboratorRegistration extends Model {
         return $query->where('status', $status);
     }
 
-    /**
-     * Scope: Lọc theo tổ chức
-     */
-    public function scopeOrganization($query, int $organizationId) {
-        return $query->where('organization_id', $organizationId);
-    }
 }

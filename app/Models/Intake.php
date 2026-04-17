@@ -15,7 +15,6 @@ class Intake extends Model {
         'end_date',
         'enrollment_deadline',
         'status',
-        'organization_id',
         'settings',
     ];
 
@@ -41,12 +40,6 @@ class Intake extends Model {
         ];
     }
 
-    /**
-     * Quan hệ: Thuộc tổ chức
-     */
-    public function organization() {
-        return $this->belongsTo(Organization::class);
-    }
 
 
     /**
@@ -108,12 +101,6 @@ class Intake extends Model {
         return $query->where('status', self::STATUS_ACTIVE);
     }
 
-    /**
-     * Scope: Lấy intakes của organization
-     */
-    public function scopeForOrganization($query, $organizationId) {
-        return $query->where('organization_id', $organizationId);
-    }
 
     /**
      * Kiểm tra xem đợt tuyển có còn nhận hồ sơ không

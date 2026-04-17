@@ -16,15 +16,4 @@ class EditCollaboratorRegistration extends EditRecord {
         ];
     }
 
-    protected function mutateFormDataBeforeSave(array $data): array {
-        // Đảm bảo organization_owner không thể thay đổi organization_id
-        if (Auth::user()->role === 'organization_owner') {
-            $organization = \App\Models\Organization::where('organization_owner_id', Auth::user()->id)->first();
-            if ($organization) {
-                $data['organization_id'] = $organization->id;
-            }
-        }
-
-        return $data;
-    }
 }

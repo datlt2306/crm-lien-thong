@@ -17,7 +17,6 @@ class Quota extends Model {
         'major_name',
         'program_name',
         'intake_id',
-        'organization_id',
         'target_quota',
         'current_quota',
         'pending_quota',
@@ -53,12 +52,6 @@ class Quota extends Model {
 
 
 
-    /**
-     * Quan hệ: Thuộc tổ chức
-     */
-    public function organization() {
-        return $this->belongsTo(Organization::class);
-    }
 
     /**
      * Scope: Lấy quotas đang active
@@ -74,12 +67,6 @@ class Quota extends Model {
         return $query->where('intake_id', $intakeId);
     }
 
-    /**
-     * Scope: Lấy quotas của organization
-     */
-    public function scopeForOrganization($query, $organizationId) {
-        return $query->where('organization_id', $organizationId);
-    }
 
     /**
      * Kiểm tra xem quota còn trống không

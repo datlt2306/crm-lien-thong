@@ -15,7 +15,7 @@ class PaymentFactory extends Factory {
      */
     public function definition(): array {
         return [
-            'organization_id' => null,
+            
             'student_id' => null,
             'primary_collaborator_id' => null,
             'sub_collaborator_id' => null,

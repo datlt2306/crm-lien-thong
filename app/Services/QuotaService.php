@@ -13,7 +13,7 @@ use App\Models\Payment;
 class QuotaService {
 
     /**
-     * Giảm quota khi payment verified. Dùng quotas/annual_quotas (org, major_name, program_name, year).
+     * Giảm quota khi payment verified. Dùng quotas/annual_quotas (major_name, program_name, year).
      */
     public function consumeQuotaOnPaymentVerified(Payment $payment): bool {
         $student = $payment->student;
@@ -33,7 +33,6 @@ class QuotaService {
             // Cập nhật AnnualQuota tương ứng (nếu có)
             $year = (int) ($student->intake?->start_date?->format('Y') ?? now()->format('Y'));
             $annual = AnnualQuota::query()
-                ->where('organization_id', $payment->organization_id)
                 ->where('year', $year);
 
             if ($quota->major_name) {
@@ -88,7 +87,6 @@ class QuotaService {
 
             $year = (int) ($student->intake?->start_date?->format('Y') ?? now()->format('Y'));
             $annual = AnnualQuota::query()
-                ->where('organization_id', $payment->organization_id)
                 ->where('year', $year);
 
             if ($quota->major_name) {

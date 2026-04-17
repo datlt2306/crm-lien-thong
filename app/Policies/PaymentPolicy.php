@@ -7,11 +7,11 @@ use App\Models\User;
 
 class PaymentPolicy {
     public function viewAny(User $user): bool {
-        return $user->hasRole(['super_admin', 'admin', 'accountant', 'ctv', 'organization_owner', 'document']);
+        return $user->hasRole(['super_admin', 'admin', 'accountant', 'ctv', 'document']);
     }
 
     public function view(User $user, Payment $payment): bool {
-        if ($user->hasRole(['super_admin', 'admin', 'accountant', 'organization_owner', 'document'])) {
+        if ($user->hasRole(['super_admin', 'admin', 'accountant', 'document'])) {
             return true;
         }
         if ($user->hasRole('ctv')) {

@@ -15,7 +15,6 @@ class Collaborator extends Model {
         'tax_code',
         'bank_name',
         'bank_account',
-        'organization_id',
         'ref_id',
         'note',
         'status',
@@ -27,12 +26,6 @@ class Collaborator extends Model {
         'status' => 'string',
     ];
 
-    /**
-     * Quan hệ: Thuộc tổ chức
-     */
-    public function organization() {
-        return $this->belongsTo(Organization::class, 'organization_id');
-    }
 
     // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====
     // Đã xóa: upline(), downlines(), allDownlines(), downlineCommissionConfigs(), uplineCommissionConfigs()

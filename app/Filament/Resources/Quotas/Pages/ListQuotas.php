@@ -13,7 +13,7 @@ class ListQuotas extends ListRecords {
         $actions = [];
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        if ($user && in_array($user->role, ['super_admin', 'organization_owner'])) {
+        if ($user && in_array($user->role, ['super_admin', ])) {
             $actions[] = CreateAction::make();
         }
 

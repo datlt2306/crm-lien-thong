@@ -67,7 +67,7 @@ class IntakesTable {
 
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
+        $canEdit = $user && in_array($user->role, ['super_admin']);
 
         $dedupedQuotaIds = Quota::query()
             ->selectRaw('MAX(id) as id')
@@ -81,16 +81,8 @@ class IntakesTable {
         $query = Quota::query()
             ->join('intakes as i', 'i.id', '=', 'quotas.intake_id')
             ->select('quotas.*', 'i.start_date as intake_start_date', 'i.end_date as intake_end_date', 'i.status as intake_status')
-            ->with(['intake.organization'])
+            ->with(['intake'])
             ->whereIn('quotas.id', $dedupedQuotaIds);
-
-        if ($user?->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            $query->where('organization_id', $org?->id ?? 0);
-        } elseif ($user?->role === 'ctv') {
-            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-            $query->where('organization_id', $collaborator?->organization_id ?? 0);
-        }
 
         return $table
             ->query($query)
@@ -189,7 +181,7 @@ class IntakesTable {
                         ->icon('heroicon-o-pencil-square')
                         ->url(fn(Quota $record) => self::getEditUrlForQuota($record))
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin'])),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -207,7 +199,7 @@ class IntakesTable {
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', 'organization_owner'])),
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin'])),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

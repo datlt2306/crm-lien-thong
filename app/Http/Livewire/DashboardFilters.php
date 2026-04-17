@@ -3,7 +3,6 @@
 namespace App\Http\Livewire;
 
 use Livewire\Component;
-use App\Models\Organization;
 
 
 class DashboardFilters extends Component {
@@ -12,7 +11,6 @@ class DashboardFilters extends Component {
         'from' => null,
         'to' => null,
         'program_type' => null,
-        'organization_id' => null,
         'major' => null,
     ];
 
@@ -32,7 +30,7 @@ class DashboardFilters extends Component {
     }
 
     public function render() {
-        $organizations = Organization::query()->orderBy('name')->get(['id', 'name']);
+        $organizations = collect();
         $majors = \Illuminate\Support\Facades\DB::table('quotas')
             ->select('major_name as id', 'major_name as name')
             ->whereNotNull('major_name')

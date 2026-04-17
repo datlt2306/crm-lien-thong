@@ -27,7 +27,6 @@ class User extends Authenticatable {
         'bio',
         'password',
         'role',
-        'organization_id',
     ];
 
     /**
@@ -81,42 +80,7 @@ class User extends Authenticatable {
         };
     }
 
-    /**
-     * Quan hệ: User có thể có Collaborator record (nếu role là 'ctv')
-     */
     public function collaborator() {
         return $this->hasOne(Collaborator::class, 'email', 'email');
-    }
-
-    /**
-     * Quan hệ: User có thể là owner của Organization (nếu role là 'organization_owner')
-     */
-    public function ownedOrganization() {
-        return $this->hasOne(Organization::class, 'organization_owner_id');
-    }
-
-    /**
-     * Quan hệ: User thuộc về Organization (khi lưu trực tiếp organization_id)
-     */
-    public function organization() {
-        return $this->belongsTo(Organization::class);
-    }
-
-    /**
-     * Lấy organization mà user thuộc về
-     */
-    public function getOrganization() {
-        if (!empty($this->organization_id) && $this->organization) {
-            return $this->organization;
-        }
-        if ($this->role === 'organization_owner') {
-            return $this->ownedOrganization;
-        }
-
-        if ($this->role === 'ctv' && $this->collaborator) {
-            return $this->collaborator->organization;
-        }
-
-        return null;
     }
 }

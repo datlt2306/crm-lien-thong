@@ -63,7 +63,7 @@ class CleanupOrphanedRecordsSeeder extends Seeder {
             })->get();
 
         foreach ($collaboratorsWithInvalidOrgs as $collab) {
-            $collab->update(['organization_id' => null]);
+            $collab->update([
             echo "✓ Đã xóa organization_id không hợp lệ cho: {$collab->full_name}\n";
         }
 

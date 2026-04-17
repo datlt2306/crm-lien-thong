@@ -42,14 +42,6 @@ class QuotaForm {
                             ->after('intake_start_date')
                             ->helperText('Ngày cuối cùng nhận hồ sơ'),
 
-                        Select::make('organization_id')
-                            ->label('Tổ chức')
-                            ->relationship('organization', 'name')
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn tổ chức...')
-                            ->helperText('Tổ chức quản lý đợt tuyển sinh này'),
 
                         TextInput::make('name')
                             ->label('Tên chương trình tuyển sinh')

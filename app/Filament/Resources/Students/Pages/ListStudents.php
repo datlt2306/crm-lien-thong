@@ -14,7 +14,7 @@ class ListStudents extends ListRecords {
         $actions = [];
 
         // Super_admin, organization_owner, CTV và kế toán đều có thể tạo mới
-        if (in_array(Auth::user()?->role, ['super_admin', 'organization_owner', 'ctv', 'accountant'])) {
+        if (in_array(Auth::user()?->role, ['super_admin', 'ctv', 'accountant'])) {
             $actions[] = CreateAction::make()
                 ->label('Thêm học viên mới');
         }

@@ -74,10 +74,6 @@ class CollaboratorResource extends Resource {
             return $query;
         }
 
-        // Chủ đơn vị
-        if ($user->role === 'organization_owner') {
-            return $query;
-        }
 
         if ($user->role === 'ctv') {
             // CTV không được xem danh sách CTV khác
@@ -98,9 +94,6 @@ class CollaboratorResource extends Resource {
                 return (string) Collaborator::count();
             }
 
-            if ($user->role === 'organization_owner') {
-                return (string) Collaborator::count();
-            }
 
             if ($user->role === 'ctv') {
                 // CTV không thấy badge vì không thấy menu
@@ -121,9 +114,6 @@ class CollaboratorResource extends Resource {
             return 'Tổng số cộng tác viên';
         }
 
-        if ($user->role === 'organization_owner') {
-            return 'Tổng số cộng tác viên';
-        }
 
         if ($user->role === 'ctv') {
             return null; // CTV không thấy menu nên không cần tooltip

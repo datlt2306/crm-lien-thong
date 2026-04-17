@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\CollaboratorRegistration;
 use App\Models\Collaborator;
-use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -15,9 +14,7 @@ class CollaboratorRegistrationController extends Controller {
      * Hiển thị form đăng ký cộng tác viên
      */
     public function showRegistrationForm() {
-        $organizations = Organization::where('status', 'active')->get();
-
-        return view('collaborator-registration', compact('organizations'));
+        return view('collaborator-registration');
     }
 
     /**
@@ -28,7 +25,6 @@ class CollaboratorRegistrationController extends Controller {
             'full_name' => 'required|string|max:255',
             'phone' => 'required|string|unique:collaborators,phone',
             'email' => 'nullable|email|unique:collaborators,email',
-            'organization_id' => 'required|exists:organizations,id',
             'password' => 'required|string|min:6|confirmed',
             'note' => 'nullable|string',
         ], [
@@ -37,8 +33,6 @@ class CollaboratorRegistrationController extends Controller {
             'phone.unique' => 'Số điện thoại đã được đăng ký',
             'email.email' => 'Email không đúng định dạng',
             'email.unique' => 'Email đã được đăng ký',
-            'organization_id.required' => 'Vui lòng chọn tổ chức',
-            'organization_id.exists' => 'Tổ chức không tồn tại',
             'password.required' => 'Mật khẩu là bắt buộc',
             'password.min' => 'Mật khẩu phải từ 6 ký tự',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp',
@@ -57,7 +51,6 @@ class CollaboratorRegistrationController extends Controller {
                 'phone' => $request->phone,
                 'email' => $request->email,
                 'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-                'organization_id' => $request->organization_id,
                 'ref_id' => 'REG-' . time() . '-' . rand(1000, 9999),
                 'status' => 'pending', // Chờ duyệt
                 'note' => $request->note,

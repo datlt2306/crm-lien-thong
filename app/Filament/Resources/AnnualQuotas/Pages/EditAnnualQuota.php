@@ -11,7 +11,7 @@ class EditAnnualQuota extends EditRecord {
 
     public function mount(int|string $record): void {
         $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user || !in_array($user->role, ['super_admin', 'organization_owner'])) {
+        if (!$user || !in_array($user->role, ['super_admin', ])) {
             abort(403, 'Bạn không có quyền truy cập.');
         }
         parent::mount($record);

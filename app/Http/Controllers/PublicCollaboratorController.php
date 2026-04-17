@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Collaborator;
-use App\Models\Organization;
 use App\Services\RefTrackingService;
 
 class PublicCollaboratorController extends Controller {
@@ -15,10 +14,7 @@ class PublicCollaboratorController extends Controller {
     }
 
     public function showRegisterForm() {
-        $organizations = Organization::orderBy('name')->pluck('name', 'id')->toArray();
-        return view('ctv-register', [
-            'organizations' => $organizations,
-        ]);
+        return view('ctv-register');
     }
 
     public function submitRegister(Request $request) {
@@ -26,7 +22,6 @@ class PublicCollaboratorController extends Controller {
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:collaborators,email',
             'phone' => 'required|string|max:20|unique:collaborators,phone',
-            'organization_id' => 'nullable|exists:organizations,id',
             'password' => 'required|string|min:6|confirmed',
             'note' => 'nullable|string',
         ]);
@@ -35,7 +30,6 @@ class PublicCollaboratorController extends Controller {
             'full_name' => $data['full_name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'organization_id' => $data['organization_id'] ?? null,
             'note' => $data['note'] ?? null,
             'status' => 'active',
         ]);
@@ -51,10 +45,8 @@ class PublicCollaboratorController extends Controller {
         $this->refTrackingService->setRefCookie(request(), $ref_id);
 
         $upline = Collaborator::where('ref_id', $ref_id)->firstOrFail();
-        $org = $upline->organization;
         return view('ctv-register-ref', [
             'upline' => $upline,
-            'organization' => $org,
         ]);
     }
 
@@ -66,7 +58,6 @@ class PublicCollaboratorController extends Controller {
             return redirect()->back()->withErrors(['ref_id' => 'Liên kết không hợp lệ!'])->withInput();
         }
 
-        $org = $upline->organization;
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:collaborators,email',
@@ -79,7 +70,6 @@ class PublicCollaboratorController extends Controller {
             'full_name' => $data['full_name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'organization_id' => $org?->id,
             'note' => $data['note'] ?? null,
             'status' => 'active',
         ]);

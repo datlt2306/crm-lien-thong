@@ -24,7 +24,7 @@ class IntakeResource extends Resource {
 
     public static function shouldRegisterNavigation(): bool {
         $user = \Illuminate\Support\Facades\Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'organization_owner', 'ctv']);
+        return $user && in_array($user->role, ['super_admin', 'ctv', 'admissions', 'accountant', 'document']);
     }
 
     public static function form(Schema $schema): Schema {
@@ -49,27 +49,14 @@ class IntakeResource extends Resource {
             return $query->whereNull('id');
         }
 
-        // Super admin thấy tất cả
-        if ($user->role === 'super_admin') {
+        // Sau khi bỏ đơn vị, tất cả các vai trò quản lý đều thấy toàn bộ đợt tuyển sinh
+        if (in_array($user->role, ['super_admin', 'admissions', 'accountant', 'document'])) {
             return $query;
         }
 
-        // Organization owner thấy đợt tuyển sinh của tổ chức mình
-        if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                return $query->where('organization_id', $org->id);
-            }
-            return $query->whereNull('id');
-        }
-
-        // CTV thấy đợt tuyển sinh của tổ chức (read-only)
+        // CTV thấy toàn bộ đợt tuyển sinh (read-only)
         if ($user->role === 'ctv') {
-            $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-            if ($collaborator && $collaborator->organization) {
-                return $query->where('organization_id', $collaborator->organization_id);
-            }
-            return $query->whereNull('id');
+            return $query;
         }
 
         // Các role khác không thấy gì

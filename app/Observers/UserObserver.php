@@ -3,7 +3,6 @@
 namespace App\Observers;
 
 use App\Models\User;
-use App\Models\Organization;
 use App\Models\Collaborator;
 
 class UserObserver {
@@ -13,21 +12,6 @@ class UserObserver {
     public function created(User $user): void {
         // Tự động tạo mối quan hệ khi tạo user mới
         
-        // 1. Nếu là organization_owner, ưu tiên tổ chức được chọn hoặc tìm tự do chưa có chủ
-        if ($user->role === 'organization_owner') {
-            if ($user->organization_id) {
-                $org = Organization::find($user->organization_id);
-                if ($org) {
-                    $org->update(['organization_owner_id' => $user->id]);
-                }
-            } else {
-                $organizationWithoutOwner = Organization::whereNull('organization_owner_id')->first();
-                if ($organizationWithoutOwner) {
-                    $organizationWithoutOwner->update(['organization_owner_id' => $user->id]);
-                    $user->updateQuietly(['organization_id' => $organizationWithoutOwner->id]);
-                }
-            }
-        }
 
         // 2. Tạo Collaborator record chỉ cho CTV
         if ($user->role === 'ctv') {
@@ -49,22 +33,6 @@ class UserObserver {
     public function updated(User $user): void {
         $oldRole = $user->getOriginal('role');
         $newRole = $user->role;
-        $oldOrgId = $user->getOriginal('organization_id');
-        $newOrgId = $user->organization_id;
-
-        // Xử lý thay đổi role liên quan đến organization_owner
-        if ($oldRole === 'organization_owner' && $newRole !== 'organization_owner') {
-            Organization::where('organization_owner_id', $user->id)->update(['organization_owner_id' => null]);
-        }
-
-        if ($newRole === 'organization_owner') {
-            if ($newOrgId) {
-                // Bỏ owner của tổ chức cũ (nếu có)
-                Organization::where('organization_owner_id', $user->id)->where('id', '!=', $newOrgId)->update(['organization_owner_id' => null]);
-                // Set owner cho tổ chức mới
-                Organization::where('id', $newOrgId)->update(['organization_owner_id' => $user->id]);
-            }
-        }
 
         // Khi role thay đổi, cập nhật mối quan hệ Role/Collaborator
         if ($user->isDirty('role')) {
@@ -89,7 +57,6 @@ class UserObserver {
                 $updates = [];
                 if ($user->isDirty('name')) $updates['full_name'] = $user->name;
                 if ($user->isDirty('phone')) $updates['phone'] = $user->phone;
-                if ($user->isDirty('organization_id') && $newOrgId) $updates['organization_id'] = $newOrgId;
                 
                 if (!empty($updates)) {
                     $collaborator->update($updates);
@@ -106,33 +73,28 @@ class UserObserver {
         $existingCollaborator = Collaborator::where('email', $user->email)->first();
 
         if (!$existingCollaborator) {
-            $organization = $this->getUserOrganization($user);
-
-            if ($organization) {
-                // Xử lý phone NULL - tạo phone từ email hoặc sử dụng default
-                $phone = $user->phone;
-                if (empty($phone)) {
-                    // Tạo phone từ email hoặc sử dụng ID
-                    $phone = '0000000000'; // Default phone
-                    if (!empty($user->email)) {
-                        $phone = '000' . substr(preg_replace('/[^0-9]/', '', $user->email), 0, 7);
-                    }
+            // Xử lý phone NULL - tạo phone từ email hoặc sử dụng default
+            $phone = $user->phone;
+            if (empty($phone)) {
+                // Tạo phone từ email hoặc sử dụng ID
+                $phone = '0000000000'; // Default phone
+                if (!empty($user->email)) {
+                    $phone = '000' . substr(preg_replace('/[^0-9]/', '', $user->email), 0, 7);
                 }
-
-                // Kiểm tra phone trùng lặp
-                $existingPhone = Collaborator::where('phone', $phone)->first();
-                if ($existingPhone) {
-                    $phone = $phone . '_' . time();
-                }
-
-                Collaborator::create([
-                    'full_name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $phone,
-                    'organization_id' => $organization->id,
-                    'status' => 'active'
-                ]);
             }
+
+            // Kiểm tra phone trùng lặp
+            $existingPhone = Collaborator::where('phone', $phone)->first();
+            if ($existingPhone) {
+                $phone = $phone . '_' . time();
+            }
+
+            Collaborator::create([
+                'full_name' => $user->name,
+                'email' => $user->email,
+                'phone' => $phone,
+                'status' => 'active'
+            ]);
         }
     }
 
@@ -143,8 +105,8 @@ class UserObserver {
         $collaborator = Collaborator::where('email', $user->email)->first();
 
         if ($collaborator) {
-            // Nếu chuyển từ role ctv sang role khác (hoặc chuyển từ organization_owner sang role khác)
-            if (($oldRole === 'ctv' && $newRole !== 'ctv') || ($oldRole === 'organization_owner' && $newRole !== 'organization_owner')) {
+            // Nếu chuyển từ role ctv sang role khác
+            if ($oldRole === 'ctv' && $newRole !== 'ctv') {
                 $collaborator->delete();
             }
         } else {
@@ -161,11 +123,6 @@ class UserObserver {
     public function deleted(User $user): void {
         // Khi xóa user, xóa các mối quan hệ liên quan
 
-        // 1. Nếu là organization_owner, xóa organization_owner_id
-        $organizations = Organization::where('organization_owner_id', $user->id)->get();
-        foreach ($organizations as $organization) {
-            $organization->update(['organization_owner_id' => null]);
-        }
 
         // 2. Xóa Collaborator record
         $collaborators = Collaborator::where('email', $user->email)->get();
@@ -174,19 +131,4 @@ class UserObserver {
         }
     }
 
-    /**
-     * Lấy organization phù hợp cho user
-     */
-    private function getUserOrganization(User $user): ?Organization {
-        if (!empty($user->organization_id)) {
-            return Organization::find($user->organization_id);
-        }
-
-        // Nếu là organization_owner, tìm organization của họ
-        if ($user->role === 'organization_owner') {
-            return Organization::where('organization_owner_id', $user->id)->first();
-        }
-
-        return null;
-    }
 }

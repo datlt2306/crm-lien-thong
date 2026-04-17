@@ -71,17 +71,6 @@ class UserResource extends Resource {
             return $query;
         }
 
-        // Owner chỉ thấy user trong tổ chức của mình
-        if ($user->role === 'organization_owner') {
-            $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-            if ($org) {
-                // Thấy tất cả user thuộc tổ chức (dựa trên users.organization_id)
-                return $query->where('organization_id', $org->id);
-            }
-
-            // Nếu không có tổ chức, chỉ thấy chính mình
-            return $query->where('id', $user->id);
-        }
 
         // Mặc định: không thấy gì
         return $query->whereNull('id');
@@ -96,14 +85,6 @@ class UserResource extends Resource {
                 return (string) User::count();
             }
 
-            if ($user->role === 'organization_owner') {
-                $org = \App\Models\Organization::where('organization_owner_id', $user->id)->first();
-                if ($org) {
-                    // Đếm user trong tổ chức (dựa trên users.organization_id)
-                    return (string) User::where('organization_id', $org->id)->count();
-                }
-                return '1'; // Chỉ có chính mình
-            }
 
             return null;
         } catch (\Throwable) {

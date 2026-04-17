@@ -42,9 +42,6 @@ class AnnualQuotaForm {
                 Section::make('Chỉ tiêu năm (ngành + hệ)')
                     ->description('Một năm có target (vd 100 CNTT chính quy); chia linh hoạt cho các đợt. Đợt 1 đủ → hết; chưa đủ → chuyển đợt sau.')
                     ->schema([
-                        Hidden::make('organization_id')
-                            ->default(fn() => \App\Models\Organization::query()->value('id'))
-                            ->required(),
 
                         Select::make('major_name')
                             ->label('Ngành học')

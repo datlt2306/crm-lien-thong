@@ -17,7 +17,7 @@ class ListPayments extends ListRecords {
         }
 
         // Super admin, admin và organization_owner có thể xem payments
-        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner'])) {
+        if (in_array($user->role, ['super_admin', 'admin', ])) {
             return true;
         }
 

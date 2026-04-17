@@ -35,7 +35,7 @@ class ChartTestDataSeeder extends Seeder {
                 'full_name' => 'Student Test ' . $studentCounter,
                 'phone' => '012345678' . (1000 + $studentCounter),
                 'email' => 'student' . $studentCounter . '@test.com',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->random()->id,
                 'target_university' => 'Test University',
                 'major' => 'Computer Science',
@@ -74,7 +74,7 @@ class ChartTestDataSeeder extends Seeder {
                 'full_name' => 'Chart seed HS ' . $extraStudentCounter,
                 'phone' => '0999' . str_pad((string) $extraStudentCounter, 7, '0', STR_PAD_LEFT),
                 'email' => 'chart-seed-' . $extraStudentCounter . '@test.local',
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $ctv->id,
                 'quota_id' => $quota->id,
                 'intake_id' => $quota->intake_id,
@@ -97,7 +97,7 @@ class ChartTestDataSeeder extends Seeder {
             foreach ($recipients as $recipient) {
                 $sid = $nextStudentId();
                 $samplePayment = \App\Models\Payment::create([
-                    'organization_id' => $organization->id,
+                    
                     'student_id' => $sid,
                     'primary_collaborator_id' => $recipient->id,
                     'sub_collaborator_id' => $recipient->id,
@@ -109,7 +109,7 @@ class ChartTestDataSeeder extends Seeder {
 
                 $commission = \App\Models\Commission::create([
                     'student_id' => $sid,
-                    'organization_id' => $organization->id,
+                    
                     'payment_id' => $samplePayment->id,
                     'rule' => json_encode(['type' => 'percentage', 'value' => 10]),
                 ]);
@@ -138,7 +138,7 @@ class ChartTestDataSeeder extends Seeder {
                     'full_name' => 'Student Test ' . $studentCounter,
                     'phone' => '012345678' . (1000 + $studentCounter),
                     'email' => 'student' . $studentCounter . '@test.com',
-                    'organization_id' => $organization->id,
+                    
                     'collaborator_id' => $collaborators->random()->id,
                     'target_university' => 'Test University',
                     'major' => 'Computer Science',

@@ -79,8 +79,6 @@ class Student extends Model {
         'fee',                      // 49. Lệ phí
         'notes',                    // 50. Ghi chú
 
-        // Hệ thống & liên kết (không có trong file chuẩn nhưng cần cho app)
-        'organization_id',
         'collaborator_id',
         'quota_id',
         'intake_id',
@@ -173,9 +171,6 @@ class Student extends Model {
         return in_array($this->status, [self::STATUS_ENROLLED, self::STATUS_REJECTED, self::STATUS_DROPPED]);
     }
 
-    public function organization() {
-        return $this->belongsTo(Organization::class, 'organization_id');
-    }
 
     public function collaborator() {
         return $this->belongsTo(Collaborator::class, 'collaborator_id');
@@ -279,7 +274,6 @@ class Student extends Model {
             'phone' => 'required|string|max:20|unique:students,phone,' . (request()->route('record') ?? ''),
             'email' => 'nullable|email|max:255|unique:students,email,' . (request()->route('record') ?? ''),
             'identity_card' => 'nullable|string|max:20|unique:students,identity_card,' . (request()->route('record') ?? ''),
-            'organization_id' => 'required|exists:organizations,id',
             'collaborator_id' => 'nullable|exists:collaborators,id',
             'quota_id' => 'nullable|exists:quotas,id',
             'target_university' => 'nullable|string|max:255',

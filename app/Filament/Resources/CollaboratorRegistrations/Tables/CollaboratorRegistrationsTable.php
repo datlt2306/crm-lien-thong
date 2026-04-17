@@ -32,10 +32,6 @@ class CollaboratorRegistrationsTable {
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('organization.name')
-                    ->label('Tổ chức')
-                    ->searchable()
-                    ->sortable(),
 
 
 
@@ -77,9 +73,6 @@ class CollaboratorRegistrationsTable {
                         'rejected' => 'Từ chối',
                     ]),
 
-                SelectFilter::make('organization_id')
-                    ->label('Tổ chức')
-                    ->relationship('organization', 'name'),
             ])
             ->recordActions([
                 ActionGroup::make([

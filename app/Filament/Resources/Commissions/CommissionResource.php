@@ -13,7 +13,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use App\Models\Commission;
 use App\Models\CommissionItem;
-use App\Models\Organization;
 use App\Models\Collaborator;
 use App\Models\Student;
 use App\Filament\Resources\Commissions\Pages\ListCommissions;
@@ -45,8 +44,6 @@ class CommissionResource extends Resource {
 
         // Kiểm tra xem CTV có phải là người trực tiếp giới thiệu sinh viên không
         $isDirectRef = false;
-        // Kiểm tra xem có phải là organization_owner không
-        $isOwner = $user->role === 'organization_owner';
         if ($isCtv) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             // CTV trực tiếp giới thiệu sinh viên sẽ có commission với role = 'direct'
@@ -149,7 +146,7 @@ class CommissionResource extends Resource {
                         }
                         return $payment->receipt_number;
                     })
-                    ->visible(fn(): bool => in_array(Auth::user()->role, ['accountant', 'organization_owner', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))),
+                    ->visible(fn(): bool => in_array(Auth::user()->role, ['accountant', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))),
 
                 \Filament\Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
@@ -174,9 +171,6 @@ class CommissionResource extends Resource {
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
                             return 'Đã nhận tiền thành công';
                         }
-                        if ($user->role === 'organization_owner' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            return 'Đã chuyển thành công';
-                        }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
                     }),
 
@@ -184,7 +178,7 @@ class CommissionResource extends Resource {
                     ->label('Đã thanh toán lúc')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->visible(fn(): bool => !$isCtv), // Chỉ hiển thị cho chủ đơn vị và super admin
+                    ->visible(fn(): bool => Auth::user()->role === 'super_admin'), // Chỉ hiển thị cho super admin
 
             ])
             ->filters([
@@ -230,7 +224,7 @@ class CommissionResource extends Resource {
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
-                        return $record->status === CommissionItem::STATUS_PENDING && $user->role === 'organization_owner';
+                        return $record->status === CommissionItem::STATUS_PENDING && $user->role === 'super_admin';
                     })
                     ->action(function (CommissionItem $record) {
                         $record->markAsPayable();
@@ -260,8 +254,8 @@ class CommissionResource extends Resource {
                     ->modalSubmitActionLabel('Xác nhận thanh toán')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
-                        // Chủ đơn vị xác nhận khi item là DIRECT và đang PAYABLE/PENDING
-                        return $user->role === 'organization_owner'
+                        // Admin xác nhận khi item là DIRECT và đang PAYABLE/PENDING
+                        return $user->role === 'super_admin'
                             && $record->role === 'direct'
                             && in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]);
                     })
@@ -281,7 +275,7 @@ class CommissionResource extends Resource {
                     ->color('info')
                     ->requiresConfirmation()
                     ->modalHeading('Xác nhận đã nhận tiền')
-                    ->modalDescription('Xác nhận đã nhận được tiền hoa hồng từ chủ đơn vị.')
+                    ->modalDescription('Xác nhận đã nhận được tiền hoa hồng.')
                     ->modalSubmitActionLabel('Xác nhận đã nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
@@ -376,8 +370,8 @@ class CommissionResource extends Resource {
                         ->visible(function (CommissionItem $record) use ($user): bool {
                             $payment = $record->commission->payment;
                             if (!$payment || !$payment->receipt_path) return false;
-                            // Chỉ hiển thị cho organization_owner, super_admin, ctv (không hiển thị cho accountant)
-                            return in_array($user->role, ['organization_owner', 'super_admin', 'ctv']);
+                            // Chỉ hiển thị cho super_admin, ctv (không hiển thị cho accountant)
+                            return in_array($user->role, ['super_admin', 'ctv']);
                         }),
 
                     Action::make('manage_receipt')
@@ -499,7 +493,7 @@ class CommissionResource extends Resource {
                     ->modalSubmitActionLabel('Xác nhận')
                     ->modalCancelActionLabel('Hủy')
                     ->visible(function (CommissionItem $record) use ($user): bool {
-                        return in_array($record->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE]) && $user->role === 'organization_owner';
+                        return in_array($record->status, [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE]) && $user->role === 'super_admin';
                     })
                     ->action(function (CommissionItem $record) {
                         $record->markAsCancelled();
@@ -536,7 +530,7 @@ class CommissionResource extends Resource {
                         ->modalDescription('Xác nhận đã thanh toán hoa hồng cho tất cả các CTV đã chọn. Một bill chung sẽ được áp dụng cho tất cả.')
                         ->modalSubmitActionLabel('Xác nhận thanh toán tất cả')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Auth::user()->role === 'organization_owner')
+                        ->visible(fn() => Auth::user()->role === 'super_admin')
                         ->action(function (array $data, $records) {
                             $userId = Auth::user()->id;
                             $billPath = $data['bill'];
@@ -602,17 +596,6 @@ class CommissionResource extends Resource {
                     }
                 }
 
-                if ($user->role === 'organization_owner') {
-                    // Chủ đơn vị chỉ thấy commission của tổ chức mình
-                    $org = Organization::where('organization_owner_id', $user->id)->first();
-                    if ($org) {
-                        $query->whereHas('recipient', function ($q) use ($org) {
-                            $q->where('organization_id', $org->id);
-                        });
-                        // Và chỉ hiển thị khoản hoa hồng CTV cấp 1 (direct)
-                        $query->where('role', 'direct');
-                    }
-                }
 
                 if ($user->role === 'accountant') {
                     // Kế toán có thể xem tất cả commissions để đối soát
@@ -629,8 +612,21 @@ class CommissionResource extends Resource {
 
     public static function getNavigationBadge(): ?string {
         try {
-            // Đếm theo Commission để tránh nhân đôi (DIRECT + DOWNLINE)
-            return (string) Commission::count();
+            $user = Auth::user();
+            if (!$user) return null;
+
+            if ($user->role === 'super_admin' || $user->role === 'accountant') {
+                return (string) CommissionItem::count();
+            }
+
+            if ($user->role === 'ctv') {
+                $collaborator = Collaborator::where('email', $user->email)->first();
+                if (!$collaborator) return '0';
+                
+                return (string) CommissionItem::where('recipient_collaborator_id', $collaborator->id)->count();
+            }
+
+            return null;
         } catch (\Throwable) {
             return null;
         }

@@ -24,7 +24,7 @@ class CommissionPolicySeeder extends Seeder {
         // Global policies (áp dụng cho tất cả)
         $globalPolicies = [
             [
-                'organization_id' => null,
+                
                 'collaborator_id' => null,
                 'program_type' => null,
                 'role' => 'PRIMARY',
@@ -38,7 +38,7 @@ class CommissionPolicySeeder extends Seeder {
                 'meta' => json_encode(['description' => 'CTV chính nhận 100% số tiền thanh toán']),
             ],
             [
-                'organization_id' => null,
+                
                 'collaborator_id' => null,
                 'program_type' => 'REGULAR',
                 'role' => 'SUB',
@@ -52,7 +52,7 @@ class CommissionPolicySeeder extends Seeder {
                 'meta' => json_encode(['description' => 'CTV phụ chương trình chính quy: 700k']),
             ],
             [
-                'organization_id' => null,
+                
                 'collaborator_id' => null,
                 'program_type' => 'PART_TIME',
                 'role' => 'SUB',
@@ -70,7 +70,7 @@ class CommissionPolicySeeder extends Seeder {
         // Organization-specific policies
         $orgPolicies = [
             [
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => null,
                 'program_type' => 'REGULAR',
                 'role' => 'SUB',
@@ -88,7 +88,7 @@ class CommissionPolicySeeder extends Seeder {
         // Collaborator-specific policies
         $collabPolicies = [
             [
-                'organization_id' => $organization->id,
+                
                 'collaborator_id' => $collaborators->first()->id,
                 'program_type' => null,
                 'role' => 'PRIMARY',

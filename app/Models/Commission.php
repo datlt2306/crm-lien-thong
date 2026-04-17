@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Commission extends Model {
     protected $fillable = [
-        'organization_id',
         'payment_id',
         'student_id',
         'rule',
@@ -20,9 +19,6 @@ class Commission extends Model {
         'generated_at' => 'datetime',
     ];
 
-    public function organization(): BelongsTo {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function payment(): BelongsTo {
         return $this->belongsTo(Payment::class);
