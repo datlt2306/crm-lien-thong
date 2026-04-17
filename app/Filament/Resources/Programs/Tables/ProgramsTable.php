@@ -24,7 +24,13 @@ class ProgramsTable
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make()->label('Chỉnh sửa'),
-                ])->label('Hành động'),
+                ])
+                    ->label('Hành động')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->color('gray')
+                    ->button()
+                    ->size('sm')
+                    ->tooltip('Các hành động khả dụng'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -10,6 +10,8 @@ class StudentInfolist {
         return $schema
             ->components([
                 // Thông tin cơ bản
+                TextEntry::make('profile_code')
+                    ->label('Mã hồ sơ'),
                 TextEntry::make('full_name')
                     ->label('Họ và tên'),
                 TextEntry::make('phone')

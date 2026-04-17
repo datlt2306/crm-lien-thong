@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Organization;
 use App\Models\Major;
 use App\Models\Intake;
 use App\Models\Quota;
+use App\Models\AnnualQuota;
 
 class IntakeQuotaSeeder extends Seeder {
     /**
@@ -56,25 +56,55 @@ class IntakeQuotaSeeder extends Seeder {
             ],
         ];
 
+        $createdIntakes = [];
         foreach ($intakes as $intakeData) {
             $intakeData['organization_id'] = $organization->id;
             $intake = Intake::create($intakeData);
+            $createdIntakes[] = $intake;
             echo "✓ Đã tạo đợt tuyển sinh: {$intake->name}\n";
+        }
 
-            // Tạo quota cho từng major trong đợt tuyển sinh này
-            foreach ($majors as $major) {
+        // Tạo chỉ tiêu năm làm nguồn tổng, sau đó phân bổ cho từng đợt.
+        // Tỷ lệ phân bổ mẫu: 40% - 35% - 25%.
+        $allocRatios = [0.40, 0.35, 0.25];
+        $year = (int) ($createdIntakes[0]->start_date?->format('Y') ?? now()->format('Y'));
+
+        foreach ($majors as $major) {
+            $annualTarget = rand(120, 300);
+            $annual = AnnualQuota::create([
+                'organization_id' => $organization->id,
+                'name' => $major->name . ' - REGULAR',
+                'major_name' => $major->name,
+                'program_name' => 'REGULAR',
+                'year' => $year,
+                'target_quota' => $annualTarget,
+                'current_quota' => 0,
+                'status' => AnnualQuota::STATUS_ACTIVE,
+            ]);
+
+            $allocated = 0;
+            foreach ($createdIntakes as $idx => $intake) {
+                $isLast = $idx === count($createdIntakes) - 1;
+                $target = $isLast
+                    ? ($annualTarget - $allocated)
+                    : (int) floor($annualTarget * $allocRatios[$idx]);
+                $allocated += $target;
+
                 $quota = Quota::create([
                     'intake_id' => $intake->id,
-                    'major_id' => $major->id,
                     'organization_id' => $organization->id,
-                    'target_quota' => rand(50, 200), // Chỉ tiêu mục tiêu ngẫu nhiên
-                    'current_quota' => rand(0, 20), // Chỉ tiêu hiện tại ngẫu nhiên
-                    'pending_quota' => rand(5, 30), // Chỉ tiêu đang chờ ngẫu nhiên
-                    'reserved_quota' => rand(0, 10), // Chỉ tiêu đã đặt cọc ngẫu nhiên
-                    'tuition_fee' => rand(5000000, 15000000), // Học phí ngẫu nhiên
+                    'name' => $major->name . ' - REGULAR',
+                    'major_name' => $major->name,
+                    'program_name' => 'REGULAR',
+                    'target_quota' => $target,
+                    'current_quota' => 0,
+                    'pending_quota' => rand(2, 8),
+                    'reserved_quota' => rand(0, 3),
+                    'tuition_fee' => rand(5000000, 15000000),
                     'status' => Quota::STATUS_ACTIVE,
                 ]);
-                echo "  ✓ Đã tạo quota cho ngành: {$major->name} (chỉ tiêu: {$quota->target_quota})\n";
+
+                echo "  ✓ Đợt {$intake->name} - {$major->name}: {$quota->target_quota}/{$annual->target_quota}\n";
             }
         }
 

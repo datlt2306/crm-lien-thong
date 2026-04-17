@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Major;
-use App\Models\Organization;
 
 class MajorSeeder extends Seeder {
     public function run(): void {
@@ -16,12 +15,6 @@ class MajorSeeder extends Seeder {
 
         foreach ($majors as $item) {
             Major::updateOrCreate(['code' => $item['code']], $item);
-        }
-
-        // Gán tất cả majors cho tổ chức hiện có làm ví dụ
-        $orgs = Organization::all();
-        foreach ($orgs as $org) {
-            $org->majors()->sync(Major::pluck('id')->toArray());
         }
     }
 }

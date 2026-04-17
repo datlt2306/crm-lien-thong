@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Student;
 use App\Models\Organization;
 use App\Models\Collaborator;
+use App\Models\Quota;
 use Illuminate\Database\Seeder;
 
 class StudentSeeder extends Seeder {
@@ -18,6 +19,12 @@ class StudentSeeder extends Seeder {
         $collaborators = Collaborator::where('status', 'active')->get();
         if ($collaborators->isEmpty()) {
             $this->command->error('Chưa có Collaborator active nào. Chạy CollaboratorSeeder trước.');
+            return;
+        }
+
+        $quotas = Quota::where('organization_id', $organization->id)->with('intake')->get();
+        if ($quotas->isEmpty()) {
+            $this->command->error('Chưa có quota nào. Chạy IntakeQuotaSeeder trước.');
             return;
         }
 
@@ -175,6 +182,9 @@ class StudentSeeder extends Seeder {
         ];
 
         foreach ($students as $studentData) {
+            $quota = $quotas->random();
+            $studentData['quota_id'] = $quota->id;
+            $studentData['intake_id'] = $quota->intake_id;
             Student::create($studentData);
         }
     }

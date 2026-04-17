@@ -30,8 +30,6 @@ class QuotaService {
                 return false;
             }
 
-            $quota->incrementCurrentQuota();
-
             // Cập nhật AnnualQuota tương ứng (nếu có)
             $year = (int) ($student->intake?->start_date?->format('Y') ?? now()->format('Y'));
             $annual = AnnualQuota::query()
@@ -46,8 +44,13 @@ class QuotaService {
             }
 
             $annual = $annual->lockForUpdate()->first();
+            if ($annual && !$annual->hasAvailableSlots()) {
+                DB::rollBack();
+                return false;
+            }
 
-            if ($annual && $annual->hasAvailableSlots()) {
+            $quota->incrementCurrentQuota();
+            if ($annual) {
                 $annual->incrementCurrent();
             }
 
@@ -98,7 +101,7 @@ class QuotaService {
             $annual = $annual->lockForUpdate()->first();
 
             if ($annual && $annual->current_quota > 0) {
-                $annual->decrement('current_quota');
+                $annual->decrementCurrent();
             }
 
             DB::commit();

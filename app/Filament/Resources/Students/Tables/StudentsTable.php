@@ -47,6 +47,11 @@ class StudentsTable {
                 return null;
             })
             ->columns([
+                TextColumn::make('profile_code')
+                    ->label('Mã hồ sơ')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
                     ->searchable()

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Models\User;
 use App\Services\DashboardCacheService;
 use App\Filament\Widgets\Concerns\WithDashboardFilters;
 use Carbon\CarbonImmutable;
@@ -31,7 +32,18 @@ class CtvWalletWidget extends BaseWidget {
     }
 
     protected function getWalletData(int $userId): array {
-        $wallet = Wallet::where('user_id', $userId)->first();
+        $user = User::with('collaborator')->find($userId);
+        if (!$user || !$user->collaborator) {
+            return [
+                'balance' => '0 VND',
+                'total_deposit' => '0 VND',
+                'total_withdraw' => '0 VND',
+                'last_transaction' => 'Chưa có giao dịch',
+                'last_transaction_date' => '',
+            ];
+        }
+
+        $wallet = Wallet::where('collaborator_id', $user->collaborator->id)->first();
 
         if (!$wallet) {
             return [
@@ -48,7 +60,7 @@ class CtvWalletWidget extends BaseWidget {
             ->sum('amount');
 
         $totalWithdraw = WalletTransaction::where('wallet_id', $wallet->id)
-            ->where('type', 'withdraw')
+            ->where('type', 'withdrawal')
             ->sum('amount');
 
         $lastTransaction = WalletTransaction::where('wallet_id', $wallet->id)

@@ -14,6 +14,7 @@ class Student extends Model {
     use HasFactory;
     use SoftDeletes;
     protected $fillable = [
+        'profile_code',
         // I. Thông tin cơ bản
         'full_name',                // 4. Họ và tên
         'dob',                      // 5. Ngày sinh
@@ -188,6 +189,16 @@ class Student extends Model {
     }
 
     protected static function booted(): void {
+        static::created(function (Student $student) {
+            if (!empty($student->profile_code)) {
+                return;
+            }
+
+            $year = $student->created_at?->format('Y') ?? now()->format('Y');
+            $student->profile_code = sprintf('HS%s%06d', $year, $student->id);
+            $student->saveQuietly();
+        });
+
         static::saving(function (Student $student) {
             // Nếu học viên "đến trực tiếp" (văn phòng tuyển sinh) thì không được gán CTV giới thiệu
             // (kể cả khi client/UI gửi lên collaborator_id).

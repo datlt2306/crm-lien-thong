@@ -42,7 +42,7 @@ class PublicStudentController extends Controller {
         }
 
         $today = now()->toDateString();
-        
+
         // Lấy danh sách đợt tuyển đang active của đơn vị
         $intakes = Intake::where('organization_id', $organization->id)
             ->where('end_date', '>=', $today)
@@ -106,7 +106,7 @@ class PublicStudentController extends Controller {
 
         // Check if the quota belongs to the given intake 
         if ($quota->intake_id != $validated['intake_id']) {
-             return back()->withErrors(['quota_id' => 'Chương trình đào tạo không thuộc đợt tuyển này.'])->withInput();
+            return back()->withErrors(['quota_id' => 'Chương trình đào tạo không thuộc đợt tuyển này.'])->withInput();
         }
 
         // Kiểm tra available slots (Nếu logic QuotaService cần, hoặc check trực tiếp)
@@ -143,7 +143,7 @@ class PublicStudentController extends Controller {
                 $programTypeMap = match (strtolower($quota->program_name ?? '')) {
                     'chính quy', 'hệ chính quy' => 'REGULAR',
                     'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
-                    default => 'REGULAR' 
+                    default => 'REGULAR'
                 };
 
                 \App\Models\Payment::firstOrCreate(

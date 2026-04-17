@@ -40,6 +40,9 @@ class DatabaseSeeder extends Seeder {
         // Majors
         $this->call(MajorSeeder::class);
 
+        // Seed đợt tuyển sinh + chỉ tiêu trước khi tạo học sinh
+        $this->call(IntakeQuotaSeeder::class);
+
         // Sau đó mới tạo collaborators và students
         $this->call(CollaboratorSeeder::class);
         $this->call(StudentSeeder::class);

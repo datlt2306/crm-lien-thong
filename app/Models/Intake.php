@@ -56,6 +56,42 @@ class Intake extends Model {
         return $this->hasMany(Quota::class);
     }
 
+    public function programWindows() {
+        return $this->hasMany(IntakeProgramWindow::class);
+    }
+
+    public static function computeOverallDatesFromWindows(array $windows): array {
+        $startDates = [];
+        $endDates = [];
+        $deadlines = [];
+
+        foreach ($windows as $w) {
+            $start = $w['start_date'] ?? null;
+            $end = $w['end_date'] ?? null;
+            $deadline = $w['enrollment_deadline'] ?? null;
+
+            if (!empty($start)) {
+                $startDates[] = $start;
+            }
+            if (!empty($end)) {
+                $endDates[] = $end;
+            }
+            if (!empty($deadline)) {
+                $deadlines[] = $deadline;
+            }
+        }
+
+        sort($startDates);
+        rsort($endDates);
+        rsort($deadlines);
+
+        return [
+            'start_date' => $startDates[0] ?? null,
+            'end_date' => $endDates[0] ?? null,
+            'enrollment_deadline' => $deadlines[0] ?? null,
+        ];
+    }
+
     /**
      * Quan hệ: Có nhiều students
      */
@@ -88,23 +124,11 @@ class Intake extends Model {
     }
 
     /**
-     * Lấy tổng chỉ tiêu của đợt tuyển (ưu tiên từ relationship, fallback: annual_quotas theo năm)
+     * Lấy tổng chỉ tiêu của đợt tuyển từ quotas đã gắn trực tiếp cho đợt.
      */
     public function getTotalTargetQuotaAttribute(): int {
-        // Ưu tiên: Lấy từ relationship (Quotas đã tạo cho đợt này)
-        $linkedQuotas = $this->quotas()
+        return (int) $this->quotas()
             ->where('status', Quota::STATUS_ACTIVE)
-            ->get();
-
-        if ($linkedQuotas->isNotEmpty()) {
-            return (int) $linkedQuotas->sum('target_quota');
-        }
-
-        // Fallback: Lấy tất cả annual_quotas của năm đó
-        $year = $this->start_date?->format('Y') ?? now()->format('Y');
-        return (int) AnnualQuota::where('organization_id', $this->organization_id)
-            ->where('year', $year)
-            ->where('status', AnnualQuota::STATUS_ACTIVE)
             ->sum('target_quota');
     }
 
@@ -112,20 +136,8 @@ class Intake extends Model {
      * Lấy tổng chỉ tiêu hiện tại (đã nhập học)
      */
     public function getTotalCurrentQuotaAttribute(): int {
-        // Ưu tiên: Lấy từ relationship (Quotas đã tạo cho đợt này)
-        $linkedQuotas = $this->quotas()
+        return (int) $this->quotas()
             ->where('status', Quota::STATUS_ACTIVE)
-            ->get();
-
-        if ($linkedQuotas->isNotEmpty()) {
-            return (int) $linkedQuotas->sum('current_quota');
-        }
-
-        // Fallback: Lấy tất cả annual_quotas của năm đó
-        $year = $this->start_date?->format('Y') ?? now()->format('Y');
-        return (int) AnnualQuota::where('organization_id', $this->organization_id)
-            ->where('year', $year)
-            ->where('status', AnnualQuota::STATUS_ACTIVE)
             ->sum('current_quota');
     }
 

@@ -73,12 +73,29 @@ class QuotaForm {
 
                         Select::make('program_name')
                             ->label('Hệ đào tạo')
-                            ->options(fn() => SchemaFacade::hasTable('programs')
-                                ? \App\Models\Program::query()
+                            ->options(function () {
+                                $base = [
+                                    'REGULAR' => 'Chính quy',
+                                    'PART_TIME' => 'Vừa học vừa làm',
+                                    'DISTANCE' => 'Đào tạo từ xa',
+                                    'Chính quy' => 'Chính quy',
+                                    'Vừa học vừa làm' => 'Vừa học vừa làm',
+                                    'Đào tạo từ xa' => 'Đào tạo từ xa',
+                                ];
+
+                                if (!SchemaFacade::hasTable('programs')) {
+                                    return $base;
+                                }
+
+                                $fromPrograms = \App\Models\Program::query()
                                     ->where('is_active', true)
                                     ->orderBy('name')
-                                    ->pluck('name', 'name')
-                                : [])
+                                    ->get()
+                                    ->mapWithKeys(fn($program) => [$program->code => $program->name])
+                                    ->toArray();
+
+                                return array_merge($base, $fromPrograms);
+                            })
                             ->searchable()
                             ->preload()
                             ->required(),

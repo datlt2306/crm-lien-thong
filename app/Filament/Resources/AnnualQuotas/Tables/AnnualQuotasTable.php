@@ -11,6 +11,15 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
 
 class AnnualQuotasTable {
+    private static function getProgramLabel(?string $programCode): string {
+        return match (strtoupper((string) $programCode)) {
+            'REGULAR' => 'Chính quy',
+            'PART_TIME' => 'Vừa học vừa làm',
+            'DISTANCE' => 'Đào tạo từ xa',
+            default => $programCode ?: 'Chưa xác định',
+        };
+    }
+
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
         $canEdit = $user && in_array($user->role, ['super_admin', 'organization_owner']);
@@ -30,6 +39,7 @@ class AnnualQuotasTable {
 
                 TextColumn::make('program_name')
                     ->label('Hệ đào tạo')
+                    ->formatStateUsing(fn($state) => self::getProgramLabel($state))
                     ->searchable()
                     ->sortable(),
 
@@ -81,7 +91,20 @@ class AnnualQuotasTable {
                     ->preload(),
                 \Filament\Tables\Filters\SelectFilter::make('program_name')
                     ->label('Hệ đào tạo')
-                    ->options(fn() => \Illuminate\Support\Facades\DB::table('annual_quotas')->whereNotNull('program_name')->distinct()->pluck('program_name', 'program_name')->toArray())
+                    ->options(function () {
+                        $values = \Illuminate\Support\Facades\DB::table('annual_quotas')
+                            ->whereNotNull('program_name')
+                            ->distinct()
+                            ->pluck('program_name')
+                            ->toArray();
+
+                        $options = [];
+                        foreach ($values as $value) {
+                            $options[$value] = self::getProgramLabel($value);
+                        }
+
+                        return $options;
+                    })
                     ->searchable()
                     ->preload(),
                 \Filament\Tables\Filters\SelectFilter::make('year')

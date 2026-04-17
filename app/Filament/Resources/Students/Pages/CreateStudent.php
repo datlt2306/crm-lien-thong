@@ -6,6 +6,7 @@ use App\Filament\Resources\Students\StudentResource;
 use App\Models\Collaborator;
 use App\Models\Organization;
 use App\Models\Student;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 
@@ -74,6 +75,15 @@ class CreateStudent extends CreateRecord {
 
     public function getBreadcrumb(): string {
         return 'Thêm học viên mới';
+    }
+
+    protected function getCreatedNotification(): ?Notification {
+        $profileCode = $this->record?->profile_code ?? 'Đang cập nhật';
+
+        return Notification::make()
+            ->success()
+            ->title('Tạo học viên thành công')
+            ->body("Mã hồ sơ: {$profileCode}");
     }
 
     protected function getFormActions(): array {

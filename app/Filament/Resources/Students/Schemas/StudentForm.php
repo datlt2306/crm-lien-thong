@@ -20,6 +20,15 @@ use Filament\Schemas\Components\Tabs;
 use Illuminate\Support\Facades\Auth;
 
 class StudentForm {
+    private static function getProgramLabel(?string $programCode): string {
+        return match (strtoupper((string) $programCode)) {
+            'REGULAR' => 'Chính quy',
+            'PART_TIME' => 'Vừa học vừa làm',
+            'DISTANCE' => 'Đào tạo từ xa',
+            default => $programCode ?: 'Chưa xác định',
+        };
+    }
+
     public static function configure(Schema $schema): Schema {
         return $schema
             ->columns(12)
@@ -121,13 +130,32 @@ class StudentForm {
                                         }
                                         return Intake::where('organization_id', $orgId)
                                             ->whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING, Intake::STATUS_CLOSED])
+                                            ->with(['quotas' => function ($query) {
+                                                $query->where('status', \App\Models\Quota::STATUS_ACTIVE);
+                                            }])
                                             ->orderBy('start_date')
-                                            ->pluck('name', 'id');
+                                            ->get()
+                                            ->mapWithKeys(function ($intake) {
+                                                $programs = $intake->quotas
+                                                    ->pluck('program_name')
+                                                    ->filter()
+                                                    ->unique()
+                                                    ->map(fn($p) => self::getProgramLabel($p))
+                                                    ->values()
+                                                    ->toArray();
+
+                                                $programText = empty($programs)
+                                                    ? 'Chưa cấu hình hệ'
+                                                    : implode(', ', $programs);
+
+                                                $label = "{$intake->name} ({$programText})";
+                                                return [$intake->id => $label];
+                                            });
                                     })
                                     ->searchable()
                                     ->required()
                                     ->live()
-                                    ->helperText('Chọn đợt tuyển sinh'),
+                                    ->helperText('Chọn đợt tuyển sinh theo đúng hệ đào tạo cần đăng ký'),
 
                                 \Filament\Forms\Components\Select::make('quota_id')
                                     ->label('Chương trình tuyển sinh (Khóa học)')
@@ -138,9 +166,14 @@ class StudentForm {
                                         }
                                         return \App\Models\Quota::where('intake_id', $intakeId)
                                             ->where('status', \App\Models\Quota::STATUS_ACTIVE)
+                                            ->orderByDesc('id')
                                             ->get()
+                                            ->unique(function ($quota) {
+                                                return ($quota->major_name ?: $quota->name) . '|' . strtoupper((string) $quota->program_name);
+                                            })
                                             ->mapWithKeys(function ($quota) {
-                                                $label = $quota->name . ' (Còn ' . $quota->available_slots . ' slot)';
+                                                $programLabel = self::getProgramLabel($quota->program_name);
+                                                $label = ($quota->major_name ?: $quota->name) . ' - ' . $programLabel;
                                                 return [$quota->id => $label];
                                             });
                                     })
