@@ -129,7 +129,7 @@ class EditStudent extends EditRecord {
                         ->label('Bill thanh toán')
                         ->acceptedFileTypes(['image/*', 'application/pdf'])
                         ->maxSize(5120) // 5MB
-                        ->disk('local')
+                        ->disk('google')
                         ->directory('bills')
                         ->required()
                         ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
@@ -235,6 +235,29 @@ class EditStudent extends EditRecord {
                         ->success()
                         ->send();
                 }),
+            Action::make('view_receipt')
+                ->label('Xem Phiếu Thu')
+                ->icon('heroicon-o-document-check')
+                ->color('success')
+                ->modalHeading('Phiếu thu từ Helen')
+                ->modalContent(function () use ($record) {
+                    if (!$record->payment || !$record->payment->receipt_path) {
+                        return view('components.no-content', [
+                            'message' => 'Không có phiếu thu để hiển thị.'
+                        ]);
+                    }
+
+                    $fileUrl = route('files.receipt.view', $record->payment->id);
+                    $fileName = basename($record->payment->receipt_path);
+
+                    return view('components.bill-viewer', [ // Reuse bill-viewer components if it's general
+                        'fileUrl' => $fileUrl,
+                        'fileName' => $fileName,
+                        'payment' => $record->payment
+                    ]);
+                })
+                ->modalWidth('4xl')
+                ->visible(fn(): bool => $record->payment && !empty($record->payment->receipt_path)),
 
             // Action xác nhận thanh toán (cho kế toán)
             Action::make('verify_payment')
@@ -307,6 +330,18 @@ class EditStudent extends EditRecord {
                             }
                         })
                         ->required(),
+                    \Filament\Forms\Components\TextInput::make('receipt_number')
+                        ->label('Số phiếu thu')
+                        ->required()
+                        ->helperText('Nhập số phiếu thu từ Helen'),
+                    \Filament\Forms\Components\FileUpload::make('receipt')
+                        ->label('File phiếu thu')
+                        ->acceptedFileTypes(['image/*', 'application/pdf'])
+                        ->maxSize(5120) // 5MB
+                        ->disk('google')
+                        ->directory('receipts')
+                        ->required()
+                        ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
                 ])
                 ->visible(function () use ($record): bool {
                     // Kế toán & cán bộ hồ sơ được phép xác nhận thanh toán
@@ -331,8 +366,15 @@ class EditStudent extends EditRecord {
 
                         // Chỉ cập nhật amount khi có giá trị hợp lệ (>0)
                         if ($amount > 0 && (float) ($payment->amount ?? 0) <= 0) {
-                            $payment->update(['amount' => $amount]);
+                            $payment->amount = $amount;
                         }
+
+                        // Cập nhật thông tin phiếu thu
+                        $payment->receipt_number = $data['receipt_number'] ?? null;
+                        $payment->receipt_path = $data['receipt'] ?? null;
+                        $payment->receipt_uploaded_by = Auth::id();
+                        $payment->receipt_uploaded_at = now();
+                        $payment->save();
 
                         // Xác minh thanh toán
                         $payment->markAsVerified(Auth::id());

@@ -143,7 +143,7 @@ class PaymentResource extends Resource {
                             ->label('Bill thanh toán')
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120) // 5MB
-                            ->disk('local')
+                            ->disk('google')
                             ->directory('bills')
                             ->required()
                             ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
@@ -203,7 +203,7 @@ class PaymentResource extends Resource {
                             ->label('Bill thanh toán mới')
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120) // 5MB
-                            ->disk('local')
+                            ->disk('google')
                             ->directory('bills')
                             ->required()
                             ->helperText('Upload bill thanh toán mới (JPG, PNG, PDF, tối đa 5MB)'),
@@ -283,18 +283,34 @@ class PaymentResource extends Resource {
                     ->label('Xác nhận')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận thanh toán')
-                    ->modalDescription('Xác nhận đã nhận tiền sinh viên nộp đúng hệ đã đăng ký. Hệ thống sẽ tự động tạo commission cho CTV.')
-                    ->modalSubmitActionLabel('Xác nhận đã nhận tiền')
-                    ->modalCancelActionLabel('Hủy')
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('receipt_number')
+                            ->label('Số phiếu thu')
+                            ->required()
+                            ->helperText('Nhập số phiếu thu từ Helen'),
+                        \Filament\Forms\Components\FileUpload::make('receipt')
+                            ->label('File phiếu thu')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120) // 5MB
+                            ->disk('google')
+                            ->directory('receipts')
+                            ->required()
+                            ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
+                    ])
                     ->visible(
                         fn(Payment $record): bool =>
                         $record->status === Payment::STATUS_SUBMITTED &&
-                            in_array(Auth::user()->role, ['super_admin'])
+                            in_array(Auth::user()->role, ['super_admin', 'accountant', 'document'])
                     )
-                    ->action(function (Payment $record) {
-                        \Illuminate\Support\Facades\DB::transaction(function () use ($record) {
+                    ->action(function (array $data, Payment $record) {
+                        \Illuminate\Support\Facades\DB::transaction(function () use ($data, $record) {
+                            $record->update([
+                                'receipt_number' => $data['receipt_number'] ?? null,
+                                'receipt_path' => $data['receipt'] ?? null,
+                                'receipt_uploaded_by' => Auth::id(),
+                                'receipt_uploaded_at' => now(),
+                            ]);
+
                             $record->markAsVerified(\Illuminate\Support\Facades\Auth::id());
 
                             // Tạo commission
@@ -331,6 +347,32 @@ class PaymentResource extends Resource {
                     })
                     ->modalWidth('4xl')
                     ->visible(fn(Payment $record): bool => !empty($record->bill_path)),
+                Action::make('view_receipt')
+                    ->label('Xem Phiếu Thu')
+                    ->icon('heroicon-o-document-check')
+                    ->color('success')
+                    ->modalHeading('Phiếu thu từ Helen')
+                    ->modalContent(function (Payment $record) {
+                        if (!$record->receipt_path) {
+                            return view('components.no-content', [
+                                'message' => 'Không có phiếu thu để hiển thị.'
+                            ]);
+                        }
+
+                        // Ở đây chúng ta cần route file cho receipt. 
+                        // Vì FileController hiện tại chỉ có files.bill.view, 
+                        // tôi sẽ thêm một cái tương tự cho receipt.
+                        $fileUrl = route('files.receipt.view', $record->id);
+                        $fileName = basename($record->receipt_path);
+
+                        return view('components.bill-viewer', [ // Reuse bill-viewer components if it's general
+                            'fileUrl' => $fileUrl,
+                            'fileName' => $fileName,
+                            'payment' => $record
+                        ]);
+                    })
+                    ->modalWidth('4xl')
+                    ->visible(fn(Payment $record): bool => !empty($record->receipt_path)),
 
             ])
             ->bulkActions([

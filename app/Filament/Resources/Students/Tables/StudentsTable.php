@@ -99,6 +99,7 @@ class StudentsTable {
                     ->toggleable(),
                 TextColumn::make('major')
                     ->label('Ngành học')
+                    ->formatStateUsing(fn($state) => $state ?: '—')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
@@ -368,6 +369,9 @@ class StudentsTable {
                         }
                         return $query->where('status', $data['value']);
                     }),
+
+                \Filament\Tables\Filters\TrashedFilter::make()
+                    ->label('Thùng rác'),
             ])
             ->recordActions([
                 ActionGroup::make([
@@ -409,6 +413,13 @@ class StudentsTable {
                             \Filament\Forms\Components\TextInput::make('amount')
                                 ->label('Số tiền (VNĐ)')
                                 ->required()
+                                ->default(function (Student $record) {
+                                    $expectedFee = app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
+                                    if ($expectedFee !== null) {
+                                        return number_format((int) round($expectedFee), 0, '', '.');
+                                    }
+                                    return '';
+                                })
                                 ->helperText('Nhập số tiền học viên đã nộp (ví dụ: 1.750.000)')
                                 ->formatStateUsing(function ($state) {
                                     if (empty($state)) {
@@ -438,7 +449,17 @@ class StudentsTable {
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
 
+                            // Ẩn nếu đã nhập học hoặc đang chờ xác minh hồ sơ
                             if ($record->status === Student::STATUS_ENROLLED || $record->status === Student::STATUS_SUBMITTED) {
+                                return false;
+                            }
+
+                            // Ẩn nếu đã nộp tiền hoặc đã được kế toán xác nhận
+                            $hasSubmittedOrVerifiedPayment = \App\Models\Payment::where('student_id', $record->id)
+                                ->whereIn('status', [\App\Models\Payment::STATUS_SUBMITTED, \App\Models\Payment::STATUS_VERIFIED])
+                                ->exists();
+
+                            if ($hasSubmittedOrVerifiedPayment) {
                                 return false;
                             }
 
@@ -503,9 +524,17 @@ class StudentsTable {
                         ->modalDescription('Bạn có chắc chắn muốn đánh dấu sinh viên này đã nhập học?')
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(
-                                in_array(Auth::user()->role, ['super_admin'])
-                        )
+                        ->visible(function (Student $record): bool {
+                            $user = Auth::user();
+
+                            // Chỉ cho phép Super Admin, Document (Cán bộ hồ sơ) và Admissions thấy nút này
+                            if (!in_array($user->role, ['super_admin', 'document', 'admissions'])) {
+                                return false;
+                            }
+
+                            // Chỉ hiện nút xác nhận nhập học NẾU lệ phí đã được xác minh xong
+                            return $record->payment?->status === \App\Models\Payment::STATUS_VERIFIED;
+                        })
                         ->action(function (Student $record) {
                             // Kiểm tra checklist hồ sơ
                             $requiredDocuments = [
@@ -715,13 +744,20 @@ class StudentsTable {
                                 ->label('Bill thanh toán')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120) // 5MB
-                                ->disk('local')
+                                ->disk('google')
                                 ->directory('bills')
                                 ->required()
                                 ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
                             \Filament\Forms\Components\TextInput::make('amount')
                                 ->label('Số tiền')
                                 ->required()
+                                ->default(function (Student $record) {
+                                    $expectedFee = app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
+                                    if ($expectedFee !== null) {
+                                        return number_format((int) round($expectedFee), 0, '', '.');
+                                    }
+                                    return '';
+                                })
                                 ->helperText('Nhập số tiền đã thanh toán (ví dụ: 1.750.000)')
                                 ->formatStateUsing(function ($state) {
                                     if (empty($state)) {
@@ -824,6 +860,16 @@ class StudentsTable {
                                 ->success()
                                 ->send();
                         }),
+                    
+                    \Filament\Actions\RestoreAction::make()
+                        ->label('Khôi phục')
+                        ->color('success'),
+                        
+                    \Filament\Actions\ForceDeleteAction::make()
+                        ->label('Xóa vĩnh viễn')
+                        ->modalHeading('Xóa vĩnh viễn học viên')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
+                        ->color('danger'),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -850,10 +896,16 @@ class StudentsTable {
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa học viên đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Hành động này không thể hoàn tác.')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Bạn có thể khôi phục từ thùng rác sau này.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => in_array(Auth::user()->role, ['super_admin'])),
+                    
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục đã chọn'),
+                        
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn đã chọn'),
                 ]),
             ])
             ->emptyStateHeading('Không có học viên')

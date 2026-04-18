@@ -93,6 +93,17 @@ class IntakesTable {
                     ->searchable()
                     ->sortable(),
 
+                BadgeColumn::make('year')
+                    ->label('Năm')
+                    ->getStateUsing(function (Quota $record) {
+                        $startRaw = $record->intake_start_date ?? $record->intake?->start_date;
+                        return $startRaw ? Carbon::parse($startRaw)->format('Y') : '—';
+                    })
+                    ->color('primary')
+                    ->sortable(query: function ($query, $direction) {
+                        return $query->orderBy('intake_start_date', $direction);
+                    }),
+
                 BadgeColumn::make('status')
                     ->label('Trạng thái')
                     ->getStateUsing(fn(Quota $record) => $record->intake_status ?: $record->intake?->status ?: null)
@@ -136,6 +147,7 @@ class IntakesTable {
                 TextColumn::make('target_quota')
                     ->label('Chỉ tiêu')
                     ->formatStateUsing(fn($state) => number_format((int) $state))
+                    ->tooltip('Tổng số lượng học viên tối đa có thể tiếp nhận cho chương trình này.')
                     ->sortable(),
 
                 TextColumn::make('utilization')
@@ -146,6 +158,7 @@ class IntakesTable {
                         $percent = round(((int) $record->current_quota / $target) * 100, 2);
                         return $percent . '%';
                     })
+                    ->tooltip('Phần trăm hoàn thành chỉ tiêu (Chỉ tính những học viên đã xác nhận nộp lệ phí).')
                     ->color(
                         fn($state) =>
                         (float)str_replace('%', '', $state) > 90 ? 'danger' : ((float)str_replace('%', '', $state) > 70 ? 'warning' : 'success')
@@ -154,6 +167,7 @@ class IntakesTable {
                 TextColumn::make('students_count')
                     ->label('Học viên')
                     ->state(fn(Quota $record) => Student::where('quota_id', $record->id)->count())
+                    ->tooltip('Tổng số lượng học viên đã đăng ký vào chương trình này (Bao gồm tất cả trạng thái).')
                     ->sortable(false),
 
                 TextColumn::make('created_at')

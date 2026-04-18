@@ -99,15 +99,19 @@ class StudentResource extends Resource {
     }
 
     public static function getEloquentQuery(): Builder {
-        $query = parent::getEloquentQuery();
         $user = Auth::user();
-
-        if (!$user) {
-            return $query;
+        
+        // Nếu là super_admin, cho phép truy cập cả các bản ghi đã xóa (để Tabs/Filters hoạt động)
+        if ($user?->role === 'super_admin') {
+            return parent::getEloquentQuery()
+                ->withoutGlobalScopes([
+                    \Illuminate\Database\Eloquent\SoftDeletingScope::class,
+                ]);
         }
 
-        // Super admin thấy tất cả
-        if ($user->role === 'super_admin') {
+        $query = parent::getEloquentQuery();
+
+        if (!$user) {
             return $query;
         }
 

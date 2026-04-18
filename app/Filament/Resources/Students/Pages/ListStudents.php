@@ -7,8 +7,27 @@ use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
 
+use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Database\Eloquent\Builder;
+
 class ListStudents extends ListRecords {
     protected static string $resource = StudentResource::class;
+
+    public function getTabs(): array
+    {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'super_admin') {
+            return [];
+        }
+
+        return [
+            'active' => Tab::make('Đang hoạt động')
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()),
+            'trash' => Tab::make('Thùng rác')
+                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                ->icon('heroicon-m-trash'),
+        ];
+    }
 
     protected function getHeaderActions(): array {
         $actions = [];

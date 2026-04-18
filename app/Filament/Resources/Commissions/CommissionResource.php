@@ -412,7 +412,7 @@ class CommissionResource extends Resource {
                                 ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'File phiếu thu')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120) // 5MB
-                                ->disk('local')
+                                ->disk('google')
                                 ->directory('receipts')
                                 ->required(!$hasReceipt)
                                 ->helperText($hasReceipt ? 'Chọn file mới để thay thế phiếu thu hiện tại' : 'Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)');

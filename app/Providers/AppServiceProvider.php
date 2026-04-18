@@ -17,6 +17,9 @@ use App\Policies\UserPolicy;
 use App\Policies\PaymentPolicy;
 use App\Events\PaymentVerified;
 use App\Listeners\PaymentVerifiedListener;
+use Illuminate\Support\Facades\Storage;
+use Masbug\Flysystem\GoogleDriveAdapter;
+use League\Flysystem\Filesystem;
 
 class AppServiceProvider extends ServiceProvider {
     /**
@@ -75,5 +78,24 @@ class AppServiceProvider extends ServiceProvider {
 
         // Tự động tạo mối quan hệ khi User thay đổi
         User::observe(UserObserver::class);
+
+        // Register Google Drive Storage Driver
+        Storage::extend('google', function ($app, $config) {
+            try {
+                $client = new \Google\Client();
+                $client->setClientId($config['clientId']);
+                $client->setClientSecret($config['clientSecret']);
+                $client->refreshToken($config['refreshToken']);
+
+                $service = new \Google\Service\Drive($client);
+                $adapter = new GoogleDriveAdapter($service, '/', ['sharedFolderId' => $config['folderId'] ?? null]);
+                $driver = new \League\Flysystem\Filesystem($adapter);
+
+                return new \Illuminate\Filesystem\FilesystemAdapter($driver, $adapter, $config);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Google Drive Storage Error within Driver: ' . $e->getMessage());
+                throw $e;
+            }
+        });
     }
 }

@@ -153,7 +153,38 @@ class StudentForm {
                                     ->searchable()
                                     ->preload()
                                     ->required()
-                                    ->helperText('Chọn ngành và hệ đào tạo tương ứng (chỉ hiển thị các chỉ tiêu đang mở)'),
+                                    ->helperText('Chọn ngành và hệ đào tạo tương ứng (chỉ hiển thị các chỉ tiêu đang mở)')
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        // Tự động cập nhật major khi chọn quota
+                                        if ($state) {
+                                            $quota = \App\Models\Quota::find($state);
+                                            if ($quota) {
+                                                $set('major', $quota->major_name ?? $quota->name);
+                                                $set('program_type', $quota->program_name);
+                                            }
+                                        }
+                                    })
+                                    ->live(),
+
+                                \Filament\Forms\Components\Select::make('major')
+                                    ->label('Ngành đăng ký liên thông')
+                                    ->options(fn() => \App\Models\Major::where('is_active', true)
+                                        ->orderBy('name')
+                                        ->pluck('name', 'name')
+                                        ->toArray())
+                                    ->searchable()
+                                    ->helperText('Tự động điền khi chọn Chương trình tuyển sinh. Admin có thể chỉnh thủ công.')
+                                    ->visible(fn() => in_array(Auth::user()?->role, ['super_admin', 'admin', 'admissions', 'document', 'accountant'])),
+
+                                \Filament\Forms\Components\Select::make('program_type')
+                                    ->label('Hệ liên thông / Hệ đào tạo')
+                                    ->options(fn() => \App\Models\Program::where('is_active', true)
+                                        ->orderBy('name')
+                                        ->pluck('name', 'code')
+                                        ->toArray())
+                                    ->searchable()
+                                    ->helperText('Tự động điền khi chọn Chương trình tuyển sinh. Admin có thể chỉnh thủ công.')
+                                    ->visible(fn() => in_array(Auth::user()?->role, ['super_admin', 'admin', 'admissions', 'document', 'accountant'])),
 
                                 \Filament\Forms\Components\Select::make('source')
                                     ->label('Hình thức tuyển sinh')

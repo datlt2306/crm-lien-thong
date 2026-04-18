@@ -38,6 +38,7 @@ Route::post('/ref/{ref_id}/payment', [PublicStudentController::class, 'submitPay
 // Tra cứu hồ sơ sinh viên theo mã hồ sơ
 Route::get('/track-profile', [PublicStudentController::class, 'showProfileTracking'])->name('public.profile.track.form');
 Route::get('/track/{profile_code}', [PublicStudentController::class, 'showProfileTracking'])->name('public.profile.track');
+Route::get('/public/files/bill/{paymentId}', [FileController::class, 'publicViewBill'])->name('public.files.bill.view');
 
 // Đã loại bỏ hoàn toàn tính năng tự đăng ký cộng tác viên
 // Route::get('/collaborator/register', ...);

@@ -220,6 +220,27 @@
                                 <div class="kv"><span class="muted">Số tiền</span><span class="strong">{{ $paymentAmountLabel }}</span></div>
                                 <div class="kv"><span class="muted">Ngày gửi bill</span><span class="strong">{{ $student->payment?->receipt_uploaded_at?->format('d/m/Y H:i') ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Ngày xác nhận tiền</span><span class="strong">{{ $student->payment?->verified_at?->format('d/m/Y H:i') ?? 'Chưa xác nhận' }}</span></div>
+
+                                @if($billUrl)
+                                    <div class="muted" style="font-size: 12px; margin-top: 15px; margin-bottom: 8px;">Minh chứng thanh toán:</div>
+                                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                        <div style="width: 100px; height: 100px; border-radius: 12px; overflow: hidden; border: 2px solid #e2e8f0; background: #f1f5f9; flex-shrink: 0; transition: all 0.2s;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#e2e8f0'">
+                                            <a href="{{ $billUrl }}" target="_blank" title="Xem ảnh phóng lớn">
+                                                <img src="{{ $billUrl }}" alt="Bill" referrerpolicy="no-referrer" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                                            </a>
+                                        </div>
+                                        <div style="padding-top: 8px;">
+                                            <div style="font-size: 13px; font-weight: 600; color: #1e293b;">Hóa đơn đăng ký</div>
+                                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Bấm vào ảnh để xem chi tiết</div>
+                                            <a href="{{ $billUrl }}" target="_blank" style="display: inline-flex; align-items: center; margin-top: 8px; font-size: 12px; color: #2563eb; text-decoration: none; font-weight: 600; background: #eff6ff; padding: 4px 10px; border-radius: 8px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" style="width:14px; height:14px; margin-right:4px;" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                </svg>
+                                                Tải về ảnh gốc
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 

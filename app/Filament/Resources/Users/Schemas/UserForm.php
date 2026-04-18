@@ -82,6 +82,7 @@ class UserForm {
                     ->imageResizeTargetWidth('200')
                     ->imageResizeTargetHeight('200')
                     ->helperText('Tải lên ảnh đại diện (khuyến nghị: 200x200px)')
+                    ->disk('google')
                     ->directory('avatars'),
             ]);
     }

@@ -15,6 +15,18 @@ class StudentFeeService {
      * Hiện tại cấu hình số tiền đang nằm ở `quotas.tuition_fee`.
      */
     public function getExpectedFeeForStudent(Student $student): ?float {
+        // Mặc định theo yêu cầu
+        $programType = strtoupper((string) ($student->program_type ?? ''));
+        
+        $defaultFees = [
+            'REGULAR' => 1750000,   // Chính Quy
+            'PART_TIME' => 750000,  // VHVL
+            'DISTANCE' => 200000,   // Đào tạo từ xa
+        ];
+
+        if (isset($defaultFees[$programType])) {
+            return (float) $defaultFees[$programType];
+        }
 
         // Ưu tiên cao nhất: Lấy từ quota_id đã lưu
         if (!empty($student->quota_id)) {

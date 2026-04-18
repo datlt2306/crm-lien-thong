@@ -37,16 +37,31 @@ class PublicStudentController extends Controller {
         // Lấy danh sách đợt tuyển có thể đăng ký.
         $intakes = Intake::whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING])
             ->with(['quotas' => function ($q) {
-                // List toàn bộ quota thuộc đợt để user nhìn đầy đủ ngành/hệ đang có.
-                $q->orderBy('major_name')->orderBy('program_name')->orderBy('name');
+                $q->where('status', 'active');
             }])
             ->orderBy('start_date')
             ->get();
+
+        // Tạo danh sách các "Chương trình" duy nhất (Major + Program Name)
+        $programs = [];
+        foreach ($intakes as $intake) {
+            foreach ($intake->quotas as $quota) {
+                $key = $quota->major_name . '|' . $quota->program_name;
+                if (!isset($programs[$key])) {
+                    $programs[$key] = [
+                        'major_name' => $quota->major_name,
+                        'program_name' => $quota->program_name,
+                        'label' => $quota->major_name . ' - ' . $this->mapProgramTypeLabel($quota->program_name),
+                    ];
+                }
+            }
+        }
 
         return view('ref-form', [
             'ref_id' => $ref_id,
             'collaborator' => $collaborator,
             'intakes' => $intakes,
+            'programs' => array_values($programs),
         ]);
     }
 
@@ -61,10 +76,11 @@ class PublicStudentController extends Controller {
             'full_name' => 'required|string|max:255',
             'dob' => 'required|date',
             'address' => 'required|string|max:255',
-            'phone' => 'required|string|max:20|unique:students,phone',
-            'email' => 'nullable|email|max:255|unique:students,email',
+            'phone' => ['required', 'string', 'max:20', Rule::unique('students', 'phone')->whereNull('deleted_at')],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('students', 'email')->whereNull('deleted_at')],
             'intake_id' => 'required|exists:intakes,id',
             'quota_id' => 'required|exists:quotas,id',
+            'bill_image' => 'required|image|mimes:jpg,jpeg,png|max:5120', // Bắt buộc upload bill
             'notes' => 'nullable|string',
         ], [
             'intake_id.required' => 'Vui lòng chọn đợt tuyển',
@@ -73,9 +89,12 @@ class PublicStudentController extends Controller {
             'quota_id.exists' => 'Chương trình đào tạo không hợp lệ hoặc đã đóng',
             'phone.unique' => 'Số điện thoại đã tồn tại',
             'email.unique' => 'Email đã tồn tại',
+            'bill_image.required' => 'Vui lòng tải lên ảnh phiếu thu/hóa đơn chuyển khoản',
+            'bill_image.image' => 'Tệp tải lên phải là định dạng ảnh (jpg, png)',
         ]);
 
         $quota = Quota::find($validated['quota_id']);
+        $intake = Intake::find($validated['intake_id']);
 
         // Check if the quota belongs to the given intake 
         if ($quota->intake_id != $validated['intake_id']) {
@@ -93,7 +112,7 @@ class PublicStudentController extends Controller {
         }
 
         try {
-            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes) {
+            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes, $request) {
                 $student = Student::create([
                     'full_name' => $validated['full_name'],
                     'dob' => $validated['dob'],
@@ -103,7 +122,9 @@ class PublicStudentController extends Controller {
                     'collaborator_id' => $collaborator->id,
                     'instructor' => $collaborator->full_name ?? null,
 
-                    'target_university' => $quota->intake?->name, // Dùng tên đợt tuyển làm mục tiêu nếu không có org
+                    'target_university' => $quota->intake?->name, 
+                    'major' => $quota->major_name,
+                    'program_type' => $quota->program_name,
                     'quota_id' => $quota->id,
                     'intake_id' => $validated['intake_id'],
                     'source' => 'ref',
@@ -118,41 +139,75 @@ class PublicStudentController extends Controller {
                     default => 'REGULAR'
                 };
 
-                \App\Models\Payment::firstOrCreate(
-                    [
-                        'student_id' => $student->id,
-                    ],
-                    [
-                        'primary_collaborator_id' => $collaborator->id,
-                        'program_type' => $programTypeMap,
-                        'amount' => 0,
-                        'status' => \App\Models\Payment::STATUS_NOT_PAID,
-                    ]
-                );
+                // Xử lý upload bill với tên file format chuẩn:
+                // Mã số hồ sơ - Họ tên - Ngành - Hệ - Năm - Tên File
+                $billPath = null;
+                if ($request->hasFile('bill_image')) {
+                    $file = $request->file('bill_image');
+                    $extension = $file->extension();
+                    $year = $student->created_at?->format('Y') ?? now()->format('Y');
+                    
+                    // Lấy profile_code vừa được tạo (hoặc tự tính toán lại nếu model chưa refresh)
+                    $profileCode = $student->profile_code;
+                    if (empty($profileCode)) {
+                        $profileCode = sprintf('HS%s%06d', $year, $student->id);
+                    }
+
+                    $originalFileName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                    
+                    $newFileName = sprintf(
+                        '%s - %s - %s - %s - %s - %s.%s',
+                        $profileCode,
+                        $student->full_name,
+                        $student->major,
+                        $student->program_type,
+                        $year,
+                        $originalFileName,
+                        $extension
+                    );
+
+                    // Làm sạch tên file (loại bỏ ký tự đặc biệt)
+                    $newFileName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $newFileName);
+                    
+                    $billPath = $file->storeAs('', $newFileName, [
+                        'disk' => 'google',
+                        'visibility' => 'public'
+                    ]);
+
+                    \Illuminate\Support\Facades\Log::info('Drive Upload Result:', [
+                        'filename' => $newFileName,
+                        'result_path' => $billPath,
+                        'disk' => 'google'
+                    ]);
+                }
+
+                \App\Models\Payment::create([
+                    'student_id' => $student->id,
+                    'primary_collaborator_id' => $collaborator->id,
+                    'program_type' => $programTypeMap,
+                    'amount' => 0, // Sẽ được kế toán xác minh sau
+                    'bill_path' => $billPath,
+                    'receipt_uploaded_at' => now(),
+                    'status' => \App\Models\Payment::STATUS_SUBMITTED,
+                ]);
                 
                 return $student;
             });
 
-            // Gửi qua API của Resend (Không cần cài SDK)
-            if ($student && !empty($validated['email'])) {
+            // Gửi qua Laravel Mailer chuẩn
+            if ($student && !empty($student->email)) {
                 try {
-                    $student->refresh();
-                    $htmlContent = view('emails.student.registration_successful', ['student' => $student])->render();
+                    \Illuminate\Support\Facades\Mail::to($student->email)
+                        ->queue(new \App\Mail\StudentRegistrationSuccessful($student));
                     
-                    \Illuminate\Support\Facades\Http::withToken('re_JwHwMoP7_DRd15sFgzganuCwivQVyCr5R')
-                        ->post('https://api.resend.com/emails', [
-                            'from' => config('mail.from.name') . ' <' . config('mail.from.address') . '>',
-                            'to' => $validated['email'],
-                            'subject' => 'Đăng Ký Liên thông GTVT Thành Công - Mã Hồ Sơ: ' . $student->profile_code,
-                            'html' => $htmlContent
-                        ]);
+                    \Illuminate\Support\Facades\Log::info('Mail queued successfully for: ' . $student->email);
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Lỗi gửi email đăng ký: ' . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error('Mail Queue Error: ' . $e->getMessage());
                 }
             }
 
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra trong quá trình lưu hồ sơ, vui lòng thử lại!'])->withInput();
+            return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra: ' . $e->getMessage()])->withInput();
         }
 
         // Xóa cookie sau khi đăng ký thành công
@@ -163,8 +218,11 @@ class PublicStudentController extends Controller {
             'registered_student' => [
                 'full_name' => $student->full_name,
                 'profile_code' => $student->profile_code,
+                'major' => $student->major,
                 'program_type' => $student->program_type_label,
-                'target_university' => $student->target_university ?? 'Trường',
+                'intake_name' => $intake->name,
+                'intake_year' => $intake->start_date?->format('Y') ?? now()->format('Y'),
+                'intake_month' => $intake->start_date?->format('n'),
             ]
         ]);
     }
@@ -223,7 +281,10 @@ class PublicStudentController extends Controller {
         // Lưu bill với extension hợp lệ và tên ngẫu nhiên UUID để chống RCE, Directory Traversal
         $extension = $request->file('bill')->extension();
         $safeFileName = \Illuminate\Support\Str::uuid() . '.' . $extension;
-        $path = $request->file('bill')->storeAs('bills', $safeFileName, 'public');
+        $path = $request->file('bill')->storeAs('bills', $safeFileName, [
+            'disk' => 'google',
+            'visibility' => 'public'
+        ]);
 
         // Tạo hoặc cập nhật payment (tránh sinh bản ghi trùng lặp)
         $payment = Payment::updateOrCreate(
@@ -266,6 +327,15 @@ class PublicStudentController extends Controller {
             'programTypeLabel' => $student?->program_type_label,
             'paymentAmountLabel' => $student?->payment ? number_format((float) $student->payment->amount, 0, ',', '.') . ' VNĐ' : 'Chưa cập nhật',
             'isPaymentVerified' => $student?->payment?->status === Payment::STATUS_VERIFIED,
+            'billUrl' => (function() use ($student) {
+                if (!$student?->payment?->bill_path) return null;
+                $url = Storage::disk('google')->url($student->payment->bill_path);
+                if (str_contains($url, 'uc?id=')) {
+                    $url = str_replace('uc?id=', 'thumbnail?id=', $url);
+                    $url = str_replace('&export=media', '&sz=w1000', $url);
+                }
+                return $url;
+            })(),
         ]);
     }
 
