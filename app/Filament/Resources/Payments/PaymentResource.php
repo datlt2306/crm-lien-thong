@@ -297,7 +297,9 @@ class PaymentResource extends Resource {
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120) // 5MB
                             ->disk('google')
-                            ->directory('receipts')
+                            ->getUploadedFileNameForStorageUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file, Payment $record) {
+                                return $record->generateStandardReceiptPath($file->getClientOriginalExtension());
+                            })
                             ->required()
                             ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
                     ])
