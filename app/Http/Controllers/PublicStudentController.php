@@ -261,25 +261,32 @@ class PublicStudentController extends Controller {
             return back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.']);
         }
 
-        // Lưu bill với extension hợp lệ và tên ngẫu nhiên UUID để chống RCE, Directory Traversal
-        $extension = $request->file('bill')->extension();
-        $safeFileName = \Illuminate\Support\Str::uuid() . '.' . $extension;
-        $path = $request->file('bill')->storeAs('bills', $safeFileName, [
-            'disk' => 'google',
-            'visibility' => 'public'
-        ]);
-
-        // Tạo hoặc cập nhật payment (tránh sinh bản ghi trùng lặp)
+        // Tạo hoặc cập nhật payment trước để có instance gọi hàm generateStandardBillPath
         $payment = Payment::updateOrCreate(
             ['student_id' => $student->id],
             [
                 'primary_collaborator_id' => $collaborator->id,
                 'program_type' => $validated['program_type'],
                 'amount' => $validated['amount'],
-                'bill_path' => $path,
                 'status' => Payment::STATUS_SUBMITTED,
             ]
         );
+
+        // Lưu bill với định dạng chuẩn: "Hóa đơn đăng ký/2026/Mã_Tên_Ngành_Hệ.ext"
+        $extension = $request->file('bill')->getClientOriginalExtension();
+        $standardPath = $payment->generateStandardBillPath($extension);
+
+        // Tách thư mục và tên file từ đường dẫn chuẩn
+        $directory = dirname($standardPath);
+        $fileName = basename($standardPath);
+
+        $request->file('bill')->storeAs($directory, $fileName, [
+            'disk' => 'google',
+            'visibility' => 'public'
+        ]);
+
+        // Cập nhật lại đường dẫn chuẩn vào database
+        $payment->update(['bill_path' => $standardPath]);
 
         // Chuyển status Học viên sang SUBMITTED (Đã nộp hồ sơ/Đang chờ duyệt)
         $student->update(['status' => Student::STATUS_SUBMITTED]);

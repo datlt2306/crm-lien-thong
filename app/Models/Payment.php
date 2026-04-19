@@ -96,6 +96,27 @@ class Payment extends Model {
     }
 
 
+    public function generateStandardBillPath(string $extension): string {
+        $student = $this->student;
+        $year = now()->format('Y');
+        
+        $profileCode = $student->profile_code;
+        $fullName = $student->full_name;
+        $major = $student->major;
+        
+        $systemCode = match (strtoupper((string)$this->program_type)) {
+            'REGULAR' => 'CQ',
+            'PART_TIME' => 'VHVL',
+            'DISTANCE' => 'TX',
+            default => $this->program_type
+        };
+
+        // Format: Hóa đơn đăng ký/2026/HS2026000194_Dat Le Trong_CNTT_CQ.png
+        $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$extension}";
+        
+        return "Hóa đơn đăng ký/{$year}/{$fileName}";
+    }
+
     public function student(): BelongsTo {
         return $this->belongsTo(Student::class);
     }

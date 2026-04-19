@@ -144,7 +144,9 @@ class PaymentResource extends Resource {
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120) // 5MB
                             ->disk('google')
-                            ->directory('bills')
+                            ->getUploadedFileNameForStorageUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file, Payment $record) {
+                                return $record->generateStandardBillPath($file->getClientOriginalExtension());
+                            })
                             ->required()
                             ->helperText('Upload bill thanh toán (JPG, PNG, PDF, tối đa 5MB)'),
                         \Filament\Forms\Components\TextInput::make('amount')
@@ -204,7 +206,9 @@ class PaymentResource extends Resource {
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120) // 5MB
                             ->disk('google')
-                            ->directory('bills')
+                            ->getUploadedFileNameForStorageUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file, Payment $record) {
+                                return $record->generateStandardBillPath($file->getClientOriginalExtension());
+                            })
                             ->required()
                             ->helperText('Upload bill thanh toán mới (JPG, PNG, PDF, tối đa 5MB)'),
                         \Filament\Forms\Components\TextInput::make('amount')
@@ -257,9 +261,9 @@ class PaymentResource extends Resource {
                             return;
                         }
 
-                        // Xóa bill cũ nếu có
-                        if ($record->bill_path && Storage::disk('local')->exists($record->bill_path)) {
-                            Storage::disk('local')->delete($record->bill_path);
+                        // Xóa bill cũ nếu có trên Drive
+                        if ($record->bill_path && Storage::disk('google')->exists($record->bill_path)) {
+                            Storage::disk('google')->delete($record->bill_path);
                         }
 
                         // Cập nhật payment record với bill mới
