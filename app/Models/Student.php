@@ -280,7 +280,7 @@ class Student extends Model {
             'major' => 'nullable|string|max:255',
             'intake_id' => 'nullable|exists:intakes,id',
             'intake_month' => 'nullable|integer|between:1,12',
-            'program_type' => ['nullable', Rule::in(['REGULAR', 'PART_TIME'])],
+            'program_type' => ['nullable', Rule::in(['REGULAR', 'PART_TIME', 'DISTANCE'])],
             'source' => ['required', Rule::in(['form', 'ref', 'facebook', 'zalo', 'tiktok', 'hotline', 'event', 'school', 'walkin', 'other'])],
             'status' => ['required', Rule::in([
                 self::STATUS_NEW,

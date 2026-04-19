@@ -219,15 +219,10 @@ class PublicStudentController extends Controller {
      * Hiển thị form upload bill thanh toán cho sinh viên đã đăng ký.
      */
     public function showPaymentForm(string $ref_id) {
-        // Lấy collaborator từ ref_id hoặc cookie
         $collaborator = $this->refTrackingService->getCollaborator(request(), $ref_id);
+        if (!$collaborator) abort(404);
 
-        if (!$collaborator) {
-            abort(404, 'Liên kết không hợp lệ!');
-        }
-
-        return view('ref-payment', [
-            'ref_id' => $ref_id,
+        return view('ref-payment-disabled', [
             'collaborator' => $collaborator,
         ]);
     }

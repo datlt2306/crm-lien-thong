@@ -746,6 +746,61 @@ class StudentsTable {
                                 ->send();
                         }),
 
+                    // Action cho CTV: Review & Gửi Kế toán
+                    Action::make('ctv_submit_for_verification')
+                        ->label('Gửi Kế toán')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->color('primary')
+                        ->modalHeading('Xác minh & Gửi Kế toán')
+                        ->modalDescription('Vui lòng kiểm tra kỹ thông tin & tải lên Minh chứng nộp tiền (Bill) để Kế toán đối soát.')
+                        ->form([
+                            \Filament\Forms\Components\TextInput::make('amount')
+                                ->label('Số tiền đã thu')
+                                ->numeric()
+                                ->required()
+                                ->helperText('Nhập số tiền sinh viên đã nộp thực tế.'),
+                            \Filament\Forms\Components\FileUpload::make('bill')
+                                ->label('Minh chứng nộp tiền (Bill)')
+                                ->disk('google')
+                                ->directory('bills')
+                                ->required(),
+                        ])
+                        ->action(function (array $data, Student $record) {
+                            // Map program_type từ record sang enum của Payment
+                            $programType = match (strtoupper((string) $record->program_type)) {
+                                'VỪA HỌC VỪA LÀM', 'PART_TIME' => 'PART_TIME',
+                                'CHÍNH QUY', 'REGULAR' => 'REGULAR',
+                                'ĐÀO TẠO TỪ XA', 'TỪ XA', 'DISTANCE' => 'DISTANCE',
+                                default => 'REGULAR',
+                            };
+
+                            $payment = $record->payment ?? \App\Models\Payment::create([
+                                'student_id' => $record->id,
+                                'primary_collaborator_id' => $record->collaborator_id,
+                                'program_type' => $programType,
+                                'amount' => 0,
+                                'status' => Payment::STATUS_NOT_PAID,
+                            ]);
+
+                            $payment->update([
+                                'program_type' => $programType, // Đảm bảo update lại nếu đã tồn tại
+                                'amount' => (int) $data['amount'],
+                                'bill_path' => $data['bill'],
+                                'status' => Payment::STATUS_SUBMITTED,
+                            ]);
+
+                            $record->update(['status' => Student::STATUS_SUBMITTED]);
+
+                            Notification::make()
+                                ->title('Đã gửi hồ sơ cho Kế toán xác minh')
+                                ->success()
+                                ->send();
+                        })
+                        ->visible(fn (Student $record): bool => 
+                            Auth::user()->role === 'ctv' && 
+                            in_array($record->status, [Student::STATUS_NEW, Student::STATUS_CONTACTED])
+                        ),
+
                     
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục')
