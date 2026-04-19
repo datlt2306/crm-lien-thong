@@ -1,4 +1,6 @@
-@php($success = session('success'))
+@php
+    $success = session('success');
+@endphp
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -132,6 +134,23 @@
             color: #1e293b;
             animation: fadeIn 0.3s ease;
         }
+        .field-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+            background-color: white;
+            color: #0f172a;
+        }
+        optgroup {
+            font-weight: bold;
+            color: #1e293b;
+            font-style: normal;
+            background-color: #f1f5f9;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -211,7 +230,9 @@
         <div class="alert alert-success">{{ $success }}</div>
         @endif
         @if(session('registered_student'))
-            @php($st = session('registered_student'))
+            @php
+                $st = session('registered_student');
+            @endphp
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
                 <div style="width: 64px; height: 64px; background-color: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 32px;">
                     ✓
@@ -284,10 +305,22 @@
                     <label class="label">Chương trình đào tạo (Ngành & Hệ) <span class="req">*</span></label>
                     <select id="program_selector" class="field-select @error('quota_id') border-red-500 @enderror" required>
                         <option value="">-- Chọn ngành học & hệ đào tạo --</option>
-                        @foreach(($programs ?? []) as $program)
-                        <option value="{{ $program['major_name'] }}|{{ $program['program_name'] }}">
-                            {{ $program['label'] }}
-                        </option>
+                        @php
+                            $typeLabels = [
+                                'REGULAR' => '🎓 HỆ CHÍNH QUY', 
+                                'PART_TIME' => '💼 HỆ VỪA HỌC VỪA LÀM', 
+                                'DISTANCE' => '🌐 HỆ ĐÀO TẠO TỪ XA'
+                            ];
+                            $groupedPrograms = collect($programs ?? [])->groupBy('program_name');
+                        @endphp
+                        @foreach($groupedPrograms as $type => $group)
+                            <optgroup label="{{ $typeLabels[$type] ?? $type }}">
+                                @foreach($group as $program)
+                                    <option value="{{ $program['major_name'] }}|{{ $program['program_name'] }}">
+                                        {{ $program['major_name'] }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
                         @endforeach
                     </select>
                 </div>
@@ -297,33 +330,24 @@
                     <select name="quota_id" id="quota_id" class="field-select @error('quota_id') border-red-500 @enderror" required disabled>
                         <option value="">-- Vui lòng chọn chương trình học trước --</option>
                     </select>
-                    <!-- Hidden field for intake_id to maintain compatibility with controller validation -->
                     <input type="hidden" name="intake_id" id="intake_id" value="{{ old('intake_id') }}">
                     @error('quota_id') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
                 </div>
 
-                <!-- Fee Info Container -->
                 <div id="fee-info-container" class="hidden"></div>
-                
-                <div id="bill-upload-section" class="field hidden" style="margin-top: 15px;">
-                    <label class="label">Minh chứng chuyển khoản (Ảnh bill) <span class="req">*</span></label>
-                    <div style="border: 2px dashed #cbd5e1; padding: 20px; border-radius: 12px; text-align: center; background: #f8fafc;">
-                        <input type="file" name="bill_image" id="bill_image" accept="image/*" class="hidden" />
-                        <label for="bill_image" style="cursor: pointer; display: block;">
-                            <div style="font-size: 24px; color: #64748b; margin-bottom: 8px;">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                            </div>
-                            <div id="file-name" style="color: #475569; font-weight: 500;">Nhấn để tải ảnh hoặc kéo thả vào đây</div>
-                            <div style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Định dạng: JPG, PNG (Tối đa 5MB)</div>
-                        </label>
-                    </div>
-                </div>
 
                 <div class="field">
                     <label class="label">Ghi chú</label>
                     <textarea name="notes" class="field-textarea">{{ old('notes') }}</textarea>
                 </div>
-                <button type="submit" class="submit" id="submit-btn">
+
+                <div class="field" style="margin-top: 10px; margin-bottom: 20px; display: flex; justify-content: center;">
+                    <!-- Hardcoded site key for immediate load -->
+                    <div class="g-recaptcha" data-sitekey="6Ldyz74sAAAAAMBNZc87V7Xcf5CD6zIrjTX37kjn" data-callback="recaptchaCallback"></div>
+                    @error('g-recaptcha-response') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
+                </div>
+
+                <button type="submit" class="submit" id="submit-btn" disabled>
                     <span class="spinner"></span>
                     <span class="btn-text">Gửi đăng ký</span>
                 </button>
@@ -334,15 +358,39 @@
         </div>
     </div>
 
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <script>
         const programSelector = document.getElementById('program_selector');
         const quotaSelect = document.getElementById('quota_id');
         const intakeHidden = document.getElementById('intake_id');
-        const billSection = document.getElementById('bill-upload-section');
-        const billInput = document.getElementById('bill_image');
-        const fileNameLabel = document.getElementById('file-name');
         const feeContainer = document.getElementById('fee-info-container');
         const form = document.getElementById('student-form');
+        const submitBtn = document.getElementById('submit-btn');
+
+        function showError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                let errorDiv = field.parentNode.querySelector('.error-message');
+                if (!errorDiv) {
+                    errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-message text-red-500 text-sm mt-1';
+                    field.parentNode.appendChild(errorDiv);
+                }
+                errorDiv.textContent = message;
+            }
+        }
+
+        function hideError(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                const errorDiv = field.parentNode.querySelector('.error-message');
+                if (errorDiv) errorDiv.remove();
+            }
+        }
+
+        window.recaptchaCallback = function() {
+            submitBtn.disabled = false;
+        };
 
         const intakesData = @json($intakes ?? []);
         const oldQuotaId = @json(old('quota_id'));
@@ -358,7 +406,6 @@
         function updateFeeInfo(quotaId) {
             if (!quotaId) {
                 feeContainer.classList.add('hidden');
-                billSection.classList.add('hidden');
                 return;
             }
 
@@ -375,11 +422,9 @@
 
             if (!selectedQuota) {
                 feeContainer.classList.add('hidden');
-                billSection.classList.add('hidden');
                 return;
             }
 
-            // Cập nhật intake_id ẩn để controller validate
             intakeHidden.value = selectedIntakeId;
 
             const programCode = getProgramLabel(selectedQuota.program_name);
@@ -426,7 +471,6 @@
                 `;
             } else {
                 feeContainer.classList.add('hidden');
-                billSection.classList.add('hidden');
                 return;
             }
 
@@ -438,55 +482,20 @@
                         <div class="payment-row"><span class="payment-label">Người nhận:</span> <span class="payment-value">Cô Ly (Phụ trách tuyển sinh)</span></div>
                         <div class="payment-row"><span class="payment-label">Nội dung CK:</span> <span class="payment-value">Họ tên + Ngày sinh + Nơi sinh</span></div>
                     </div>
-                    <p style="font-size: 12px; color: #64748b; margin-top: 10px; font-style: italic;">
-                        📌 <strong>Xác nhận thanh toán:</strong> Sau khi chuyển khoản, sinh viên cần chụp lại màn hình giao dịch và <strong>upload ngay bên dưới</strong>.
+                    <p style="font-size: 13px; color: #1e293b; margin-top: 12px; line-height: 1.5; background: #fffbeb; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">
+                        ⚠️ <strong>Lưu ý:</strong> Sau khi sinh viên đăng ký, vui lòng liên hệ với <strong>Cộng tác viên giới thiệu</strong> để gửi minh chứng thanh toán. Cộng tác viên sẽ giúp bạn hoàn tất thủ tục này trên hệ thống.
                     </p>
                 </div>
             `;
 
             feeContainer.innerHTML = feeHtml;
             feeContainer.classList.remove('hidden');
-            billSection.classList.remove('hidden');
-        }
-
-        billInput.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                fileNameLabel.textContent = "Đã chọn: " + this.files[0].name;
-                fileNameLabel.style.color = "#2563eb";
-            } else {
-                fileNameLabel.textContent = "Nhấn để tải ảnh hoặc kéo thả vào đây";
-                fileNameLabel.style.color = "#475569";
-            }
-        });
-
-        function showError(fieldId, message) {
-            const errorDiv = document.getElementById(fieldId + '_error');
-            if (errorDiv) {
-                errorDiv.textContent = message;
-                errorDiv.classList.remove('hidden');
-            }
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.classList.add('border-red-500');
-            }
-        }
-
-        function hideError(fieldId) {
-            const errorDiv = document.getElementById(fieldId + '_error');
-            if (errorDiv) {
-                errorDiv.classList.add('hidden');
-            }
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.classList.remove('border-red-500');
-            }
         }
 
         programSelector.addEventListener('change', function(e, isInitialSelection = false) {
-            const selectedValue = this.value; // MajorName|ProgramName
+            const selectedValue = this.value;
             quotaSelect.innerHTML = '<option value="">-- Chọn đợt tuyển sinh --</option>';
             feeContainer.classList.add('hidden');
-            billSection.classList.add('hidden');
             intakeHidden.value = '';
             
             if (!selectedValue) {
@@ -495,14 +504,12 @@
             }
 
             const [majorName, programName] = selectedValue.split('|');
-            
-            // Lọc các đợt tuyển có ngành này
             const availableOptions = [];
             intakesData.forEach(intake => {
                 const q = (intake.quotas || []).find(it => it.major_name === majorName && it.program_name === programName && it.status === 'active');
                 if (q) {
                     const availableSlots = Number(q.available_slots ?? 0);
-                    if (availableSlots > 0 || isInitialSelection) { // Cho phép hiển thị nếu là reset sau lỗi dù hết slot (hiếm gặp nhưng an toàn)
+                    if (availableSlots > 0 || isInitialSelection) {
                         availableOptions.push({
                             quota_id: q.id,
                             intake_name: intake.name,
@@ -531,43 +538,39 @@
             updateFeeInfo(this.value);
         });
 
-        form.addEventListener('submit', function(e) {
-            let isValid = true;
-            if (!programSelector.value) {
-                alert('Vui lòng chọn chương trình đào tạo!');
-                isValid = false;
-            }
-            if (!quotaSelect.value) {
-                showError('quota_id', 'Vui lòng chọn đợt tuyển sinh');
-                isValid = false;
-            }
-            
-            // Kiểm tra bill nếu là lần đầu submit (không có sẵn trong form)
-            // Lưu ý: Files input sẽ bị reset sau lỗi submit, nên học viên buộc phải chọn lại ảnh
-            if (!billInput.value) {
-                alert('Vui lòng tải lại ảnh minh chứng chuyển khoản (Bill)!');
-                isValid = false;
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-            } else {
-                // Hiển thị trạng thái Loading
-                const btn = document.getElementById('submit-btn');
-                const btnText = btn.querySelector('.btn-text');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+                if (!programSelector.value) {
+                    alert('Vui lòng chọn chương trình đào tạo!');
+                    isValid = false;
+                }
+                if (!quotaSelect.value) {
+                    showError('quota_id', 'Vui lòng chọn đợt tuyển sinh');
+                    isValid = false;
+                }
                 
-                btn.disabled = true;
-                btn.classList.add('loading');
-                btnText.textContent = 'Đang xử lý...';
-            }
-        });
+                if (typeof grecaptcha !== 'undefined') {
+                    const response = grecaptcha.getResponse();
+                    if (response.length === 0) {
+                        alert('Vui lòng xác minh Captcha!');
+                        isValid = false;
+                    }
+                }
 
-        // Xử lý giữ lại dữ liệu cũ sau khi submit lỗi
+                if (!isValid) {
+                    e.preventDefault();
+                } else {
+                    const btn = document.getElementById('submit-btn');
+                    btn.disabled = true;
+                    btn.classList.add('loading');
+                    btn.querySelector('.btn-text').textContent = 'Đang xử lý...';
+                }
+            });
+        }
+
         if (oldQuotaId) {
-            // 1. Tìm program tương ứng từ oldQuotaId
-            let foundMajor = null;
-            let foundProgram = null;
-            
+            let foundMajor = null, foundProgram = null;
             for (const intake of intakesData) {
                 const q = (intake.quotas || []).find(it => it.id == oldQuotaId);
                 if (q) {
@@ -576,19 +579,10 @@
                     break;
                 }
             }
-
             if (foundMajor && foundProgram) {
-                // 2. Chọn lại Program trong dropdown
-                const programKey = foundMajor + '|' + foundProgram;
-                programSelector.value = programKey;
-                
-                // 3. Kích hoạt trigger thay đổi để đổ lại danh sách Đợt tuyển sinh
+                programSelector.value = foundMajor + '|' + foundProgram;
                 programSelector.dispatchEvent(new Event('change', { bubbles: true }));
-                
-                // 4. Chọn lại Quota (Đợt tuyển) cũ
                 quotaSelect.value = oldQuotaId;
-                
-                // 5. Hiển thị lại lệ phí và phần upload
                 updateFeeInfo(oldQuotaId);
             }
         }

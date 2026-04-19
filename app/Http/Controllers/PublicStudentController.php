@@ -15,6 +15,7 @@ use App\Services\RefTrackingService;
 use App\Services\QuotaService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
 class PublicStudentController extends Controller {
@@ -37,13 +38,17 @@ class PublicStudentController extends Controller {
         // Lấy danh sách đợt tuyển có thể đăng ký.
         $intakes = Intake::whereIn('status', [Intake::STATUS_ACTIVE, Intake::STATUS_UPCOMING])
             ->with(['quotas' => function ($q) {
-                $q->where('status', 'active');
+                // Chỉ lấy các chỉ tiêu đang mở và CÒN CHỖ
+                $q->where('status', 'active')
+                  ->whereColumn('current_quota', '<', 'target_quota');
             }])
             ->orderBy('start_date')
             ->get();
 
         // Tạo danh sách các "Chương trình" duy nhất (Major + Program Name)
         $programs = [];
+        
+        // 1. Nhặt từ các Đợt tuyển sinh đang mở
         foreach ($intakes as $intake) {
             foreach ($intake->quotas as $quota) {
                 $key = $quota->major_name . '|' . $quota->program_name;
@@ -54,6 +59,22 @@ class PublicStudentController extends Controller {
                         'label' => $quota->major_name . ' - ' . $this->mapProgramTypeLabel($quota->program_name),
                     ];
                 }
+            }
+        }
+
+        // 2. Nhặt thêm từ AnnualQuota nếu có ngành hệ khác đang "Đang tuyển sinh" và CÒN CHỖ
+        $activeAnnualQuotas = AnnualQuota::where('status', 'active')
+            ->whereColumn('current_quota', '<', 'target_quota')
+            ->get();
+
+        foreach ($activeAnnualQuotas as $aq) {
+            $key = $aq->major_name . '|' . $aq->program_name;
+            if (!isset($programs[$key])) {
+                $programs[$key] = [
+                    'major_name' => $aq->major_name,
+                    'program_name' => $aq->program_name,
+                    'label' => $aq->major_name . ' - ' . $this->mapProgramTypeLabel($aq->program_name),
+                ];
             }
         }
 
@@ -80,7 +101,7 @@ class PublicStudentController extends Controller {
             'email' => ['nullable', 'email', 'max:255', Rule::unique('students', 'email')->whereNull('deleted_at')],
             'intake_id' => 'required|exists:intakes,id',
             'quota_id' => 'required|exists:quotas,id',
-            'bill_image' => 'required|image|mimes:jpg,jpeg,png|max:5120', // Bắt buộc upload bill
+            'g-recaptcha-response' => 'required',
             'notes' => 'nullable|string',
         ], [
             'intake_id.required' => 'Vui lòng chọn đợt tuyển',
@@ -89,9 +110,19 @@ class PublicStudentController extends Controller {
             'quota_id.exists' => 'Chương trình đào tạo không hợp lệ hoặc đã đóng',
             'phone.unique' => 'Số điện thoại đã tồn tại',
             'email.unique' => 'Email đã tồn tại',
-            'bill_image.required' => 'Vui lòng tải lên ảnh phiếu thu/hóa đơn chuyển khoản',
-            'bill_image.image' => 'Tệp tải lên phải là định dạng ảnh (jpg, png)',
+            'g-recaptcha-response.required' => 'Vui lòng xác minh Captcha',
         ]);
+
+        // Xác thực reCAPTCHA với Google
+        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+            'secret' => config('services.recaptcha.secret_key'),
+            'response' => $validated['g-recaptcha-response'],
+            'remoteip' => $request->ip(),
+        ]);
+
+        if (!$response->json('success')) {
+            return back()->withErrors(['g-recaptcha-response' => 'Xác minh Captcha thất bại!'])->withInput();
+        }
 
         $quota = Quota::find($validated['quota_id']);
         $intake = Intake::find($validated['intake_id']);
@@ -139,56 +170,13 @@ class PublicStudentController extends Controller {
                     default => 'REGULAR'
                 };
 
-                // Xử lý upload bill với tên file format chuẩn:
-                // Mã số hồ sơ - Họ tên - Ngành - Hệ - Năm - Tên File
-                $billPath = null;
-                if ($request->hasFile('bill_image')) {
-                    $file = $request->file('bill_image');
-                    $extension = $file->extension();
-                    $year = $student->created_at?->format('Y') ?? now()->format('Y');
-                    
-                    // Lấy profile_code vừa được tạo (hoặc tự tính toán lại nếu model chưa refresh)
-                    $profileCode = $student->profile_code;
-                    if (empty($profileCode)) {
-                        $profileCode = sprintf('HS%s%06d', $year, $student->id);
-                    }
-
-                    $originalFileName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                    
-                    $newFileName = sprintf(
-                        '%s - %s - %s - %s - %s - %s.%s',
-                        $profileCode,
-                        $student->full_name,
-                        $student->major,
-                        $student->program_type,
-                        $year,
-                        $originalFileName,
-                        $extension
-                    );
-
-                    // Làm sạch tên file (loại bỏ ký tự đặc biệt)
-                    $newFileName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $newFileName);
-                    
-                    $billPath = $file->storeAs('', $newFileName, [
-                        'disk' => 'google',
-                        'visibility' => 'public'
-                    ]);
-
-                    \Illuminate\Support\Facades\Log::info('Drive Upload Result:', [
-                        'filename' => $newFileName,
-                        'result_path' => $billPath,
-                        'disk' => 'google'
-                    ]);
-                }
-
                 \App\Models\Payment::create([
                     'student_id' => $student->id,
                     'primary_collaborator_id' => $collaborator->id,
                     'program_type' => $programTypeMap,
-                    'amount' => 0, // Sẽ được kế toán xác minh sau
-                    'bill_path' => $billPath,
-                    'receipt_uploaded_at' => now(),
-                    'status' => \App\Models\Payment::STATUS_SUBMITTED,
+                    'amount' => 0, 
+                    'bill_path' => null, // Sẽ được CTV tải lên sau
+                    'status' => \App\Models\Payment::STATUS_NOT_PAID,
                 ]);
                 
                 return $student;
@@ -327,15 +315,8 @@ class PublicStudentController extends Controller {
             'programTypeLabel' => $student?->program_type_label,
             'paymentAmountLabel' => $student?->payment ? number_format((float) $student->payment->amount, 0, ',', '.') . ' VNĐ' : 'Chưa cập nhật',
             'isPaymentVerified' => $student?->payment?->status === Payment::STATUS_VERIFIED,
-            'billUrl' => (function() use ($student) {
-                if (!$student?->payment?->bill_path) return null;
-                $url = Storage::disk('google')->url($student->payment->bill_path);
-                if (str_contains($url, 'uc?id=')) {
-                    $url = str_replace('uc?id=', 'thumbnail?id=', $url);
-                    $url = str_replace('&export=media', '&sz=w1000', $url);
-                }
-                return $url;
-            })(),
+            'billUrl' => $student?->payment?->bill_path ? route('public.files.bill.view', ['paymentId' => $student->payment->id]) : null,
+            'receiptUrl' => $student?->payment?->receipt_path ? route('public.files.bill.view', ['paymentId' => $student->payment->id]) . '?type=receipt' : null,
         ]);
     }
 

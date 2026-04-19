@@ -19,6 +19,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class StudentResource extends Resource {
     protected static ?string $model = Student::class;
@@ -63,32 +64,30 @@ class StudentResource extends Resource {
                 return null;
             }
 
-            // Super admin đếm tất cả
-            if ($user->role === 'super_admin') {
-                return (string) Student::count();
-            }
+            $cacheKey = sprintf('students_navigation_badge:%s:%s', $user->id, $user->role);
 
-
-            // CTV đếm học viên của mình và downline
-            if ($user->role === 'ctv') {
-                $collaborator = Collaborator::where('email', $user->email)->first();
-                if ($collaborator) {
-                    return (string) Student::where('collaborator_id', $collaborator->id)->count();
+            return (string) Cache::remember($cacheKey, now()->addMinutes(2), function () use ($user) {
+                // Super admin đếm tất cả
+                if ($user->role === 'super_admin') {
+                    return Student::count();
                 }
-            }
 
-            // Kế toán & cán bộ hồ sơ đếm học viên đã được CTV xác nhận nộp tiền
-            if (
-                $user->role === 'accountant'
-                || $user->role === 'document'
-                || ($user->roles && $user->roles->contains('name', 'accountant'))
-            ) {
-                return (string) Student::whereHas('payment', function ($query) {
-                    $query->whereIn('status', ['submitted', 'verified']);
-                })->count();
-            }
+                // CTV đếm học viên của mình
+                if ($user->role === 'ctv') {
+                    return Student::whereRelation('collaborator', 'email', $user->email)->count();
+                }
 
-            return '0';
+                // Kế toán & cán bộ hồ sơ đếm học viên đã được CTV xác nhận nộp tiền
+                if (
+                    $user->role === 'accountant'
+                    || $user->role === 'document'
+                    || ($user->roles && $user->roles->contains('name', 'accountant'))
+                ) {
+                    return Student::whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified']))->count();
+                }
+
+                return 0;
+            });
         } catch (\Throwable) {
             return null;
         }
@@ -106,10 +105,11 @@ class StudentResource extends Resource {
             return parent::getEloquentQuery()
                 ->withoutGlobalScopes([
                     \Illuminate\Database\Eloquent\SoftDeletingScope::class,
-                ]);
+                ])
+                ->with(['payment', 'collaborator', 'intake']);
         }
 
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(['payment', 'collaborator', 'intake']);
 
         if (!$user) {
             return $query;
@@ -118,10 +118,7 @@ class StudentResource extends Resource {
 
         // CTV thấy student của mình
         if ($user->role === 'ctv') {
-            $collaborator = Collaborator::where('email', $user->email)->first();
-            if ($collaborator) {
-                return $query->where('collaborator_id', $collaborator->id);
-            }
+            return $query->whereRelation('collaborator', 'email', $user->email);
         }
 
         // Kế toán & cán bộ hồ sơ chỉ thấy học viên đã được CTV xác nhận nộp tiền (để xác minh / xử lý hồ sơ)
@@ -130,9 +127,7 @@ class StudentResource extends Resource {
             || $user->role === 'document'
             || ($user->roles && $user->roles->contains('name', 'accountant'))
         ) {
-            return $query->whereHas('payment', function ($paymentQuery) {
-                $paymentQuery->whereIn('status', ['submitted', 'verified']);
-            });
+            return $query->whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified']));
         }
 
         // Fallback: không thấy gì

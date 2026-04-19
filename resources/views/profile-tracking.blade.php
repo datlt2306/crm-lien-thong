@@ -185,7 +185,10 @@
                                 <div class="muted" style="font-size:14px;">Kết quả tra cứu cho mã</div>
                                 <div style="font-size:20px;font-weight:800;color:#1e3a8a;">{{ $student->profile_code }}</div>
                             </div>
-                            <span class="badge">{{ $statusLabel }}</span>
+                            <div style="text-align: right;">
+                                <div class="muted" style="font-size:12px; margin-bottom: 2px;">Trạng thái hồ sơ:</div>
+                                <span class="badge">{{ $statusLabel }}</span>
+                            </div>
                         </div>
 
                         <div class="progress-card">
@@ -202,12 +205,16 @@
                             <div class="info-card">
                                 <strong style="color:#475569; text-transform:uppercase; letter-spacing:.08em; font-size:12px;">Thông tin hồ sơ</strong>
                                 <div class="kv"><span class="muted">Họ và tên</span><span class="strong">{{ $student->full_name }}</span></div>
+                                <div class="kv"><span class="muted">Số điện thoại</span><span class="strong">{{ $student->phone }}</span></div>
                                 <div class="kv"><span class="muted">Ngày sinh</span><span class="strong">{{ $student->dob ? \Carbon\Carbon::parse($student->dob)->format('d/m/Y') : 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Địa chỉ</span><span class="strong" style="max-width: 60%; text-align: right;">{{ $student->address ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Đợt tuyển sinh</span><span class="strong">{{ $student->intake?->name ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Ngành - Hệ</span><span class="strong">{{ $student->quota?->major_name ?? $student->major ?? 'Chưa cập nhật' }} - {{ $programTypeLabel ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Tình trạng xử lý</span><span class="strong">{{ $applicationStatusLabel }}</span></div>
                                 <div class="kv"><span class="muted">Người giới thiệu</span><span class="strong">{{ $student->collaborator?->full_name ?? 'Không có' }}</span></div>
+                                @if($student->collaborator?->phone)
+                                    <div class="kv"><span class="muted">SĐT người giới thiệu</span><span class="strong">{{ $student->collaborator->phone }}</span></div>
+                                @endif
                             </div>
 
                             <div class="info-card">
@@ -216,31 +223,36 @@
                                     <strong>{{ $isPaymentVerified ? 'Đã xác nhận thanh toán' : 'Chưa xác nhận thanh toán' }}</strong><br>
                                     {{ $isPaymentVerified ? 'Hệ thống đã ghi nhận phí đăng ký tuyển sinh.' : 'Đang chờ kế toán/chủ đơn vị xác nhận.' }}
                                 </div>
-                                <div class="kv"><span class="muted">Trạng thái thanh toán</span><span class="strong">{{ $paymentStatusLabel }}</span></div>
                                 <div class="kv"><span class="muted">Số tiền</span><span class="strong">{{ $paymentAmountLabel }}</span></div>
                                 <div class="kv"><span class="muted">Ngày gửi bill</span><span class="strong">{{ $student->payment?->receipt_uploaded_at?->format('d/m/Y H:i') ?? 'Chưa cập nhật' }}</span></div>
                                 <div class="kv"><span class="muted">Ngày xác nhận tiền</span><span class="strong">{{ $student->payment?->verified_at?->format('d/m/Y H:i') ?? 'Chưa xác nhận' }}</span></div>
 
-                                @if($billUrl)
-                                    <div class="muted" style="font-size: 12px; margin-top: 15px; margin-bottom: 8px;">Minh chứng thanh toán:</div>
-                                    <div style="display: flex; align-items: flex-start; gap: 12px;">
-                                        <div style="width: 100px; height: 100px; border-radius: 12px; overflow: hidden; border: 2px solid #e2e8f0; background: #f1f5f9; flex-shrink: 0; transition: all 0.2s;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#e2e8f0'">
-                                            <a href="{{ $billUrl }}" target="_blank" title="Xem ảnh phóng lớn">
-                                                <img src="{{ $billUrl }}" alt="Bill" referrerpolicy="no-referrer" style="width: 100%; height: 100%; object-fit: cover; display: block;">
-                                            </a>
-                                        </div>
-                                        <div style="padding-top: 8px;">
-                                            <div style="font-size: 13px; font-weight: 600; color: #1e293b;">Hóa đơn đăng ký</div>
-                                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Bấm vào ảnh để xem chi tiết</div>
-                                            <a href="{{ $billUrl }}" target="_blank" style="display: inline-flex; align-items: center; margin-top: 8px; font-size: 12px; color: #2563eb; text-decoration: none; font-weight: 600; background: #eff6ff; padding: 4px 10px; border-radius: 8px;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" style="width:14px; height:14px; margin-right:4px;" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px;">
+                                    @if($billUrl)
+                                        <div>
+                                            <div class="muted" style="font-size: 12px; margin-bottom: 8px;">Minh chứng thanh toán:</div>
+                                            <a href="{{ $billUrl }}" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px; text-decoration: none; transition: all 0.2s; color: #1e293b; font-weight: 600;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#e2e8f0'">
+                                                <svg xmlns="http://www.w3.org/2000/svg" style="width:18px; height:18px; color:#2563eb;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
-                                                Tải về ảnh gốc
+                                                Xem minh chứng
                                             </a>
                                         </div>
-                                    </div>
-                                @endif
+                                    @endif
+
+                                    @if($receiptUrl)
+                                        <div>
+                                            <div class="muted" style="font-size: 12px; margin-bottom: 8px;">Phiếu thu chính thức:</div>
+                                            <a href="{{ $receiptUrl }}" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #ecfdf5; border: 1.5px solid #d1fae5; border-radius: 12px; padding: 12px; text-decoration: none; transition: all 0.2s; color: #065f46; font-weight: 600;" onmouseover="this.style.background='#d1fae5'; this.style.borderColor='#a7f3d0'" onmouseout="this.style.background='#ecfdf5'; this.style.borderColor='#d1fae5'">
+                                                <svg xmlns="http://www.w3.org/2000/svg" style="width:18px; height:18px; color:#059669;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Xem phiếu thu
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         </div>
 

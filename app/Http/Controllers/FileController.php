@@ -38,11 +38,16 @@ class FileController extends Controller {
         abort(403, 'Không có quyền truy cập file này');
     }
 
-    public function publicViewBill($paymentId) {
+    public function publicViewBill(Request $request, $paymentId) {
         // Tìm payment
         $payment = Payment::findOrFail($paymentId);
 
-        // Cho phép xem công khai (thường dùng cho trang tra cứu của sinh viên)
+        // Nếu yêu cầu phiếu thu (receipt)
+        if ($request->query('type') === 'receipt') {
+            return $this->serveFile($payment->receipt_path);
+        }
+
+        // Mặc định xem minh chứng (bill)
         return $this->serveFile($payment->bill_path);
     }
 
@@ -110,28 +115,19 @@ class FileController extends Controller {
             abort(404, 'File không tồn tại');
         }
 
-        // Ưu tiên kiểm tra trên Google Drive
-        if (Storage::disk('google')->exists($filePath)) {
+        // Tối ưu: Không kiểm tra tồn tại (exists) vì rất chậm đối với Google Drive
+        // Hỗ trợ cả ID Google Drive (không có dấu gạch chéo) và đường dẫn đầy đủ
+        try {
             $url = Storage::disk('google')->url($filePath);
-            // Chuyển đổi từ link uc?id sang link thumbnail để hiển thị tốt hơn trên <img>
+            
+            // Chuyển đổi sang link thumbnail để hiển thị nhanh hơn
             if (str_contains($url, 'uc?id=')) {
                 $url = str_replace('uc?id=', 'thumbnail?id=', $url);
                 $url = str_replace('&export=media', '&sz=w1000', $url);
             }
             return redirect($url);
+        } catch (\Exception $e) {
+            abort(404, 'Không thể sinh liên kết cho file này');
         }
-
-        // Kiểm tra local như fallback (cho các file cũ)
-        if (Storage::disk('local')->exists($filePath)) {
-            $file = Storage::disk('local')->get($filePath);
-            $mimeType = mime_content_type(Storage::disk('local')->path($filePath));
-
-            return response($file, 200, [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"'
-            ]);
-        }
-
-        abort(404, 'File không tồn tại');
     }
 }
