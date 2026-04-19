@@ -136,17 +136,17 @@ class StudentsTable {
                     ->label('Trạng thái hồ sơ')
                     ->sortable()
                     ->toggleable()
-                    ->formatStateUsing(function ($state, Student $record) {
+                    ->state(function (Student $record) {
                         // Nếu có application_status trong database, dùng nó
-                        if ($state) {
-                            return match ($state) {
+                        if ($record->application_status) {
+                            return match ($record->application_status) {
                                 'draft' => 'Đang nhập',
                                 'pending_documents' => 'Thiếu giấy tờ',
                                 'submitted' => 'Đã nộp hồ sơ',
                                 'verified' => 'Đã xác minh',
                                 'eligible' => 'Đủ điều kiện',
                                 'ineligible' => 'Không đủ điều kiện',
-                                default => $state,
+                                default => $record->application_status,
                             };
                         }
 
@@ -195,7 +195,7 @@ class StudentsTable {
                         return 'Đang nhập';
                     })
                     ->badge()
-                    ->color(fn(string $state) => match ($state) {
+                    ->color(fn(?string $state) => match ($state) {
                         'Đang nhập' => 'gray',
                         'Đã nộp hồ sơ' => 'warning',
                         'Thiếu giấy tờ' => 'danger',
