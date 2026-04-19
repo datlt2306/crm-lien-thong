@@ -17,28 +17,28 @@ class ListCommissions extends ListRecords {
         }
 
         // Super admin và organization_owner có thể xem commissions
-        if (in_array($user->role, ['super_admin', ])) {
-            return true;
-        }
-
-        // CTV có thể xem commissions của mình
-        if ($user->role === 'ctv') {
-            return true;
-        }
-
-        // Accountant có thể xem commissions (để đối soát)
-        if ($user->role === 'accountant') {
+        if (in_array($user->role, ['super_admin', 'accountant', 'ctv'])) {
             return true;
         }
 
         return false;
     }
 
+    protected function getHeaderWidgets(): array {
+        return [
+            CommissionResource\Widgets\CommissionSummary::class,
+        ];
+    }
+
+    public function getMaxContentWidth(): string {
+        return 'full';
+    }
+
     public function getTitle(): string {
-        return 'Danh sách hoa hồng';
+        return 'Báo cáo hoa hồng & Đối soát';
     }
 
     public function getBreadcrumb(): string {
-        return 'Danh sách hoa hồng';
+        return 'Hoa hồng';
     }
 }

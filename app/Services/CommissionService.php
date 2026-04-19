@@ -18,61 +18,58 @@ class CommissionService {
      */
     public function createCommissionFromPayment(Payment $payment): Commission {
         return DB::transaction(function () use ($payment) {
-            // Tạo commission chính (idempotent theo payment)
+            // 1. Tìm chính sách phù hợp
+            $policy = $this->getMatchingPolicy($payment);
+
+            // 2. Tạo commission chính (idempotent theo payment)
             $commission = Commission::firstOrCreate(
                 ['payment_id' => $payment->id],
                 [
                     'student_id' => $payment->student_id,
                     'rule' => [
+                        'policy_id' => $policy?->id,
                         'program_type' => $payment->program_type,
                         'amount' => $payment->amount,
+                        'payout_rules' => $policy?->payout_rules,
                     ],
                     'generated_at' => now(),
                 ]
             );
 
-            // Tạo commission cho CTV cấp 1 (direct) ở trạng thái PAYABLE
-            // Chủ đơn vị sẽ "Xác nhận thanh toán" (upload bill) để chuyển item sang PAYMENT_CONFIRMED,
-            // sau đó CTV cấp 1 mới xác nhận đã nhận để nạp ví.
-            $this->createDirectCommission($commission, $payment, CommissionItem::STATUS_PAYABLE);
-
-            // Không còn CTV cấp 2 - đã loại bỏ logic downline commission
+            // 3. Tạo các dòng hoa hồng (Items) dựa trên quy tắc chia tiền (Split Rules)
+            if ($policy && !empty($policy->payout_rules)) {
+                $this->createCommissionsFromRules($commission, $payment, $policy->payout_rules);
+            } else {
+                // Fallback nếu không có quy tắc split: tạo 1 dòng mặc định cho CTV chính
+                $this->createDirectCommission($commission, $payment, CommissionItem::STATUS_PAYABLE);
+            }
 
             return $commission;
         });
     }
 
-    // createCommissionOnSubmission đã được loại bỏ theo flow mới (chỉ tạo sau VERIFY)
-
     /**
-     * Tạo commission trực tiếp cho CTV cấp 1
+     * Tạo commission trực tiếp cho CTV cấp 1 (Fallback)
      */
     private function createDirectCommission(Commission $commission, Payment $payment, string $initialStatus): void {
         $amount = $this->getDirectCommissionAmount($payment);
 
-        // Lấy collaborator_id: ưu tiên từ payment->primary_collaborator_id, nếu không có thì lấy từ student->collaborator_id
-        $collaboratorId = $payment->primary_collaborator_id;
-        if (!$collaboratorId && $payment->student) {
-            $collaboratorId = $payment->student->collaborator_id;
-        }
+        $collaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
 
-        // Nếu vẫn không có collaborator_id, không thể tạo commission_item
         if (!$collaboratorId) {
             Log::warning('Cannot create commission item: missing collaborator_id', [
                 'payment_id' => $payment->id,
-                'student_id' => $payment->student_id,
             ]);
             return;
         }
 
-        // Tránh tạo trùng (idempotent)
+        // Tránh tạo trùng
         $exists = CommissionItem::where('commission_id', $commission->id)
             ->where('recipient_collaborator_id', $collaboratorId)
             ->where('role', 'direct')
             ->exists();
-        if ($exists) {
-            return;
-        }
+            
+        if ($exists) return;
 
         CommissionItem::create([
             'commission_id' => $commission->id,
@@ -81,57 +78,110 @@ class CommissionService {
             'amount' => $amount,
             'status' => $initialStatus,
             'trigger' => 'payment_verified',
-            'payable_at' => now(),
+            'payable_at' => ($initialStatus === CommissionItem::STATUS_PAYABLE) ? now() : null,
             'visibility' => 'visible',
             'meta' => [
                 'program_type' => $payment->program_type,
                 'payment_id' => $payment->id,
             ],
         ]);
-        // Không nạp tiền ví ngay ở bước SUBMITTED/CONFIRMED. Chờ CTV cấp 1 xác nhận nhận tiền.
     }
 
-    // ===== LOẠI BỎ LOGIC CTV CẤP 2 - HỆ THỐNG CHỈ CÒN 1 CẤP =====
-    // createDownlineCommission() đã bị xóa
+    /**
+     * Tạo các dòng hoa hồng từ danh sách quy tắc chia tiền
+     */
+    private function createCommissionsFromRules(Commission $commission, Payment $payment, array $rules): void {
+        $directCollaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
 
-    // ===== LOẠI BỎ LOGIC CTV CẤP 2 - updateCommissionsOnEnrollment() đã bị xóa =====
+        foreach ($rules as $rule) {
+            $recipientId = null;
 
-    // ===== LOẠI BỎ LOGIC CTV CẤP 2 - transferCommissionToDownline() đã bị xóa =====
+            if ($rule['recipient_type'] === 'direct_ctv') {
+                $recipientId = $directCollaboratorId;
+            } elseif ($rule['recipient_type'] === 'specific_ctv') {
+                $recipientId = $rule['recipient_id'] ?? null;
+            }
+
+            if (!$recipientId) continue;
+
+            // Xác định trạng thái ban đầu của hoa hồng
+            // Nếu là trả sau khi nhập học -> STATUS_PENDING
+            // Nếu là trả ngay mùng 5 -> STATUS_PAYABLE
+            $initialStatus = ($rule['payout_trigger'] === 'student_enrolled') 
+                ? CommissionItem::STATUS_PENDING 
+                : CommissionItem::STATUS_PAYABLE;
+
+            // Tránh tạo trùng dòng tiền giống hệt nhau cho cùng 1 người trong cùng 1 đợt
+            $exists = CommissionItem::where('commission_id', $commission->id)
+                ->where('recipient_collaborator_id', $recipientId)
+                ->where('amount', $rule['amount_vnd'])
+                ->where('trigger', $rule['payout_trigger'])
+                ->exists();
+
+            if ($exists) continue;
+
+            CommissionItem::create([
+                'commission_id' => $commission->id,
+                'recipient_collaborator_id' => $recipientId,
+                'role' => ($rule['recipient_type'] === 'direct_ctv') ? 'direct' : 'override',
+                'amount' => (float)$rule['amount_vnd'],
+                'status' => $initialStatus,
+                'trigger' => $rule['payout_trigger'],
+                'payable_at' => ($initialStatus === CommissionItem::STATUS_PAYABLE) ? now() : null,
+                'visibility' => 'visible',
+                'meta' => [
+                    'description' => $rule['description'] ?? '',
+                    'program_type' => $payment->program_type,
+                    'payout_trigger_label' => $rule['payout_trigger'] === 'payment_verified' ? 'Mùng 5' : 'Nhập học',
+                ],
+            ]);
+        }
+    }
 
     /**
-     * Lấy số tiền commission trực tiếp theo hệ đào tạo
+     * Lấy chính sách hoa hồng khớp nhất với hồ sơ
      */
-    private function getDirectCommissionAmount(Payment $payment): float {
+    private function getMatchingPolicy(Payment $payment): ?CommissionPolicy {
         $programType = $payment->program_type;
-        $now = now();
+        $programId = $payment->student->program_id ?? null;
         $collaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
 
-        // Lấy chính sách có độ ưu tiên cao nhất, vẫn còn hiệu lực và đúng điều kiện
-        $policy = \App\Models\CommissionPolicy::where('role', 'PRIMARY')
-            ->where('active', true)
+        return CommissionPolicy::where('active', true)
+            ->where(function ($query) use ($programId) {
+                $query->whereNull('target_program_id')
+                    ->orWhere('target_program_id', $programId);
+            })
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
                     ->orWhere('program_type', strtoupper($programType));
-            })
-            ->where(function ($query) use ($now) {
-                $query->whereNull('effective_from')
-                    ->orWhere('effective_from', '<=', $now);
-            })
-            ->where(function ($query) use ($now) {
-                $query->whereNull('effective_to')
-                    ->orWhere('effective_to', '>=', $now);
             })
             ->where(function ($query) use ($collaboratorId) {
                 $query->whereNull('collaborator_id')
                     ->orWhere('collaborator_id', $collaboratorId);
             })
             ->orderBy('priority', 'desc')
+            ->orderBy('collaborator_id', 'desc') // Ưu tiên chính sách chỉ định đích danh CTV
+            ->orderBy('target_program_id', 'desc') // Tiếp theo là đích danh chương trình
             ->first();
+    }
+
+    /**
+     * Lấy số tiền hoa hồng trực tiếp (Fallback)
+     */
+    private function getDirectCommissionAmount(Payment $payment): float {
+        $policy = $this->getMatchingPolicy($payment);
+        $programType = $payment->program_type;
 
         if ($policy) {
-            if ($policy->type === 'PASS_THROUGH') {
-                return (float) $payment->amount;
+            // Nếu có quy tắc chia tiền JSON, ưu tiên lấy dòng 'direct_ctv' trong đó
+            if (!empty($policy->payout_rules)) {
+                $directRule = collect($policy->payout_rules)->firstWhere('recipient_type', 'direct_ctv');
+                if ($directRule) {
+                    return (float) ($directRule['amount_vnd'] ?? 0);
+                }
             }
+
+            // Legacy fallback cho các chính sách cũ (nếu còn)
             if ($policy->type === 'FIXED') {
                 return (float) ($policy->amount_vnd ?? 0);
             }
@@ -140,10 +190,10 @@ class CommissionService {
             }
         }
 
-        // Fallback cứng nếu không có chính sách
+        // Fallback cứng cuối cùng theo hệ đào tạo (nếu không khớp bất kỳ chính sách nào)
         return match (strtolower($programType)) {
             'cq', 'regular' => 1750000,
-            'vhvlv', 'part_time' => 750000,
+            'vhvl', 'part_time' => 750000,
             'distance' => 500000,
             default => 0,
         };
@@ -193,6 +243,18 @@ class CommissionService {
         });
     }
 
-    // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====
-    // confirmDownlineTransfer() và confirmDownlineReceived() đã bị xóa
+    /**
+     * Cập nhật trạng thái hoa hồng khi sinh viên nhập học (Mở khóa các dòng PENDING)
+     */
+    public function unlockCommissionsOnEnrollment(Student $student): void {
+        CommissionItem::whereHas('commission', function ($query) use ($student) {
+            $query->where('student_id', $student->id);
+        })
+        ->where('trigger', 'student_enrolled')
+        ->where('status', CommissionItem::STATUS_PENDING)
+        ->update([
+            'status' => CommissionItem::STATUS_PAYABLE,
+            'payable_at' => now(),
+        ]);
+    }
 }

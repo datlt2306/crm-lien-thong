@@ -129,6 +129,19 @@ class CommissionResource extends Resource {
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv),
 
+                \Filament\Tables\Columns\TextColumn::make('meta.description')
+                    ->label('Nội dung')
+                    ->wrap()
+                    ->formatStateUsing(function ($state, $record) {
+                        if ($state) return $state;
+                        return match ($record->role) {
+                            'direct' => 'Hoa hồng trực tiếp',
+                            'override' => 'Hoa hồng quản lý/thưởng',
+                            default => 'Phân bổ hoa hồng'
+                        };
+                    })
+                    ->searchable(),
+
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
                     ->money('VND')
@@ -607,6 +620,12 @@ class CommissionResource extends Resource {
     public static function getPages(): array {
         return [
             'index' => ListCommissions::route('/'),
+        ];
+    }
+
+    public static function getWidgets(): array {
+        return [
+            Widgets\CommissionSummary::class,
         ];
     }
 

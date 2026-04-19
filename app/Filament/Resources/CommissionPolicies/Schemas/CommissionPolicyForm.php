@@ -7,108 +7,112 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Illuminate\Support\Facades\Auth;
 
 class CommissionPolicyForm {
     public static function configure(Schema $schema): Schema {
         return $schema
             ->components([
-                Select::make('collaborator_id')
-                    ->label('Cộng tác viên')
-                    ->relationship('collaborator', 'full_name')
-                    ->searchable()
-                    ->preload()
-                    ->helperText('Để trống để áp dụng cho tất cả CTV')
-                    ->nullable(),
-                Select::make('program_type')
-                    ->label('Hệ đào tạo')
-                    ->options([
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'Bán thời gian',
-                    ])
-                    ->helperText('Để trống để áp dụng cho tất cả loại chương trình')
-                    ->nullable(),
-                Select::make('role')
-                    ->label('Vai trò')
-                    ->options([
-                        'PRIMARY' => 'CTV chính',
-                        'SUB' => 'CTV phụ',
-                    ])
-                    ->helperText('Để trống để áp dụng cho tất cả vai trò')
-                    ->nullable(),
-                Select::make('type')
-                    ->label('Loại hoa hồng')
-                    ->options([
-                        'FIXED' => 'Cố định (VND)',
-                        'PERCENT' => 'Phần trăm (%)',
-                        'PASS_THROUGH' => 'Chuyển tiếp (100%)',
-                    ])
-                    ->required()
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        if ($state === 'FIXED') {
-                            $set('percent', null);
-                        } elseif ($state === 'PERCENT') {
-                            $set('amount_vnd', null);
-                        } else {
-                            $set('amount_vnd', null);
-                            $set('percent', null);
-                        }
-                    }),
-                TextInput::make('amount_vnd')
-                    ->label('Số tiền cố định (VND)')
-                    ->numeric()
-                    ->visible(fn($get) => $get('type') === 'FIXED')
-                    ->required(fn($get) => $get('type') === 'FIXED')
-                    ->helperText('Số tiền hoa hồng cố định'),
-                TextInput::make('percent')
-                    ->label('Phần trăm (%)')
-                    ->numeric()
-                    ->minValue(0)
-                    ->maxValue(100)
-                    ->visible(fn($get) => $get('type') === 'PERCENT')
-                    ->required(fn($get) => $get('type') === 'PERCENT')
-                    ->helperText('Phần trăm hoa hồng (0-100)'),
+                // 1. Điều kiện áp dụng (Để lên đầu cho rõ ràng)
+                Section::make('Điều kiện áp dụng')
+                    ->description('Xác định đối tượng và chương trình áp dụng chính sách này.')
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                Select::make('collaborator_id')
+                                    ->label('Cộng tác viên')
+                                    ->relationship('collaborator', 'full_name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->helperText('Để trống để áp dụng cho tất cả CTV')
+                                    ->nullable(),
+                                Select::make('target_program_id')
+                                    ->label('Chương trình cụ thể')
+                                    ->relationship('program', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable(),
+                                Select::make('program_type')
+                                    ->label('Hệ đào tạo (Nhóm)')
+                                    ->options([
+                                        'REGULAR' => 'Chính quy',
+                                        'PART_TIME' => 'Vừa học vừa làm',
+                                        'DISTANCE' => 'Từ xa',
+                                    ])
+                                    ->nullable(),
+                            ]),
+                    ]),
 
-                DatePicker::make('effective_from')
-                    ->label('Ngày bắt đầu có hiệu lực')
-                    ->nullable()
-                    ->default(null),
-                DatePicker::make('effective_to')
-                    ->label('Ngày kết thúc hiệu lực')
-                    ->nullable()
-                    ->default(null),
+                // 2. Gói chia tiền (Trung tâm)
+                Section::make('Gói chia tiền (Khuyên dùng)')
+                    ->description('Thiết lập danh sách nhiều người nhận hoa hồng cùng lúc.')
+                    ->schema([
+                        Repeater::make('payout_rules')
+                            ->label('Quy tắc chia tiền')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Select::make('recipient_type')
+                                            ->label('Người nhận')
+                                            ->options([
+                                                'direct_ctv' => '🎯 CTV giới thiệu (Trực tiếp)',
+                                                'specific_ctv' => '👤 Một CTV cụ thể (Quản lý/Bạn)',
+                                            ])
+                                            ->required()
+                                            ->reactive(),
+                                        Select::make('recipient_id')
+                                            ->label('Chọn CTV cụ thể')
+                                            ->relationship('collaborator', 'full_name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->visible(fn($get) => $get('recipient_type') === 'specific_ctv')
+                                            ->required(fn($get) => $get('recipient_type') === 'specific_ctv'),
+                                    ]),
+                                Grid::make(2)
+                                    ->schema([
+                                        TextInput::make('amount_vnd')
+                                            ->label('Số tiền (VND)')
+                                            ->numeric()
+                                            ->required()
+                                            ->prefix('₫'),
+                                        Select::make('payout_trigger')
+                                            ->label('Thời điểm trả')
+                                            ->options([
+                                                'payment_verified' => '📅 Mùng 5 tháng sau',
+                                                'student_enrolled' => '🎓 Sau khi nhập học',
+                                            ])
+                                            ->required()
+                                            ->default('payment_verified'),
+                                    ]),
+                                TextInput::make('description')
+                                    ->label('Ghi chú')
+                                    ->placeholder('Vd: Tiền cắt phế...'),
+                            ])
+                            ->addActionLabel('Thêm người nhận tiền')
+                            ->itemLabel(fn (array $state): ?string => ($state['recipient_type'] ?? '') === 'direct_ctv' ? '🎯 CTV Trực tiếp' : '👤 CTV Cụ thể')
+                            ->collapsible()
+                            ->defaultItems(1)
+                    ]),
 
-                Select::make('trigger')
-                    ->label('Thời điểm kích hoạt')
-                    ->options([
-                        'ON_VERIFICATION' => 'Khi xác nhận thanh toán',
-                        'ON_ENROLLMENT' => 'Khi học viên nhập học',
-                    ])
-                    ->helperText('Để trống để sử dụng mặc định')
-                    ->nullable(),
-                Select::make('visibility')
-                    ->label('Hiển thị')
-                    ->options([
-                        'INTERNAL' => 'Nội bộ (chỉ admin)',
-                    ])
-                    ->helperText('Để trống để sử dụng mặc định')
-                    ->nullable(),
-                TextInput::make('priority')
-                    ->label('Độ ưu tiên')
-                    ->numeric()
-                    ->default(0)
-                    ->helperText('Số càng cao càng ưu tiên (mặc định: 0)'),
-                Toggle::make('active')
-                    ->label('Kích hoạt')
-                    ->default(true)
-                    ->helperText('Bật để kích hoạt chính sách này'),
-
-                Textarea::make('meta')
-                    ->label('Thông tin bổ sung')
-                    ->helperText('Thông tin bổ sung về chính sách (JSON)')
-                    ->nullable(),
+                // 3. Cài đặt nâng cao (Cuối cùng)
+                Section::make('Cài đặt nâng cao')
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('priority')
+                                    ->label('Độ ưu tiên')
+                                    ->numeric()
+                                    ->default(0),
+                                Toggle::make('active')
+                                    ->label('Kích hoạt')
+                                    ->default(true),
+                            ]),
+                    ]),
             ]);
     }
 }

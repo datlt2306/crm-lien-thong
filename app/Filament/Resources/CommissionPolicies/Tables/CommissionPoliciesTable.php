@@ -16,51 +16,82 @@ class CommissionPoliciesTable {
         return $table
             ->columns([
                 TextColumn::make('collaborator.full_name')
-                    ->label('CTV')
+                    ->label('Đối tượng CTV')
                     ->searchable()
-                    ->default('Tất cả'),
-                TextColumn::make('program_type')
+                    ->default('Tất cả CTV')
+                    ->toggleable(),
+                TextColumn::make('program.name')
                     ->label('Chương trình')
-                    ->formatStateUsing(fn($state) => $state ? ($state === 'REGULAR' ? 'Chính quy' : 'Bán thời gian') : 'Tất cả'),
+                    ->searchable()
+                    ->default('Tất cả chương trình'),
+                TextColumn::make('program_type')
+                    ->label('Hệ đào tạo')
+                    ->badge()
+                    ->color(fn($state) => match ($state) {
+                        'REGULAR' => 'success',
+                        'PART_TIME' => 'warning',
+                        'DISTANCE' => 'info',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'REGULAR' => 'Chính quy',
+                        'PART_TIME' => 'VHVLV',
+                        'DISTANCE' => 'Từ xa',
+                        default => 'Tất cả',
+                    }),
+                TextColumn::make('payout_rules')
+                    ->label('Gói chia tiền')
+                    ->html()
+                    ->getStateUsing(function ($record) {
+                        $rules = $record->payout_rules;
+                        $html = '';
+                        
+                        // 1. Hiển thị cấu hình Gói chia tiền mới (JSON)
+                        if (!empty($rules) && is_array($rules)) {
+                            $lines = [];
+                            foreach ($rules as $rule) {
+                                if (empty($rule['amount_vnd'])) continue;
+                                
+                                $recipient = ($rule['recipient_type'] ?? '') === 'direct_ctv' 
+                                    ? '<span class="text-primary-600 font-bold">• CTV trực tiếp</span>' 
+                                    : '<span class="text-info-600 font-bold">• CTV chỉ định</span>';
+                                
+                                $amount = number_format($rule['amount_vnd']) . 'đ';
+                                
+                                $trigger = ($rule['payout_trigger'] ?? '') === 'payment_verified' 
+                                    ? '<span class="bg-success-100 text-success-700 px-1 rounded text-xs">Mùng 5</span>' 
+                                    : '<span class="bg-warning-100 text-warning-700 px-1 rounded text-xs">Nhập học</span>';
+                                
+                                $lines[] = "<div>{$recipient}: <strong>{$amount}</strong> {$trigger}</div>";
+                            }
+                            if (!empty($lines)) {
+                                $html = '<div class="text-sm space-y-1">' . implode('', $lines) . '</div>';
+                            }
+                        }
+
+                        // 2. Fallback cho dữ liệu cũ (Legacy) nếu HTML vẫn trống
+                        if (empty($html)) {
+                            if ($record->amount_vnd > 0) {
+                                $amount = number_format($record->amount_vnd) . 'đ';
+                                $triggerLabel = $record->trigger === 'ON_ENROLLMENT' ? 'Nhập học' : 'Mùng 5';
+                                $html = "<div class='text-sm'>📍 CTV trực tiếp: <strong>{$amount}</strong> ({$triggerLabel})</div>";
+                            } elseif ($record->percent > 0) {
+                                $percent = rtrim(rtrim((string)$record->percent, '0'), '.') . '%';
+                                $html = "<div class='text-sm'>📍 CTV trực tiếp: <strong>{$percent}</strong></div>";
+                            } else {
+                                $html = '<span class="text-gray-400 italic">Chưa thiết lập</span>';
+                            }
+                        }
+
+                        return $html;
+                    }),
                 TextColumn::make('role')
                     ->label('Vai trò')
-                    ->formatStateUsing(fn($state) => $state ? ($state === 'PRIMARY' ? 'CTV chính' : 'CTV phụ') : 'Tất cả'),
-                TextColumn::make('type')
-                    ->label('Loại')
-                    ->formatStateUsing(fn($state) => match ($state) {
-                        'FIXED' => 'Cố định',
-                        'PERCENT' => 'Phần trăm',
-                        'PASS_THROUGH' => 'Chuyển tiếp',
-                        default => $state
-                    }),
-                TextColumn::make('amount_vnd')
-                    ->label('Mức hoa hồng')
-                    ->formatStateUsing(function ($state, $record) {
-                        if ($record->type === 'FIXED' && $state) {
-                            return number_format($state) . ' VND';
-                        }
-                        if ($record->type === 'PERCENT' && $record->percent) {
-                            return rtrim(rtrim((string) $record->percent, '0'), '.') . '%';
-                        }
-                        if ($record->type === 'PASS_THROUGH') {
-                            return '100%';
-                        }
-                        return '-';
-                    }),
-                TextColumn::make('effective_from')
-                    ->label('Hiệu lực từ')
-                    ->date('d/m/Y')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('effective_to')
-                    ->label('Đến ngày')
-                    ->date('d/m/Y')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('trigger')
-                    ->label('Kích hoạt')
-                    ->formatStateUsing(fn($state) => $state ? ($state === 'ON_VERIFICATION' ? 'Khi xác nhận' : 'Khi nhập học') : 'Mặc định')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->badge()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn($state) => $state === 'PRIMARY' ? 'CTV Chính' : 'CTV Phụ'),
                 TextColumn::make('priority')
-                    ->label('Ưu tiên')
+                    ->label('Độ ưu tiên')
                     ->sortable(),
                 TextColumn::make('active')
                     ->label('Trạng thái')

@@ -15,6 +15,15 @@ use Illuminate\Support\Facades\Auth;
 class EditStudent extends EditRecord {
     protected static string $resource = StudentResource::class;
 
+    protected function afterSave(): void {
+        $record = $this->record;
+
+        // Nếu chuyển trạng thái sang Nhập học, mở khóa hoa hồng tương ứng
+        if ($record->status === Student::STATUS_ENROLLED) {
+            app(\App\Services\CommissionService::class)->unlockCommissionsOnEnrollment($record);
+        }
+    }
+
     protected function getHeaderActions(): array {
         $record = $this->record;
 

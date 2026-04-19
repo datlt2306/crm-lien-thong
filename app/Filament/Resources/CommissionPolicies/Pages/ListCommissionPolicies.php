@@ -9,6 +9,11 @@ use Filament\Resources\Pages\ListRecords;
 class ListCommissionPolicies extends ListRecords {
     protected static string $resource = CommissionPolicyResource::class;
 
+    public function getMaxContentWidth(): string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array {
         return [
             CreateAction::make()

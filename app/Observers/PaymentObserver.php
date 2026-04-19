@@ -8,9 +8,11 @@ use App\Services\QuotaService;
 
 class PaymentObserver {
     protected QuotaService $quotaService;
+    protected \App\Services\CommissionService $commissionService;
 
-    public function __construct(QuotaService $quotaService) {
+    public function __construct(QuotaService $quotaService, \App\Services\CommissionService $commissionService) {
         $this->quotaService = $quotaService;
+        $this->commissionService = $commissionService;
     }
 
     protected function bust(): void {
@@ -29,14 +31,18 @@ class PaymentObserver {
             $oldStatus = $payment->getOriginal('status');
             $newStatus = $payment->status;
 
-            // Nếu payment vừa được verify thì trừ quota
+            // Nếu payment vừa được verify thì trừ quota và tạo hoa hồng
             if ($newStatus === Payment::STATUS_VERIFIED && $oldStatus !== Payment::STATUS_VERIFIED) {
                 // Trừ quota khi payment được verify
                 $this->quotaService->decreaseQuotaOnPaymentSubmission($payment);
+                
+                // Tự động tạo hoa hồng dựa trên chính sách
+                $this->commissionService->createCommissionFromPayment($payment);
             } 
             // Nếu payment đang từ VERIFIED chuyển sang trạng thái khác (vd: bị hoàn hay hủy) thì cọng lại quota
             elseif ($oldStatus === Payment::STATUS_VERIFIED && $newStatus !== Payment::STATUS_VERIFIED) {
                 $this->quotaService->restoreQuotaOnPaymentReverted($payment);
+                // Lưu ý: Tạm thời chưa tự động hủy hoa hồng để kế toán kiểm tra thủ công cho an toàn
             }
         }
     }

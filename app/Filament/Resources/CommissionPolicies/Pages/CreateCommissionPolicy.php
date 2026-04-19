@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Auth;
 class CreateCommissionPolicy extends CreateRecord {
     protected static string $resource = CommissionPolicyResource::class;
 
+    public function getMaxContentWidth(): string
+    {
+        return 'full';
+    }
+
     public function getTitle(): string {
         return 'Tạo cấu hình hoa hồng mới';
     }
