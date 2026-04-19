@@ -31,12 +31,6 @@ class CommissionPolicyForm {
                                     ->preload()
                                     ->helperText('Để trống để áp dụng cho tất cả CTV')
                                     ->nullable(),
-                                Select::make('target_program_id')
-                                    ->label('Chương trình cụ thể')
-                                    ->relationship('program', 'name')
-                                    ->searchable()
-                                    ->preload()
-                                    ->nullable(),
                                 Select::make('program_type')
                                     ->label('Hệ đào tạo (Nhóm)')
                                     ->options([
@@ -44,7 +38,20 @@ class CommissionPolicyForm {
                                         'PART_TIME' => 'Vừa học vừa làm',
                                         'DISTANCE' => 'Từ xa',
                                     ])
-                                    ->nullable(),
+                                    ->reactive()
+                                    ->afterStateUpdated(fn ($set) => $set('target_program_id', null))
+                                    ->nullable()
+                                    ->helperText('Để trống để áp dụng cho TẤT CẢ Hệ đào tạo'),
+                                Select::make('target_program_id')
+                                    ->label('Ngành học cụ thể')
+                                    ->relationship('major', 'name', fn ($query) => $query->where('is_active', true))
+                                    ->searchable()
+                                    ->preload()
+                                    ->reactive()
+                                    ->afterStateUpdated(fn ($set) => $set('program_type', null))
+                                    ->hidden(fn ($get) => !empty($get('program_type')))
+                                    ->nullable()
+                                    ->helperText('Để trống để áp dụng cho TẤT CẢ Ngành học'),
                             ]),
                     ]),
 

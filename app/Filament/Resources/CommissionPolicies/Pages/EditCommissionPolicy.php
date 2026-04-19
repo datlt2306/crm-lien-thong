@@ -43,4 +43,20 @@ class EditCommissionPolicy extends EditRecord {
         return 'Chỉnh sửa cấu hình hoa hồng';
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        // Nếu không có gói chia tiền nhưng có số tiền cũ (Legacy Data)
+        if (empty($data['payout_rules']) && !empty($data['amount_vnd'])) {
+            $data['payout_rules'] = [
+                [
+                    'recipient_type' => 'direct_ctv',
+                    'amount_vnd' => $data['amount_vnd'],
+                    'payout_trigger' => 'payment_verified',
+                    'description' => 'Dữ liệu cũ (Tự động chuyển đổi)',
+                ]
+            ];
+        }
+
+        return $data;
+    }
 }

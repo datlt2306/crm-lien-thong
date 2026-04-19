@@ -143,13 +143,15 @@ class CommissionService {
      */
     private function getMatchingPolicy(Payment $payment): ?CommissionPolicy {
         $programType = $payment->program_type;
-        $programId = $payment->student->program_id ?? null;
+        $studentMajor = $payment->student->major ?? null;
         $collaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
 
         return CommissionPolicy::where('active', true)
-            ->where(function ($query) use ($programId) {
+            ->where(function ($query) use ($studentMajor) {
                 $query->whereNull('target_program_id')
-                    ->orWhere('target_program_id', $programId);
+                    ->orWhereHas('major', function($q) use ($studentMajor) {
+                        $q->where('name', $studentMajor);
+                    });
             })
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
