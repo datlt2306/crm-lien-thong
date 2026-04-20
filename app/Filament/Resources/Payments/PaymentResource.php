@@ -322,11 +322,21 @@ class PaymentResource extends Resource {
                             // Tạo commission
                             $commissionService = new \App\Services\CommissionService();
                             $commissionService->createCommissionFromPayment($record);
+
+                            // Gửi email thông báo cho sinh viên
+                            if ($record->student && $record->student->email) {
+                                try {
+                                    \Illuminate\Support\Facades\Mail::to($record->student->email)
+                                        ->send(new \App\Mail\PaymentVerified($record));
+                                } catch (\Exception $e) {
+                                    \Illuminate\Support\Facades\Log::error('Failed to send payment verification email: ' . $e->getMessage());
+                                }
+                            }
                         });
 
                         \Filament\Notifications\Notification::make()
                             ->title('Đã xác nhận thanh toán')
-                            ->body('Commission đã được tạo tự động.')
+                            ->body('Commission đã được tạo và email phiếu thu đã được gửi cho sinh viên.')
                             ->success()
                             ->send();
                     }),

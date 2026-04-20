@@ -643,10 +643,8 @@ class StudentsTable {
                             $user = Auth::user();
                             if (!$record->is_active || !$user->can('payment_upload_receipt')) return false;
 
-                            // Kế toán cho thấy luôn để có thể upload ngay sau khi thu
-                            if ($user->role === 'accountant') return true;
-
-                            return (bool) $record->payment;
+                            // Chỉ Kế toán hoặc Super Admin mới được đẩy phiếu thu chính thức
+                            return in_array($user->role, ['accountant', 'super_admin']);
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
