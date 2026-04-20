@@ -149,9 +149,7 @@ class CommissionService {
         return CommissionPolicy::where('active', true)
             ->where(function ($query) use ($studentMajor) {
                 $query->whereNull('target_program_id')
-                    ->orWhereHas('major', function($q) use ($studentMajor) {
-                        $q->where('name', $studentMajor);
-                    });
+                    ->orWhere('target_program_id', $studentMajor);
             })
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
@@ -162,8 +160,8 @@ class CommissionService {
                     ->orWhere('collaborator_id', $collaboratorId);
             })
             ->orderBy('priority', 'desc')
-            ->orderBy('collaborator_id', 'desc') // Ưu tiên chính sách chỉ định đích danh CTV
-            ->orderBy('target_program_id', 'desc') // Tiếp theo là đích danh chương trình
+            ->orderByRaw('collaborator_id DESC NULLS LAST')
+            ->orderByRaw('target_program_id DESC NULLS LAST')
             ->first();
     }
 

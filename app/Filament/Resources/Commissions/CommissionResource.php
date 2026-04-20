@@ -625,7 +625,7 @@ class CommissionResource extends Resource {
 
     public static function getWidgets(): array {
         return [
-            Widgets\CommissionSummary::class,
+            \App\Filament\Resources\Commissions\Widgets\CommissionSummary::class,
         ];
     }
 

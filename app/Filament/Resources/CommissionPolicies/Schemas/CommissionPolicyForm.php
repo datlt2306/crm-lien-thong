@@ -44,7 +44,7 @@ class CommissionPolicyForm {
                                     ->helperText('Để trống để áp dụng cho TẤT CẢ Hệ đào tạo'),
                                 Select::make('target_program_id')
                                     ->label('Ngành học cụ thể')
-                                    ->relationship('major', 'name', fn ($query) => $query->where('is_active', true))
+                                    ->options(fn() => \App\Models\Major::where('is_active', true)->pluck('name', 'name'))
                                     ->searchable()
                                     ->preload()
                                     ->reactive()

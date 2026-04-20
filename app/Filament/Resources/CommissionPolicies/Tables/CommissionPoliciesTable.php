@@ -20,10 +20,10 @@ class CommissionPoliciesTable {
                     ->searchable()
                     ->default('Tất cả CTV')
                     ->toggleable(),
-                TextColumn::make('program.name')
-                    ->label('Chương trình')
+                TextColumn::make('target_program_id')
+                    ->label('Ngành/Chương trình')
                     ->searchable()
-                    ->default('Tất cả chương trình'),
+                    ->default('Tất cả'),
                 TextColumn::make('program_type')
                     ->label('Hệ đào tạo')
                     ->badge()

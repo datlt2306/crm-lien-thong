@@ -64,7 +64,8 @@ class StudentResource extends Resource {
                 return null;
             }
 
-            $cacheKey = sprintf('students_navigation_badge:%s:%s', $user->id, $user->role);
+            $version = \Illuminate\Support\Facades\Cache::get('crm-cache-dash:version', 1);
+            $cacheKey = sprintf('students_navigation_badge:%s:%s:%s', $version, $user->id, $user->role);
 
             return (string) Cache::remember($cacheKey, now()->addMinutes(2), function () use ($user) {
                 // Super admin đếm tất cả
@@ -77,13 +78,13 @@ class StudentResource extends Resource {
                     return Student::whereRelation('collaborator', 'email', $user->email)->count();
                 }
 
-                // Kế toán & cán bộ hồ sơ đếm học viên đã được CTV xác nhận nộp tiền
+                // Kế toán & cán bộ hồ sơ đếm học viên đã được CTV xác nhận nộp tiền hoặc đã bị hoàn trả
                 if (
                     $user->role === 'accountant'
                     || $user->role === 'document'
                     || ($user->roles && $user->roles->contains('name', 'accountant'))
                 ) {
-                    return Student::whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified']))->count();
+                    return Student::whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified', 'reverted']))->count();
                 }
 
                 return 0;
@@ -121,13 +122,13 @@ class StudentResource extends Resource {
             return $query->whereRelation('collaborator', 'email', $user->email);
         }
 
-        // Kế toán & cán bộ hồ sơ chỉ thấy học viên đã được CTV xác nhận nộp tiền (để xác minh / xử lý hồ sơ)
+        // Kế toán & cán bộ hồ sơ thấy học viên đang nộp tiền hoặc đã xác minh hoặc đã hoàn trả
         if (
             $user->role === 'accountant'
             || $user->role === 'document'
             || ($user->roles && $user->roles->contains('name', 'accountant'))
         ) {
-            return $query->whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified']));
+            return $query->whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified', 'reverted']));
         }
 
         // Fallback: không thấy gì

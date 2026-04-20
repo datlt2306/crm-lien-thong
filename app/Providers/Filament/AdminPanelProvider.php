@@ -40,7 +40,7 @@ class AdminPanelProvider extends PanelProvider {
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                // Tất cả widget đã được xóa
+                \App\Filament\Resources\Commissions\Widgets\CommissionSummary::class,
             ])
             ->maxContentWidth('full')
             ->renderHook(

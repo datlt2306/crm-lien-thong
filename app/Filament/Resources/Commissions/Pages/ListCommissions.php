@@ -6,6 +6,8 @@ use Filament\Resources\Pages\ListRecords;
 use App\Filament\Resources\Commissions\CommissionResource;
 use Illuminate\Support\Facades\Auth;
 
+use App\Filament\Resources\Commissions\Widgets\CommissionSummary;
+
 class ListCommissions extends ListRecords {
     protected static string $resource = CommissionResource::class;
 
@@ -26,7 +28,7 @@ class ListCommissions extends ListRecords {
 
     protected function getHeaderWidgets(): array {
         return [
-            CommissionResource\Widgets\CommissionSummary::class,
+            \App\Filament\Resources\Commissions\Widgets\CommissionSummary::class,
         ];
     }
 

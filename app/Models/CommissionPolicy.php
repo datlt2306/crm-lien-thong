@@ -39,12 +39,4 @@ class CommissionPolicy extends Model {
     public function collaborator(): BelongsTo {
         return $this->belongsTo(Collaborator::class);
     }
-
-    public function program(): BelongsTo {
-        return $this->belongsTo(Program::class, 'target_program_id');
-    }
-
-    public function major(): BelongsTo {
-        return $this->belongsTo(Major::class, 'target_program_id');
-    }
 }

@@ -13,6 +13,22 @@ use Illuminate\Database\Eloquent\Builder;
 class ListStudents extends ListRecords {
     protected static string $resource = StudentResource::class;
 
+    protected function getHeaderWidgets(): array
+    {
+        return [];
+    }
+
+    public function getContentTabPosition(): \Filament\Resources\Pages\ListRecords\TabPosition
+    {
+        return \Filament\Resources\Pages\ListRecords\TabPosition::Header;
+    }
+
+    // Tiêm CSS để đẩy tab sang phải
+    public function getHeader(): ?\Illuminate\Contracts\View\View
+    {
+        return view('filament.components.list-students-header');
+    }
+
     public function getTabs(): array
     {
         $user = Auth::user();

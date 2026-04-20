@@ -243,7 +243,6 @@ class StudentsTable {
                             };
                         }
 
-                        // Nếu không có payment, hiển thị trạng thái sinh viên
                         $statusOptions = Student::getStatusOptions();
                         $statusLabel = $statusOptions[$record->status] ?? $record->status;
 
@@ -260,6 +259,15 @@ class StudentsTable {
 
                         $icon = $icons[$record->status] ?? '';
                         return $icon ? "{$icon} {$statusLabel}" : $statusLabel;
+                    })
+                    ->description(function (Student $record) {
+                        if ($record->payment?->status === Payment::STATUS_REVERTED && $record->payment->edit_reason) {
+                            return "Lý do: " . $record->payment->edit_reason;
+                        }
+                        return null;
+                    })
+                    ->color(function (Student $record) {
+                        return $record->payment?->status === Payment::STATUS_REVERTED ? 'danger' : null;
                     })
                     ->tooltip(function (Student $record): string {
                         if ($record->payment) {
@@ -293,8 +301,8 @@ class StudentsTable {
                             </a>";
                         }
                         
-                        // Phiếu thu từ Kế toán
-                        if ($payment->receipt_path) {
+                        // Phiếu thu từ Kế toán - CHỈ hiển thị khi đã VERIFIED
+                        if ($payment->status === Payment::STATUS_VERIFIED && $payment->receipt_path) {
                             $url = route('files.receipt.view', ['paymentId' => $payment->id]);
                             $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 text-success-600 hover:underline' title='Xem phiếu thu chính thức'>
                                 <svg class='w-4 h-4' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z' /></svg>
@@ -430,129 +438,106 @@ class StudentsTable {
                         }),
 
                     Action::make('confirm_payment')
-                        ->label('Tải lên minh chứng nộp tiền') // Đổi tên cho rõ nghĩa với CTV
-                        ->icon('heroicon-o-arrow-up-tray')
+                        ->label('Gửi Kế toán') // Tên mới gộp cả upload minh chứng
+                        ->icon('heroicon-o-paper-airplane')
                         ->color('primary')
                         ->requiresConfirmation()
-                        ->modalHeading('Tải lên minh chứng nộp tiền')
-                        ->modalDescription('Tải lên ảnh bill chuyển khoản hoặc phiếu thu để kế toán xác minh.')
-                        ->modalSubmitActionLabel('Tải lên')
+                        ->modalHeading('Gửi Kế toán & Minh chứng')
+                        ->modalDescription('Cập nhật số tiền và tải lên hóa đơn/bill chuyển khoản để Kế toán đối soát.')
+                        ->modalSubmitActionLabel('Gửi xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->form([
-                            \Filament\Forms\Components\TextInput::make('amount')
-                                ->label('Số tiền (VNĐ)')
-                                ->required()
-                                ->default(function (Student $record) {
-                                    // Trả về số nguyên thuần túy để formatStateUsing xử lý
+                            \Filament\Forms\Components\Placeholder::make('amount_display')
+                                ->label('Số tiền dự kiến (VNĐ)')
+                                ->content(function (Student $record) {
                                     $expectedFee = app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
-                                    return $expectedFee !== null ? (int) $expectedFee : '';
-                                })
-                                ->helperText('Nhập số tiền học viên đã nộp (ví dụ: 1.750.000)')
-                                ->formatStateUsing(function ($state) {
-                                    if (empty($state)) {
-                                        return '';
-                                    }
-                                    // Xử lý cả trường hợp state là số hoặc chuỗi đã có dấu chấm
-                                    $numericValue = (int) str_replace('.', '', (string) $state);
-                                    return number_format($numericValue, 0, '', '.');
-                                })
-                                ->dehydrateStateUsing(function ($state) {
-                                    if (empty($state)) {
-                                        return 0;
-                                    }
-                                    // Loại bỏ dấu chấm trước khi lưu vào database
-                                    return (int) str_replace('.', '', $state);
-                                })
-                                ->live()
-                                ->afterStateUpdated(function ($state, callable $set) {
-                                    if (!empty($state)) {
-                                        $numericValue = (int) str_replace('.', '', $state);
-                                        if ($numericValue > 0) {
-                                            $set('amount', number_format($numericValue, 0, '', '.'));
-                                        }
-                                    }
+                                    return $expectedFee !== null ? number_format((int)$expectedFee, 0, '', '.') . ' VNĐ' : 'Chưa xác định';
                                 }),
                             \Filament\Forms\Components\FileUpload::make('bill')
-                                ->label('Bill thanh toán')
+                                ->label('Minh chứng nộp tiền (Bill)')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                ->maxSize(5120) // 5MB
+                                ->maxSize(5120)
                                 ->disk('google')
                                 ->directory('bills')
                                 ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
-                                    $year = now()->year;
-                                    $programName = $record->program_type === 'REGULAR' ? 'Chính quy' : ($record->program_type === 'PART_TIME' ? 'Vừa học vừa làm' : 'Từ xa');
-                                    return "BILL_SV_{$record->profile_code}_{$record->full_name}_{$year}." . $file->getClientOriginalExtension();
+                                    // Sử dụng logic chuẩn hóa từ Model Payment
+                                    $year = now()->format('Y');
+                                    $profileCode = $record->profile_code;
+                                    $fullName = $record->full_name;
+                                    $major = $record->major;
+                                    $ext = $file->getClientOriginalExtension();
+                                    
+                                    $systemCode = match (strtoupper((string)$record->program_type)) {
+                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
+                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                        'DISTANCE', 'TỪ XA' => 'TX',
+                                        default => $record->program_type
+                                    };
+
+                                    // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
+                                    $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
+                                    
+                                    return "Hóa đơn đăng ký/{$year}/{$fileName}";
                                 })
-                                ->helperText('Tải lên ảnh hoặc file PDF hóa đơn nộp tiền'),
+                                ->required()
+                                ->helperText('Tải lên ảnh bill chuyển khoản hoặc phiếu thu để kế toán xác minh.'),
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
 
-                            // Ẩn nếu đã nhập học hoặc đang chờ xác minh hồ sơ
                             if ($record->status === Student::STATUS_ENROLLED || $record->status === Student::STATUS_SUBMITTED) {
                                 return false;
                             }
 
-                            // Ẩn nếu đã nộp tiền hoặc đã được kế toán xác nhận
                             $hasSubmittedOrVerifiedPayment = in_array(
                                 $record->payment?->status,
                                 [\App\Models\Payment::STATUS_SUBMITTED, \App\Models\Payment::STATUS_VERIFIED],
                                 true
                             );
 
-                            if ($hasSubmittedOrVerifiedPayment) {
-                                return false;
-                            }
+                            if ($hasSubmittedOrVerifiedPayment) return false;
 
-                            if (!in_array($user->role, ['super_admin', 'ctv'])) {
-                                return false;
-                            }
+                            if (!in_array($user->role, ['super_admin', 'ctv'])) return false;
 
-                            // CTV không được phép confirm nếu payment đã verified
                             if ($user->role === 'ctv') {
                                 $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
-
                                 return !$hasVerifiedPayment;
                             }
 
                             return true;
                         })
                         ->action(function (array $data, Student $record): void {
-                            $amount = (int) ($data['amount'] ?? 0);
+                            // Tự động lấy số tiền từ Service thay vì input
+                            $amount = (int) app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
                             $billPath = $data['bill'] ?? null;
 
-                            // Cập nhật payment record nếu có
                             $payment = $record->payment;
                             if ($payment) {
                                 $payment->update([
                                     'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
-                                    'bill_path' => $billPath ?: $payment->bill_path, // Lưu vào bill_path
+                                    'bill_path' => $billPath ?: $payment->bill_path,
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
                                 ]);
                             } else {
-                                // Tạo payment record mới
                                 \App\Models\Payment::create([
                                     'student_id' => $record->id,
                                     'primary_collaborator_id' => $record->collaborator_id,
                                     'program_type' => $record->program_type ?? 'REGULAR',
                                     'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
-                                    'bill_path' => $billPath, // Lưu vào bill_path
+                                    'bill_path' => $billPath,
                                     'receipt_uploaded_by' => Auth::id(),
                                     'receipt_uploaded_at' => now(),
                                 ]);
                             }
 
-                            // Cập nhật trạng thái học viên sang "Đã nộp hồ sơ" (chờ xác minh)
-                            $record->update([
-                                'status' => Student::STATUS_SUBMITTED,
-                            ]);
+                            $record->update(['status' => Student::STATUS_SUBMITTED]);
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Xác nhận thành công')
-                                ->body('Học viên đã được xác nhận nộp tiền. Trạng thái: Đã nộp hồ sơ (chờ xác minh).')
+                                ->title('Gửi hồ sơ thành công')
+                                ->body('Học viên đã được gửi cho Kế toán đối soát theo quy trình.')
                                 ->success()
                                 ->send();
                         }),
@@ -640,38 +625,31 @@ class StudentsTable {
                         ->modalCancelActionLabel('Hủy')
                         ->tooltip('Xác nhận đã nhận tiền từ học viên và chuyển trạng thái thanh toán sang "Đã xác nhận"')
                         ->form([
-                            \Filament\Forms\Components\TextInput::make('amount')
-                                ->label('Số tiền thực nhận (VNĐ)')
-                                ->helperText('Kiểm tra và điều chỉnh số tiền thực tế đã vào tài khoản (ví dụ: 1.750.000)')
-                                ->default(function (Student $record) {
-                                    $paymentAmount = (float) ($record->payment?->amount ?? 0);
-                                    if ($paymentAmount > 0) return (int) $paymentAmount;
-                                    
-                                    $expectedFee = app(StudentFeeService::class)->getExpectedFeeForStudent($record);
-                                    return $expectedFee !== null ? (int) $expectedFee : '';
+                            \Filament\Forms\Components\Placeholder::make('amount_info')
+                                ->label('Số tiền cần xác nhận')
+                                ->content(function (Student $record) {
+                                    $amount = $record->payment?->amount ?? app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
+                                    return number_format((int)$amount, 0, '', '.') . ' VNĐ';
                                 })
-                                ->formatStateUsing(fn($state) => !empty($state) ? number_format((int) str_replace('.', '', (string) $state), 0, '', '.') : '')
-                                ->dehydrateStateUsing(fn($state) => (int) str_replace('.', '', (string) $state))
-                                ->live()
-                                ->afterStateUpdated(fn($state, callable $set) => !empty($state) ? $set('amount', number_format((int) str_replace('.', '', $state), 0, '', '.')) : null)
-                                ->required(),
+                                ->helperText('Đối soát kỹ với minh chứng (Bill) và sao kê ngân hàng trước khi xác nhận.'),
                         ])
                         ->visible(
                             fn(Student $record): bool =>
                             (in_array(Auth::user()->role, ['accountant', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
                                 $record->payment &&
-                                in_array($record->payment->status, [Payment::STATUS_SUBMITTED, Payment::STATUS_REVERTED])
+                                in_array($record->payment->status, [\App\Models\Payment::STATUS_SUBMITTED, \App\Models\Payment::STATUS_REVERTED])
                         )
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             if ($payment) {
-                                $amount = (int) $data['amount'];
+                                // Sử dụng số tiền đã có sẵn trong payment hoặc lấy lại từ service nếu chưa có
+                                $amount = (int) ($payment->amount ?: app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record));
                                 $payment->update(['amount' => $amount]);
                                 $payment->markAsVerified(Auth::id());
                                 $record->update(['status' => Student::STATUS_APPROVED]);
                                 (new \App\Services\CommissionService())->createCommissionFromPayment($payment);
 
-                                Notification::make()->title('Xác minh thành công')->success()->send();
+                                \Filament\Notifications\Notification::make()->title('Xác minh thành công')->success()->send();
                             }
                         }),
 
@@ -718,90 +696,57 @@ class StudentsTable {
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Hoàn trả trạng thái thanh toán')
-                        ->modalDescription('Hành động này sẽ hủy xác nhận đã nộp tiền, đưa hồ sơ về trạng thái "Chờ xác minh". Bạn có chắc chắn?')
+                        ->modalDescription('Hành động này sẽ hủy xác nhận đã nộp tiền, đưa hồ sơ học viên quay lại trạng thái "Mới".')
+                        ->form([
+                            \Filament\Forms\Components\Textarea::make('reason')
+                                ->label('Lý do hoàn trả')
+                                ->placeholder('Vd: Học viên rút hồ sơ, sai thông tin giao dịch...')
+                                ->required()
+                                ->rows(3),
+                        ])
                         ->modalSubmitActionLabel('Xác nhận hoàn trả')
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
                             return $record->payment && 
-                                   $record->payment->status === Payment::STATUS_VERIFIED &&
+                                   $record->payment->status === \App\Models\Payment::STATUS_VERIFIED &&
                                    (in_array($user->role, ['accountant', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')));
                         })
-                        ->action(function (Student $record) {
+                        ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             if (!$payment) return;
 
-                            // Hủy xác minh
+                            // Chuyển trạng thái thanh toán về Hoàn trả (Reverted)
                             $payment->update([
-                                'status' => Payment::STATUS_SUBMITTED,
+                                'status' => \App\Models\Payment::STATUS_REVERTED,
+                                'edit_reason' => $data['reason'] ?? null,
                                 'verified_at' => null,
                                 'verified_by' => null,
+                                'receipt_path' => null,
+                                'receipt_number' => null,
+                                'receipt_uploaded_by' => null,
+                                'receipt_uploaded_at' => null,
                             ]);
 
-                            // Chuyển lại trạng thái học viên về Chờ xác minh
-                            $record->update(['status' => Student::STATUS_SUBMITTED]);
+                            // Đưa học viên về trạng thái Mới để CTV có thể nộp lại
+                            $record->update(['status' => Student::STATUS_NEW]);
                             
-                            Notification::make()
+                            \Filament\Notifications\Notification::make()
                                 ->success()
-                                ->title('Đã hoàn trả trạng thái thanh toán thành công')
+                                ->title('Đã hoàn trả trạng thái thành công')
+                                ->body('Hồ sơ học viên đã được đưa về trạng thái Mới.')
                                 ->send();
                         }),
 
-                    // Action cho CTV: Review & Gửi Kế toán
-                    Action::make('ctv_submit_for_verification')
-                        ->label('Gửi Kế toán')
-                        ->icon('heroicon-o-paper-airplane')
-                        ->color('primary')
-                        ->modalHeading('Xác minh & Gửi Kế toán')
-                        ->modalDescription('Vui lòng kiểm tra kỹ thông tin & tải lên Minh chứng nộp tiền (Bill) để Kế toán đối soát.')
-                        ->form([
-                            \Filament\Forms\Components\TextInput::make('amount')
-                                ->label('Số tiền đã thu')
-                                ->numeric()
-                                ->required()
-                                ->helperText('Nhập số tiền sinh viên đã nộp thực tế.'),
-                            \Filament\Forms\Components\FileUpload::make('bill')
-                                ->label('Minh chứng nộp tiền (Bill)')
-                                ->disk('google')
-                                ->directory('bills')
-                                ->required(),
-                        ])
-                        ->action(function (array $data, Student $record) {
-                            // Map program_type từ record sang enum của Payment
-                            $programType = match (strtoupper((string) $record->program_type)) {
-                                'VỪA HỌC VỪA LÀM', 'PART_TIME' => 'PART_TIME',
-                                'CHÍNH QUY', 'REGULAR' => 'REGULAR',
-                                'ĐÀO TẠO TỪ XA', 'TỪ XA', 'DISTANCE' => 'DISTANCE',
-                                default => 'REGULAR',
-                            };
-
-                            $payment = $record->payment ?? \App\Models\Payment::create([
-                                'student_id' => $record->id,
-                                'primary_collaborator_id' => $record->collaborator_id,
-                                'program_type' => $programType,
-                                'amount' => 0,
-                                'status' => Payment::STATUS_NOT_PAID,
-                            ]);
-
-                            $payment->update([
-                                'program_type' => $programType, // Đảm bảo update lại nếu đã tồn tại
-                                'amount' => (int) $data['amount'],
-                                'bill_path' => $data['bill'],
-                                'status' => Payment::STATUS_SUBMITTED,
-                            ]);
-
-                            $record->update(['status' => Student::STATUS_SUBMITTED]);
-
-                            Notification::make()
-                                ->title('Đã gửi hồ sơ cho Kế toán xác minh')
-                                ->success()
-                                ->send();
-                        })
-                        ->visible(fn (Student $record): bool => 
-                            Auth::user()->role === 'ctv' && 
-                            in_array($record->status, [Student::STATUS_NEW, Student::STATUS_CONTACTED])
-                        ),
 
                     
+                    \Filament\Actions\DeleteAction::make()
+                        ->label('Xóa')
+                        ->modalHeading('Xóa học viên')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Bạn có thể khôi phục từ thùng rác.')
+                        ->modalSubmitActionLabel('Xóa')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(fn() => Auth::user()->role === 'super_admin'),
+
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục')
                         ->color('success'),
