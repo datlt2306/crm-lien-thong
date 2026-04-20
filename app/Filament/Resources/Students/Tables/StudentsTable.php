@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Students\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
@@ -202,71 +203,31 @@ class StudentsTable {
                         'Không đủ điều kiện' => 'danger',
                         default => 'gray',
                     }),
-                TextColumn::make('status')
+                TextColumn::make('payment.status')
                     ->label('Lệ Phí')
                     ->toggleable()
                     ->badge()
-                    ->color(function (Student $record): string {
-                        // Ưu tiên hiển thị trạng thái thanh toán nếu có payment
-                        if ($record->payment) {
-                            return match ($record->payment->status) {
-                                Payment::STATUS_NOT_PAID => 'gray',
-                                Payment::STATUS_SUBMITTED => 'warning',
-                                Payment::STATUS_VERIFIED => 'success',
-                                Payment::STATUS_REVERTED => 'danger',
-                                default => 'gray',
-                            };
-                        }
-
-                        // Nếu không có payment, hiển thị trạng thái sinh viên
-                        return match ($record->status) {
-                            Student::STATUS_NEW => 'slate',
-                            Student::STATUS_CONTACTED => 'info',
-                            Student::STATUS_SUBMITTED => 'warning',
-                            Student::STATUS_APPROVED => 'orange',
-                            Student::STATUS_ENROLLED => 'success',
-                            Student::STATUS_REJECTED => 'danger',
-                            Student::STATUS_DROPPED => 'gray',
-                            default => 'slate',
+                    ->color(function (?string $state): string {
+                        return match ($state) {
+                            Payment::STATUS_SUBMITTED => 'warning',
+                            Payment::STATUS_VERIFIED => 'success',
+                            Payment::STATUS_REVERTED => 'danger',
+                            default => 'gray',
                         };
                     })
-                    ->formatStateUsing(function (Student $record): string {
-                        // Ưu tiên hiển thị trạng thái thanh toán nếu có payment
-                        if ($record->payment) {
-                            return match ($record->payment->status) {
-                                Payment::STATUS_NOT_PAID => '💳 Chưa nộp tiền',
-                                Payment::STATUS_SUBMITTED => '⏳ Chờ xác minh',
-                                Payment::STATUS_VERIFIED => '✅ Đã nộp tiền',
-                                Payment::STATUS_REVERTED => '↩️ Đã hoàn trả',
-                                default => '—',
-                            };
-                        }
-
-                        $statusOptions = Student::getStatusOptions();
-                        $statusLabel = $statusOptions[$record->status] ?? $record->status;
-
-                        // Thêm icon cho từng trạng thái
-                        $icons = [
-                            Student::STATUS_NEW => '🆕',
-                            Student::STATUS_CONTACTED => '📞',
-                            Student::STATUS_SUBMITTED => '⏳',
-                            Student::STATUS_APPROVED => '✅',
-                            Student::STATUS_ENROLLED => '🎓',
-                            Student::STATUS_REJECTED => '❌',
-                            Student::STATUS_DROPPED => '🚫',
-                        ];
-
-                        $icon = $icons[$record->status] ?? '';
-                        return $icon ? "{$icon} {$statusLabel}" : $statusLabel;
+                    ->formatStateUsing(function (?string $state): string {
+                        return match ($state) {
+                            Payment::STATUS_SUBMITTED => '⏳ Chờ xác minh',
+                            Payment::STATUS_VERIFIED => '✅ Đã nộp tiền',
+                            Payment::STATUS_REVERTED => '↩️ Đã hoàn tiền',
+                            default => '💳 Chưa nộp tiền',
+                        };
                     })
                     ->description(function (Student $record) {
                         if ($record->payment?->status === Payment::STATUS_REVERTED && $record->payment->edit_reason) {
                             return "Lý do: " . $record->payment->edit_reason;
                         }
                         return null;
-                    })
-                    ->color(function (Student $record) {
-                        return $record->payment?->status === Payment::STATUS_REVERTED ? 'danger' : null;
                     })
                     ->tooltip(function (Student $record): string {
                         if ($record->payment) {
@@ -278,7 +239,7 @@ class StudentsTable {
                                 default => '',
                             };
                         }
-                        return 'Trạng thái: ' . (Student::getStatusOptions()[$record->status] ?? $record->status);
+                        return 'Chưa có thông tin thanh toán';
                     })
                     ->searchable(),
 
@@ -430,7 +391,7 @@ class StudentsTable {
                         }),
 
                     Action::make('confirm_payment')
-                        ->label('Gửi Kế toán') // Tên mới gộp cả upload minh chứng
+                        ->label(fn() => Auth::user()?->role === 'accountant' ? 'Tiếp nhận & Thu tiền' : 'Gửi Kế toán')
                         ->icon('heroicon-o-paper-airplane')
                         ->color('primary')
                         ->requiresConfirmation()
@@ -625,12 +586,24 @@ class StudentsTable {
                                 })
                                 ->helperText('Đối soát kỹ với minh chứng (Bill) và sao kê ngân hàng trước khi xác nhận.'),
                         ])
-                        ->visible(
-                            fn(Student $record): bool =>
-                            Auth::user()->can('payment_verify') &&
-                                $record->payment &&
-                                in_array($record->payment->status, [\App\Models\Payment::STATUS_SUBMITTED, \App\Models\Payment::STATUS_REVERTED])
-                        )
+                        ->visible(function (Student $record): bool {
+                            $user = Auth::user();
+                            if (!$user->can('payment_verify')) return false;
+                            
+                            // Nếu là kế toán, cho phép xác nhận ngay cả khi chưa có record payment (tạo mới luôn)
+                            if ($user->role === 'accountant') {
+                                return !$record->payment || in_array($record->payment->status, [
+                                    \App\Models\Payment::STATUS_NOT_PAID,
+                                    \App\Models\Payment::STATUS_SUBMITTED,
+                                    \App\Models\Payment::STATUS_REVERTED
+                                ]);
+                            }
+
+                            return $record->payment && in_array($record->payment->status, [
+                                \App\Models\Payment::STATUS_SUBMITTED,
+                                \App\Models\Payment::STATUS_REVERTED
+                            ]);
+                        })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             if ($payment) {
@@ -665,10 +638,15 @@ class StudentsTable {
                                 })
                                 ->required(),
                         ])
-                        ->visible(
-                            fn(Student $record): bool =>
-                            Auth::user()->can('payment_upload_receipt') && $record->payment
-                        )
+                        ->visible(function (Student $record): bool {
+                            $user = Auth::user();
+                            if (!$record->is_active || !$user->can('payment_upload_receipt')) return false;
+
+                            // Kế toán cho thấy luôn để có thể upload ngay sau khi thu
+                            if ($user->role === 'accountant') return true;
+
+                            return (bool) $record->payment;
+                        })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             if ($payment->receipt_path) {
@@ -728,26 +706,30 @@ class StudentsTable {
                                 ->body('Hồ sơ học viên đã được đưa về trạng thái Mới.')
                                 ->send();
                         }),
+                    Action::make('toggle_active')
+                        ->label(fn($record) => $record->is_active ? 'Ngưng hoạt động' : 'Kích hoạt lại')
+                        ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
+                        ->color(fn($record) => $record->is_active ? 'danger' : 'success')
+                        ->action(fn($record) => $record->update(['is_active' => !$record->is_active]))
+                        ->requiresConfirmation(),
 
+                    Action::make('force_delete_inactive')
+                        ->label('Xóa vĩnh viễn')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xóa vĩnh viễn học viên')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
+                        ->action(fn($record) => $record->forceDelete())
+                        ->visible(fn($record) => !$record->is_active && Auth::user()->can('student_delete')),
 
-                    
-                    \Filament\Actions\DeleteAction::make()
+                    DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa học viên')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Bạn có thể khôi phục từ thùng rác.')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Hành động này không thể hoàn tác.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => Auth::user()->can('student_delete')),
-
-                    \Filament\Actions\RestoreAction::make()
-                        ->label('Khôi phục')
-                        ->color('success'),
-                        
-                    \Filament\Actions\ForceDeleteAction::make()
-                        ->label('Xóa vĩnh viễn')
-                        ->modalHeading('Xóa vĩnh viễn học viên')
-                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
-                        ->color('danger'),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -774,16 +756,10 @@ class StudentsTable {
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa học viên đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Bạn có thể khôi phục từ thùng rác sau này.')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Hành động này không thể hoàn tác.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => Auth::user()->can('student_delete')),
-                    
-                    \Filament\Actions\RestoreBulkAction::make()
-                        ->label('Khôi phục đã chọn'),
-                        
-                    \Filament\Actions\ForceDeleteBulkAction::make()
-                        ->label('Xóa vĩnh viễn đã chọn'),
                 ]),
             ])
             ->emptyStateHeading('Không có học viên')

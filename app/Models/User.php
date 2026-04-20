@@ -9,12 +9,19 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\HasAuditLog;
 
-class User extends Authenticatable {
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+
+class User extends Authenticatable implements FilamentUser {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes, HasAuditLog;
+    use HasFactory, Notifiable, HasRoles, HasAuditLog;
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->is_active;
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +36,7 @@ class User extends Authenticatable {
         'bio',
         'password',
         'role',
+        'is_active',
     ];
 
     /**

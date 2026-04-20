@@ -100,6 +100,9 @@ class PermissionSeeder extends Seeder {
 
         // Gán permissions cho accountant
         $accountant->syncPermissions([
+            'student_view_any',
+            'student_view',
+            'student_update',
             'commission_view_any',
             'payment_view_any',
             'payment_upload_receipt',

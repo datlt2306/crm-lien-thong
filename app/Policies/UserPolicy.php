@@ -44,8 +44,10 @@ class UserPolicy {
      * Determine whether the user can delete the model.
      */
     public function delete($user, $model): bool {
-        if ($user->role === 'super_admin') return true;
-
+        if ($user->role === 'super_admin') {
+            // Không được xóa tài khoản Super Admin
+            return $model->role !== 'super_admin';
+        }
 
         return false;
     }
@@ -56,7 +58,6 @@ class UserPolicy {
     public function restore($user, $model): bool {
         if ($user->role === 'super_admin') return true;
 
-
         return false;
     }
 
@@ -64,8 +65,10 @@ class UserPolicy {
      * Determine whether the user can permanently delete the model.
      */
     public function forceDelete($user, $model): bool {
-        if ($user->role === 'super_admin') return true;
-
+        if ($user->role === 'super_admin') {
+            // Không được xóa vĩnh viễn tài khoản Super Admin
+            return $model->role !== 'super_admin';
+        }
 
         return false;
     }

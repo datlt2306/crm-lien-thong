@@ -185,6 +185,40 @@ class CollaboratorsTable {
                                 }
                             }
                         }),
+                    Action::make('toggle_active')
+                        ->label(fn($record) => $record->is_active ? 'Vô hiệu hóa' : 'Kích hoạt')
+                        ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
+                        ->color(fn($record) => $record->is_active ? 'danger' : 'success')
+                        ->action(function ($record) {
+                            $record->update(['is_active' => !$record->is_active]);
+                            
+                            // Nếu disable CTV thì cũng disable user account tương ứng
+                            if ($record->email) {
+                                $user = User::where('email', $record->email)->first();
+                                if ($user) {
+                                    $user->update(['is_active' => $record->is_active]);
+                                }
+                            }
+                        })
+                        ->requiresConfirmation(),
+                    Action::make('force_delete_inactive')
+                        ->label('Xóa vĩnh viễn')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xóa vĩnh viễn cộng tác viên')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu cộng tác viên khỏi hệ thống (bao gồm cả tài khoản người dùng tương ứng) và không thể khôi phục. Bạn chắc chắn chứ?')
+                        ->action(function ($record) {
+                            // Xóa user tương ứng nếu có
+                            if ($record->email) {
+                                $user = User::where('email', $record->email)->first();
+                                if ($user) {
+                                    $user->forceDelete();
+                                }
+                            }
+                            $record->forceDelete();
+                        })
+                        ->visible(fn($record) => !$record->is_active && Gate::allows('delete', $record)),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')

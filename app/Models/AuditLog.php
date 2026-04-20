@@ -64,7 +64,7 @@ class AuditLog extends Model
 
     public function student(): BelongsTo
     {
-        return $this->belongsTo(Student::class)->withTrashed();
+        return $this->belongsTo(Student::class);
     }
 
     /**

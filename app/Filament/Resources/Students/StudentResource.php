@@ -103,7 +103,6 @@ class StudentResource extends Resource {
         $user = Auth::user();
         
         $query = static::getModel()::query()
-            ->withTrashed()
             ->with(['payment', 'collaborator', 'intake']);
 
         if (!$user) {

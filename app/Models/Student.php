@@ -4,14 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class Student extends Model {
     use HasFactory;
-    use SoftDeletes, \App\Traits\HasAuditLog;
+    use \App\Traits\HasAuditLog;
     protected $fillable = [
         'profile_code',
         // I. Thông tin cơ bản
@@ -90,9 +89,10 @@ class Student extends Model {
         'document_high_school_diploma',     // 26. Bằng TN THPT (BS/BG)
         'high_school_diploma_copy_type',    // Loại bản sao / bản gốc
         'document_identity_card_front', // 14. File CCCD - mặt trước
-        'document_identity_card_back',  // 14. File CCCD - mặt sau
+        'identity_card_back',  // 14. File CCCD - mặt sau
         'document_intermediate_diploma',    // 27. Bằng Trung cấp
         'document_intermediate_transcript', // Bảng điểm Trung cấp
+        'is_active',
     ];
 
     protected $casts = [

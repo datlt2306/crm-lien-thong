@@ -38,10 +38,10 @@ class ListStudents extends ListRecords {
 
         return [
             'active' => Tab::make('Đang hoạt động')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()),
-            'trash' => Tab::make('Thùng rác')
-                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
-                ->icon('heroicon-m-trash'),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true)),
+            'disabled' => Tab::make('Ngừng hoạt động')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false))
+                ->icon('heroicon-m-no-symbol'),
         ];
     }
 

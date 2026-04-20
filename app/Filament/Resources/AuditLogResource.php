@@ -207,7 +207,7 @@ class AuditLogResource extends Resource
             $collab = $user->collaborator;
             if ($collab) {
                 return $query->whereHas('student', function ($q) use ($collab) {
-                    $q->withTrashed()->where('collaborator_id', $collab->id);
+                    $q->where('collaborator_id', $collab->id);
                 });
             }
             return $query->whereRaw('1=0');

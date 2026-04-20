@@ -15,6 +15,17 @@ class ListCollaborators extends ListRecords {
     public function getBreadcrumb(): string {
         return 'Danh sách cộng tác viên';
     }
+    public function getTabs(): array
+    {
+        return [
+            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Đang hoạt động')
+                ->modifyQueryUsing(fn ($query) => $query->where('is_active', true)),
+            'disabled' => \Filament\Schemas\Components\Tabs\Tab::make('Ngừng hoạt động')
+                ->modifyQueryUsing(fn ($query) => $query->where('is_active', false))
+                ->icon('heroicon-m-no-symbol'),
+        ];
+    }
+
     protected function getHeaderActions(): array {
         return [
             CreateAction::make()->label('Thêm cộng tác viên mới'),

@@ -16,6 +16,7 @@ class PermissionManagementTable {
             ->columns([
                 TextColumn::make('name')
                     ->label('Tên vai trò')
+                    ->formatStateUsing(fn ($state) => __("roles.{$state}") ?? $state)
                     ->searchable()
                     ->sortable()
                     ->badge()

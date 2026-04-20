@@ -66,10 +66,8 @@ class UserResource extends Resource {
             return $query->whereNull('id');
         }
 
-        // Super admin thấy tất cả user
-        if ($user->role === 'super_admin') {
-            return $query;
-        }
+        // Mặc định cho staff: không thấy admin accounts
+        return $query->where('role', '!=', 'super_admin');
 
 
         // Mặc định: không thấy gì

@@ -4,9 +4,11 @@ namespace App\Filament\Resources\Users\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Table;
@@ -90,6 +92,24 @@ class UsersTable {
                     EditAction::make()
                         ->label('Chỉnh sửa')
                         ->visible(fn($record) => Gate::allows('update', $record)),
+                    Action::make('toggle_active')
+                        ->label(fn($record) => $record->is_active ? 'Vô hiệu hóa' : 'Kích hoạt')
+                        ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
+                        ->color(fn($record) => $record->is_active ? 'danger' : 'success')
+                        ->action(fn($record) => $record->update(['is_active' => !$record->is_active]))
+                        ->requiresConfirmation(),
+                    DeleteAction::make()
+                        ->label('Xóa')
+                        ->visible(fn($record) => Gate::allows('delete', $record)),
+                    Action::make('force_delete_inactive')
+                        ->label('Xóa vĩnh viễn')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xóa vĩnh viễn người dùng')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu người dùng khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
+                        ->action(fn($record) => $record->forceDelete())
+                        ->visible(fn($record) => !$record->is_active && Gate::allows('delete', $record)),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
