@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\HasAuditLog;
 
 class Collaborator extends Model {
-    use HasFactory;
+    use HasFactory, SoftDeletes, HasAuditLog;
     protected $fillable = [
         'full_name',
         'phone',

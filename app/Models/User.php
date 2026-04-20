@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\HasAuditLog;
 
 class User extends Authenticatable {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, SoftDeletes, HasAuditLog;
 
     /**
      * The attributes that are mass assignable.

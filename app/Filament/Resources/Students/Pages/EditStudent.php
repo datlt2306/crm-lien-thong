@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Students\Pages;
 use App\Filament\Resources\Students\StudentResource;
 use App\Models\Payment;
 use App\Models\Student;
-use App\Models\StudentUpdateLog;
 use App\Services\StudentFeeService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -445,12 +444,9 @@ class EditStudent extends EditRecord {
                         return;
                     }
 
-                    $oldStatus = $payment->status;
-                    $newStatus = Payment::STATUS_REVERTED;
-
-                    // Cập nhật payment status
+                    // Cập nhật payment status - HasAuditLog trait will handle the logging
                     $payment->update([
-                        'status' => $newStatus,
+                        'status' => Payment::STATUS_REVERTED,
                         'verified_by' => null,
                         'verified_at' => null,
                         'edit_reason' => $data['reason'] ?? null,
@@ -458,25 +454,9 @@ class EditStudent extends EditRecord {
                         'edited_by' => Auth::id(),
                     ]);
 
-                    // Log thay đổi vào StudentUpdateLog
-                    if (\Illuminate\Support\Facades\Schema::hasTable('student_update_logs')) {
-                        StudentUpdateLog::create([
-                            'student_id' => $record->id,
-                            'user_id' => Auth::id(),
-                            'changes' => [
-                                [
-                                    'field' => 'payment_status',
-                                    'from' => $oldStatus,
-                                    'to' => $newStatus,
-                                    'reason' => $data['reason'] ?? null,
-                                ],
-                            ],
-                        ]);
-                    }
-
                     \Filament\Notifications\Notification::make()
                         ->title('Hoàn trả thành công')
-                        ->body('Trạng thái thanh toán đã được hoàn trả từ "Đã xác nhận" về "Đã hoàn trả". Thay đổi đã được ghi lại trong lịch sử.')
+                        ->body('Trạng thái thanh toán đã được hoàn trả từ "Đã xác nhận" về "Đã hoàn trả". Thay đổi đã được ghi lại trong nhật ký.')
                         ->success()
                         ->send();
                 }),

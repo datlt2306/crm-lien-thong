@@ -41,6 +41,13 @@ class StudentForm {
                         Tabs\Tab::make('Thông tin cơ bản')
                             ->icon('heroicon-o-identification')
                             ->schema([
+                                TextInput::make('audit_reason')
+                                    ->label('Lý do chỉnh sửa')
+                                    ->placeholder('Nhập lý do thay đổi thông tin (bắt buộc để lưu Nhật ký)')
+                                    ->required(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\EditRecord)
+                                    ->columnSpanFull()
+                                    ->helperText('Lý do này sẽ được lưu vào Nhật ký hệ thống để đối soát.')
+                                    ->visible(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\EditRecord),
                                 TextInput::make('profile_code')
                                     ->label('Mã hồ sơ')
                                     ->disabled()
@@ -690,7 +697,7 @@ class StudentForm {
                                             return 'Chưa có dữ liệu.';
                                         }
 
-                                        $query = StudentUpdateLog::where('student_id', $record->id);
+                                        $query = \App\Models\AuditLog::where('student_id', $record->id);
 
                                         // Filter theo date range
                                         $dateFrom = $get('history_date_from');
@@ -837,17 +844,34 @@ class StudentForm {
                                         };
 
                                         $entries = $logs->map(function ($log) use ($fieldLabels, $formatValue) {
+                                            $changes = [];
+                                            $oldVals = $log->old_values ?? [];
+                                            $newVals = $log->new_values ?? [];
+
+                                            if ($log->event_type === \App\Models\AuditLog::TYPE_CREATED) {
+                                                $changes[] = [
+                                                    'label' => 'Thao tác',
+                                                    'from' => '',
+                                                    'to' => 'Đã tạo mới hồ sơ',
+                                                ];
+                                            } else {
+                                                foreach ($newVals as $field => $newValue) {
+                                                    if ($field === 'updated_at' || $field === 'audit_reason' || $field === 'edit_reason') continue;
+                                                    
+                                                    $oldValue = $oldVals[$field] ?? '';
+                                                    $changes[] = [
+                                                        'label' => $fieldLabels[$field] ?? ucfirst(str_replace('_', ' ', $field)),
+                                                        'from' => $formatValue($oldValue, $field),
+                                                        'to' => $formatValue($newValue, $field),
+                                                    ];
+                                                }
+                                            }
+
                                             return [
                                                 'time' => $log->created_at?->format('d/m/Y H:i') ?? '',
                                                 'user' => $log->user?->name ?? 'Hệ thống',
-                                                'changes' => collect($log->changes ?? [])->map(function ($change) use ($fieldLabels, $formatValue) {
-                                                    $field = $change['field'] ?? '';
-                                                    return [
-                                                        'label' => $fieldLabels[$field] ?? ucfirst(str_replace('_', ' ', $field)),
-                                                        'from' => $formatValue($change['from'] ?? '', $field),
-                                                        'to' => $formatValue($change['to'] ?? '', $field),
-                                                    ];
-                                                })->values()->all(),
+                                                'reason' => $log->reason,
+                                                'changes' => $changes,
                                             ];
                                         })->values()->all();
 

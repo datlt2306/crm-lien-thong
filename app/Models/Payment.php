@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Traits\HasAuditLog;
 
 class Payment extends Model {
-    use HasFactory;
+    use HasFactory, HasAuditLog;
     protected $fillable = [
         'student_id',
         'primary_collaborator_id',

@@ -53,15 +53,23 @@
                         $to = ($change['to'] ?? '') !== '' ? $change['to'] : 'Trống';
                     @endphp
                     <div
-                        style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center; line-height: 1.5; font-size: 14px;">
+                        style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center; line-height: 1.5; font-size: 13px;">
                         <span
                             style="font-weight: 600; color: rgba(243, 244, 246, 1);">{{ $change['label'] ?? '' }}:</span>
-                        <span style="color: rgba(209, 213, 219, 0.9);">{{ $from }}</span>
+                        <span style="color: rgba(209, 213, 219, 0.9); opacity: 0.8;">{{ $from }}</span>
                         <span style="color: rgba(156, 163, 175, 0.7); margin: 0 2px;">→</span>
                         <span style="font-weight: 500; color: rgba(147, 197, 253, 1);">{{ $to }}</span>
                     </div>
                 @endforeach
             </div>
+
+            @if(!empty($entry['reason']))
+                <div style="margin-top: 8px; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid rgba(59, 130, 246, 0.5); border-radius: 2px;">
+                    <span style="font-size: 12px; color: rgba(147, 197, 253, 0.9); font-weight: 500;">Lý do:</span>
+                    <span style="font-size: 12px; color: rgba(243, 244, 246, 0.85); font-style: italic; display: block; margin-top: 2px;">{{ $entry['reason'] }}</span>
+                </div>
+            @endif
+        </div>
         </div>
     @empty
         <div
