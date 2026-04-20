@@ -109,13 +109,18 @@ class StudentResource extends Resource {
             return $query->whereNull('students.id');
         }
 
-        // Nhóm Admin & Cán bộ văn phòng (Thấy tất cả)
-        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']) || 
-            (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']))) {
+        // Nhóm Admin (Thấy tất cả)
+        if (in_array($user->role, ['super_admin', 'admin'])) {
             return $query;
         }
 
-        // CTV chỉ thấy sinh viên của mình
+        // Nhóm Cán bộ văn phòng (Kế toán, Hồ sơ, Tuyển sinh): Chỉ thấy học viên ĐANG HOẠT ĐỘNG
+        if (in_array($user->role, ['organization_owner', 'admissions', 'document', 'accountant']) || 
+            (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['organization_owner', 'admissions', 'document', 'accountant']))) {
+            return $query->where('is_active', true);
+        }
+
+        // CTV thấy sinh viên của mình (bao gồm cả Inactive để họ có thể kích hoạt lại nếu muốn)
         if ($user->role === 'ctv') {
             return $query->whereRelation('collaborator', 'email', $user->email);
         }
@@ -123,5 +128,4 @@ class StudentResource extends Resource {
         // Mặc định không thấy gì
         return $query->whereNull('students.id');
     }
-
 }

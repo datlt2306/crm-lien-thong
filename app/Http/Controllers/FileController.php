@@ -115,19 +115,33 @@ class FileController extends Controller {
             abort(404, 'File không tồn tại');
         }
 
-        // Tối ưu: Không kiểm tra tồn tại (exists) vì rất chậm đối với Google Drive
-        // Hỗ trợ cả ID Google Drive (không có dấu gạch chéo) và đường dẫn đầy đủ
         try {
-            $url = Storage::disk('google')->url($filePath);
+            $disk = Storage::disk('google');
             
-            // Chuyển đổi sang link thumbnail để hiển thị nhanh hơn
-            if (str_contains($url, 'uc?id=')) {
-                $url = str_replace('uc?id=', 'thumbnail?id=', $url);
-                $url = str_replace('&export=media', '&sz=w1000', $url);
+            // Nếu filePath đã là một URL (hiếm gặp nhưng dự phòng)
+            if (filter_var($filePath, FILTER_VALIDATE_URL)) {
+                return redirect($filePath);
             }
+
+            // Lấy URL từ Disk
+            $url = $disk->url($filePath);
+            
+            // Nếu là link Google Drive (dạng uc?id=), chuyển sang dạng view để xem được PDF/In ấn
+            if (str_contains($url, 'uc?id=')) {
+                $fileId = null;
+                parse_str(parse_url($url, PHP_URL_QUERY), $query);
+                $fileId = $query['id'] ?? null;
+
+                if ($fileId) {
+                    // Trả về link view chính thức của Google Drive
+                    return redirect("https://docs.google.com/file/d/{$fileId}/view");
+                }
+            }
+
             return redirect($url);
         } catch (\Exception $e) {
-            abort(404, 'Không thể sinh liên kết cho file này');
+            \Illuminate\Support\Facades\Log::error('File View Error: ' . $e->getMessage());
+            abort(404, 'Không thể sinh liên kết cho file này. Lỗi: ' . $e->getMessage());
         }
     }
 }

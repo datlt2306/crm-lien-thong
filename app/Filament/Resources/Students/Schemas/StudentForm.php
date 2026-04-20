@@ -251,111 +251,49 @@ class StudentForm {
                                     ->label('Địa chỉ')
                                     ->rows(3)
                                     ->helperText('Nhập địa chỉ của sinh viên'),
-                                \Filament\Forms\Components\TextInput::make('fee')
+                                \Filament\Forms\Components\Placeholder::make('fee_display')
                                     ->label('Lệ phí (VNĐ)')
-                                    ->required(function (?Student $record, $get) {
-                                        $appStatus = $get('application_status');
-                                        if (in_array($appStatus, ['submitted', 'verified', 'eligible'])) {
-                                            return true;
-                                        }
-
-                                        if ($record) {
-                                            if (in_array($record->status, [\App\Models\Student::STATUS_SUBMITTED, \App\Models\Student::STATUS_APPROVED, \App\Models\Student::STATUS_ENROLLED])) {
-                                                return true;
-                                            }
-                                            if ($record->payment && in_array($record->payment->status, [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED])) {
-                                                return true;
-                                            }
-                                        }
-
-                                        return false;
-                                    })
-                                    ->validationMessages([
-                                        'required' => 'Bắt buộc nhập khoản lệ phí đăng ký khi hồ sơ đã chuyển sang các trạng thái: Đã thu hồ sơ, Chờ xác minh, hoặc Đã nhập học.'
-                                    ])
-                                    ->default(function (?Student $record) {
+                                    ->content(function (?Student $record) {
                                         // Ưu tiên lấy từ payment->amount
+                                        $amount = 0;
                                         if ($record?->payment && $record->payment->amount) {
                                             $amount = (float) $record->payment->amount;
-                                            if ($amount > 0) {
-                                                return number_format((int) round($amount), 0, '', '.');
+                                        } elseif ($record?->fee) {
+                                            $amount = (float) $record->fee;
+                                        }
+
+                                        $amountFormatted = $amount > 0 ? number_format((int) round($amount), 0, '', '.') . ' VNĐ' : 'Chưa có thông tin';
+
+                                        $statusLabel = 'Chưa nộp';
+                                        $statusColor = 'text-gray-500';
+
+                                        if ($record?->payment) {
+                                            switch ($record->payment->status) {
+                                                case Payment::STATUS_SUBMITTED:
+                                                    $statusLabel = 'Chờ xác minh';
+                                                    $statusColor = 'text-warning-600';
+                                                    break;
+                                                case Payment::STATUS_VERIFIED:
+                                                    $statusLabel = 'Đã nộp';
+                                                    $statusColor = 'text-success-600';
+                                                    break;
+                                                case Payment::STATUS_REVERTED:
+                                                    $statusLabel = 'Đã hoàn trả';
+                                                    $statusColor = 'text-danger-600';
+                                                    break;
                                             }
                                         }
-                                        // Nếu có fee trong student record
-                                        if ($record?->fee && $record->fee >= 100) {
-                                            return number_format((int) $record->fee, 0, '', '.');
-                                        }
-                                        return '';
-                                    })
-                                    ->formatStateUsing(function ($state, ?Student $record) {
-                                        // Luôn ưu tiên lấy từ payment->amount để đảm bảo hiển thị đúng
-                                        if ($record?->payment && $record->payment->amount) {
-                                            $amount = (float) $record->payment->amount;
-                                            if ($amount > 0) {
-                                                return number_format((int) round($amount), 0, '', '.');
-                                            }
-                                        }
 
-                                        // Nếu không có payment, format từ state
-                                        if (!empty($state) && $state != 0 && $state != '0') {
-                                            // Loại bỏ dấu chấm và dấu phẩy để lấy số
-                                            $numericValue = is_string($state)
-                                                ? (int) str_replace(['.', ',', ' '], '', $state)
-                                                : (int) round((float) $state);
-
-                                            if ($numericValue > 0) {
-                                                return number_format($numericValue, 0, '', '.');
-                                            }
-                                        }
-                                        return '';
+                                        return new \Illuminate\Support\HtmlString("
+                                            <div class='flex items-center gap-2'>
+                                                <span class='font-bold text-lg'>{$amountFormatted}</span>
+                                                <span class='px-2 py-0.5 text-xs font-medium border rounded-full {$statusColor} border-current'>
+                                                    {$statusLabel}
+                                                </span>
+                                            </div>
+                                        ");
                                     })
-                                    ->dehydrateStateUsing(function ($state) {
-                                        if (empty($state)) {
-                                            return null;
-                                        }
-                                        // Loại bỏ dấu chấm và dấu phẩy, chuyển thành số
-                                        if (is_string($state)) {
-                                            return (int) str_replace(['.', ',', ' '], '', $state);
-                                        }
-                                        return (int) round((float) $state);
-                                    })
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, callable $set) {
-                                        if (!empty($state)) {
-                                            // Format lại khi người dùng nhập
-                                            $numericValue = (int) str_replace(['.', ',', ' '], '', $state);
-                                            if ($numericValue > 0) {
-                                                $formatted = number_format($numericValue, 0, '', '.');
-                                                $set('fee', $formatted);
-                                            }
-                                        }
-                                    })
-                                    ->placeholder(function (?Student $record) {
-                                        if (!$record?->payment) {
-                                            return 'Chưa có thông tin lệ phí';
-                                        }
-
-                                        $amount = (float) ($record->payment->amount ?? 0);
-                                        if ($amount <= 0) {
-                                            return 'Chưa cập nhật số tiền';
-                                        }
-
-                                        return null;
-                                    })
-                                    ->suffix(function (?Student $record) {
-                                        if (!$record?->payment) {
-                                            return 'Chưa nộp';
-                                        }
-
-                                        return match ($record->payment->status) {
-                                            Payment::STATUS_NOT_PAID => 'Chưa nộp',
-                                            Payment::STATUS_SUBMITTED => 'Chờ xác minh',
-                                            Payment::STATUS_VERIFIED => 'Đã nộp',
-                                            Payment::STATUS_REVERTED => 'Đã hoàn trả',
-                                            default => $record->payment->status,
-                                        };
-                                    })
-                                    ->helperText('Nếu đã nộp, số tiền hiển thị trong ô và trạng thái hiển thị bên phải')
+                                    ->helperText('Tiền lệ phí được quản lý thông qua luồng Tài chính, không thể chỉnh sửa trực tiếp tại đây.')
                                     ->visible(fn() => Auth::user()?->role !== 'ctv'),
                                 Textarea::make('notes')
                                     ->label('Ghi chú')

@@ -262,12 +262,17 @@ class StudentsTable {
                             </a>";
                         }
                         
-                        // Phiếu thu từ Kế toán - CHỈ hiển thị khi đã VERIFIED
-                        if ($payment->status === Payment::STATUS_VERIFIED && $payment->receipt_path) {
+                        // Phiếu thu từ Kế toán - Hiển thị ngay khi có file, nhưng phân biệt màu sắc theo trạng thái
+                        if ($payment->receipt_path) {
+                            $isVerified = $payment->status === Payment::STATUS_VERIFIED;
                             $url = route('files.receipt.view', ['paymentId' => $payment->id]);
-                            $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 text-success-600 hover:underline' title='Xem phiếu thu chính thức'>
+                            $colorClass = $isVerified ? 'text-success-600' : 'text-warning-600';
+                            $label = $isVerified ? 'Phiếu thu' : 'Phiếu thu (Chờ xác nhận)';
+                            $title = $isVerified ? 'Xem phiếu thu chính thức' : 'Phiếu thu đã tải lên, chờ xác minh thanh toán';
+                            
+                            $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 {$colorClass} hover:underline' title='{$title}'>
                                 <svg class='w-4 h-4' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z' /></svg>
-                                Phiếu thu
+                                {$label}
                             </a>";
                         }
                         
@@ -586,6 +591,17 @@ class StudentsTable {
                                     return number_format((int)$amount, 0, '', '.') . ' VNĐ';
                                 })
                                 ->helperText('Đối soát kỹ với minh chứng (Bill) và sao kê ngân hàng trước khi xác nhận.'),
+                            \Filament\Forms\Components\FileUpload::make('receipt')
+                                ->label('Phiếu thu chính thức (Không bắt buộc)')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(5120)
+                                ->disk('google')
+                                ->directory('Phiếu thu')
+                                ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
+                                    $year = now()->year;
+                                    return "PHIEU_THU_{$record->profile_code}_{$record->full_name}_{$year}." . $file->getClientOriginalExtension();
+                                })
+                                ->helperText('Bạn có thể tải lên phiếu thu ngay bây giờ hoặc bổ sung sau bằng hành động "Tải lên Phiếu thu".'),
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
@@ -607,16 +623,40 @@ class StudentsTable {
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
-                            if ($payment) {
-                                // Sử dụng số tiền đã có sẵn trong payment hoặc lấy lại từ service nếu chưa có
-                                $amount = (int) ($payment->amount ?: app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record));
-                                $payment->update(['amount' => $amount]);
-                                $payment->markAsVerified(Auth::id());
-                                $record->update(['status' => Student::STATUS_APPROVED]);
-                                (new \App\Services\CommissionService())->createCommissionFromPayment($payment);
-
-                                \Filament\Notifications\Notification::make()->title('Xác minh thành công')->success()->send();
+                            
+                            // Nếu kế toán xác nhận ngay mà chưa có record payment (thanh toán trực tiếp)
+                            if (!$payment) {
+                                $amount = (int) app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
+                                $payment = \App\Models\Payment::create([
+                                    'student_id' => $record->id,
+                                    'primary_collaborator_id' => $record->collaborator_id,
+                                    'program_type' => $record->program_type ?? 'REGULAR',
+                                    'amount' => $amount,
+                                    'status' => Payment::STATUS_NOT_PAID, // Sẽ update ngay sau đây
+                                ]);
                             }
+
+                            $amount = (int) ($payment->amount ?: app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record));
+                            
+                            $updateData = [
+                                'amount' => $amount,
+                                'status' => Payment::STATUS_VERIFIED,
+                            ];
+
+                            // Nếu có upload phiếu thu trong lúc xác nhận
+                            if (!empty($data['receipt'])) {
+                                $updateData['receipt_path'] = $data['receipt'];
+                                $updateData['receipt_uploaded_at'] = now();
+                                $updateData['receipt_uploaded_by'] = Auth::id();
+                            }
+
+                            $payment->update($updateData);
+                            $payment->markAsVerified(Auth::id());
+                            
+                            $record->update(['status' => Student::STATUS_APPROVED]);
+                            (new \App\Services\CommissionService())->createCommissionFromPayment($payment);
+
+                            \Filament\Notifications\Notification::make()->title('Xác minh thành công')->success()->send();
                         }),
 
                     // Nút riêng biệt cho Kế toán Upload Phiếu Thu
@@ -710,7 +750,29 @@ class StudentsTable {
                         ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
                         ->color(fn($record) => $record->is_active ? 'danger' : 'success')
                         ->action(fn($record) => $record->update(['is_active' => !$record->is_active]))
-                        ->requiresConfirmation(),
+                        ->requiresConfirmation()
+                        ->visible(function (Student $record) {
+                            $user = Auth::user();
+                            if (!$user) return false;
+
+                            // Chặn Kế toán: Không bao giờ được ngưng hoạt động học viên
+                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+                                return false;
+                            }
+
+                            // Super Admin & Admin luôn thấy để xử lý mọi tình huống
+                            if (in_array($user->role, ['super_admin', 'admin'])) return true;
+
+                            // Đối với CTV: Chỉ được ngưng hoạt động khi CHƯA nộp tiền (hoặc chưa có payment record)
+                            if ($user->role === 'ctv') {
+                                // Nếu chưa có payment hoặc payment đang ở trạng thái NOT_PAID
+                                $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
+                                return $canToggle;
+                            }
+
+                            // Các role văn phòng khác (Kế toán, Hồ sơ) cũng thấy nếu họ có quyền update
+                            return $user->can('student_update');
+                        }),
 
                     Action::make('force_delete_inactive')
                         ->label('Xóa vĩnh viễn')
@@ -720,14 +782,34 @@ class StudentsTable {
                         ->modalHeading('Xóa vĩnh viễn học viên')
                         ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
                         ->action(fn($record) => $record->forceDelete())
-                        ->visible(fn($record) => !$record->is_active && Auth::user()->can('student_delete')),
+                        ->visible(function (Student $record) {
+                            $user = Auth::user();
+                            if ($record->is_active || !$user->can('student_delete')) return false;
+
+                            // Chặn Kế toán: Không được xóa vĩnh viễn
+                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+                                return false;
+                            }
+
+                            return true;
+                        }),
 
                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa học viên')
                         ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Nếu học viên đã có dữ liệu tài chính, hệ thống sẽ tự động chuyển sang trạng thái Ngừng hoạt động.')
                         ->modalSubmitActionLabel('Xóa/Vô hiệu hóa')
-                        ->visible(fn() => Auth::user()->can('student_delete'))
+                        ->visible(function (Student $record) {
+                            $user = Auth::user();
+                            if (!$user->can('student_delete')) return false;
+
+                            // Chặn Kế toán: Không được xóa học viên
+                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+                                return false;
+                            }
+
+                            return true;
+                        })
                         ->action(function ($record) {
                             // Kiểm tra dữ liệu tài chính
                             $hasFinancialData = Payment::where('student_id', $record->id)->exists() || 

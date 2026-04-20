@@ -69,23 +69,29 @@ class EditStudent extends EditRecord {
                 ])
                 ->visible(function () use ($record): bool {
                     $user = Auth::user();
-
-                    if ($record->status === Student::STATUS_ENROLLED || $record->status === Student::STATUS_SUBMITTED) {
-                        return false;
-                    }
-
+                    
+                    // 1. Kiểm tra quyền cơ bản
                     if (!$user->can('student_update')) {
                         return false;
                     }
 
-                    // CTV không được phép confirm nếu payment đã verified
-                    // Chúng ta giả định role 'ctv' vẫn dùng tên role cho logic nghiệp vụ đặc thù
-                    if ($user->hasRole('ctv')) {
-                        $hasVerifiedPayment = Payment::where('student_id', $record->id)
-                            ->where('status', Payment::STATUS_VERIFIED)
-                            ->exists();
+                    // 2. Nếu học viên đã nhập học hoặc đã ở trạng thái nộp hồ sơ thì ẩn
+                    if ($record->status === Student::STATUS_ENROLLED || $record->status === Student::STATUS_SUBMITTED) {
+                        return false;
+                    }
 
-                        return !$hasVerifiedPayment;
+                    // 3. Nếu đã có thông tin thanh toán và trạng thái là Chờ xác minh hoặc Đã nộp thì ẩn
+                    $paymentStatus = $record->payment?->status ?? Payment::STATUS_NOT_PAID;
+                    if (in_array($paymentStatus, [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED])) {
+                        return false;
+                    }
+
+                    // 4. Nếu là CTV, chỉ được confirm cho sinh viên của mình (phụ thuộc quyền can_update đã check ở trên)
+                    if ($user->role === 'ctv') {
+                        $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                        if (!$collaborator || $record->collaborator_id !== $collaborator->id) {
+                            return false;
+                        }
                     }
 
                     return true;
@@ -482,7 +488,13 @@ class EditStudent extends EditRecord {
                 ->modalDescription('Chỉ super admin được xóa. Hệ thống sẽ xóa mềm (có thể khôi phục).')
                 ->modalSubmitActionLabel('Xóa')
                 ->modalCancelActionLabel('Hủy')
-                ->visible(fn(): bool => Auth::user()?->can('student_delete')),
+                ->visible(function () {
+                    $user = Auth::user();
+                    if ($user->role === 'accountant') {
+                        return false;
+                    }
+                    return $user->can('student_delete');
+                }),
         ];
     }
 
