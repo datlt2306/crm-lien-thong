@@ -410,8 +410,7 @@ class StudentsTable {
                         return $query->where('status', $data['value']);
                     }),
 
-                \Filament\Tables\Filters\TrashedFilter::make()
-                    ->label('Thùng rác'),
+
             ])
             ->recordActions([
                 ActionGroup::make([

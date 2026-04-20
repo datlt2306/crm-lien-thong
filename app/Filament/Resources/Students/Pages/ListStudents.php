@@ -32,7 +32,7 @@ class ListStudents extends ListRecords {
     public function getTabs(): array
     {
         $user = Auth::user();
-        if (!$user || $user->role !== 'super_admin') {
+        if (!$user || !in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant', 'ctv'])) {
             return [];
         }
 

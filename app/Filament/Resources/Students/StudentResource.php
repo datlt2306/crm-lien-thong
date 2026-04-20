@@ -68,8 +68,9 @@ class StudentResource extends Resource {
             $cacheKey = sprintf('students_navigation_badge:%s:%s:%s', $version, $user->id, $user->role);
 
             return (string) Cache::remember($cacheKey, now()->addMinutes(2), function () use ($user) {
-                // Super admin đếm tất cả
-                if ($user->role === 'super_admin') {
+                // Nhóm Admin & Cán bộ văn phòng đếm tất cả
+                if (in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']) || 
+                    (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']))) {
                     return Student::count();
                 }
 
@@ -101,38 +102,27 @@ class StudentResource extends Resource {
     public static function getEloquentQuery(): Builder {
         $user = Auth::user();
         
-        // Nếu là super_admin, cho phép truy cập cả các bản ghi đã xóa (để Tabs/Filters hoạt động)
-        if ($user?->role === 'super_admin') {
-            return parent::getEloquentQuery()
-                ->withoutGlobalScopes([
-                    \Illuminate\Database\Eloquent\SoftDeletingScope::class,
-                ])
-                ->with(['payment', 'collaborator', 'intake']);
-        }
-
-        $query = parent::getEloquentQuery()->with(['payment', 'collaborator', 'intake']);
+        $query = static::getModel()::query()
+            ->withTrashed()
+            ->with(['payment', 'collaborator', 'intake']);
 
         if (!$user) {
+            return $query->whereNull('students.id');
+        }
+
+        // Nhóm Admin & Cán bộ văn phòng (Thấy tất cả)
+        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']) || 
+            (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']))) {
             return $query;
         }
 
-
-        // CTV thấy student của mình
+        // CTV chỉ thấy sinh viên của mình
         if ($user->role === 'ctv') {
             return $query->whereRelation('collaborator', 'email', $user->email);
         }
 
-        // Kế toán & cán bộ hồ sơ thấy học viên đang nộp tiền hoặc đã xác minh hoặc đã hoàn trả
-        if (
-            $user->role === 'accountant'
-            || $user->role === 'document'
-            || ($user->roles && $user->roles->contains('name', 'accountant'))
-        ) {
-            return $query->whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified', 'reverted']));
-        }
-
-        // Fallback: không thấy gì
-        return $query->whereNull('id');
+        // Mặc định không thấy gì
+        return $query->whereNull('students.id');
     }
 
 }

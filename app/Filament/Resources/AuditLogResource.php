@@ -194,6 +194,15 @@ class AuditLogResource extends Resource
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
+        if (!$user) {
+            return $query->whereNull('id');
+        }
+
+        // Super Admin, Admin & Organization Owner saw everything
+        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'organization_owner']))) {
+            return $query;
+        }
+
         if ($user->role === 'ctv') {
             $collab = $user->collaborator;
             if ($collab) {
@@ -204,6 +213,7 @@ class AuditLogResource extends Resource
             return $query->whereRaw('1=0');
         }
 
+        // Others (Accountant, Admissions, etc.)
         return $query;
     }
 }
