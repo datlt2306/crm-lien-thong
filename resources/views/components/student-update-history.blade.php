@@ -70,7 +70,6 @@
                 </div>
             @endif
         </div>
-        </div>
     @empty
         <div
             style="border: 1px solid rgba(156, 163, 175, 0.3); border-radius: 8px; background: rgba(31, 41, 55, 0.5); padding: 16px; text-align: center; font-size: 12px; color: rgba(209, 213, 219, 0.7);">

@@ -77,7 +77,7 @@ trait HasAuditLog
             'auditable_id' => $this->id,
             'user_id' => Auth::id(),
             'user_role' => $user?->role ?? ($user?->roles?->first()?->name ?? 'system'),
-            'student_id' => $this->getAuditLogStudentId(),
+            'student_id' => $this->getAuditLogStudentId($eventType),
             'old_values' => $oldValues,
             'new_values' => $newValues,
             'amount_diff' => $amountDiff,
@@ -111,9 +111,15 @@ trait HasAuditLog
         return AuditLog::GROUP_SYSTEM;
     }
 
-    protected function getAuditLogStudentId(): ?int
+    protected function getAuditLogStudentId(?string $eventType = null): ?int
     {
         $class = get_class($this);
+
+        // Nếu là xóa vĩnh viễn chính học viên này, không trả về student_id 
+        // để tránh lỗi khóa ngoại trong audit_logs khi bản ghi student đã biến mất
+        if ($class === \App\Models\Student::class && $eventType === AuditLog::TYPE_DELETED) {
+            return null;
+        }
 
         if (isset($this->student_id)) {
             return $this->student_id;

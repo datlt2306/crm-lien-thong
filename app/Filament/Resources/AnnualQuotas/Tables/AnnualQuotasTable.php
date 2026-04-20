@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\AnnualQuotas\Tables;
 
+use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
+use App\Models\Student;
+use App\Models\AnnualQuota;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Table;
@@ -107,13 +111,67 @@ class AnnualQuotasTable {
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make()->visible(fn() => $canEdit),
+                    DeleteAction::make()
+                        ->label('Xóa')
+                        ->modalHeading('Xóa chỉ tiêu năm')
+                        ->modalDescription('Nếu chỉ tiêu này đã có hồ sơ học viên, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
+                        ->modalSubmitActionLabel('Xóa/Tạm dừng')
+                        ->visible(fn() => $canEdit)
+                        ->action(function ($record) {
+                            // AnnualQuota có thể liên kết qua major_name/program_name/year hoặc qua quan hệ nếu có
+                            // Ở đây ta check theo major_name và program_name trong Student
+                            $hasStudents = Student::where('major', $record->major_name)
+                                ->where('program_type', $record->program_name)
+                                ->exists();
+
+                            if ($hasStudents) {
+                                $record->update(['status' => AnnualQuota::STATUS_INACTIVE]);
+                                Notification::make()
+                                    ->title('Đã chuyển sang Tạm dừng')
+                                    ->body("Chỉ tiêu năm này đã có học viên đăng ký nên không thể xóa. Trạng thái đã được cập nhật thành Tạm dừng.")
+                                    ->warning()
+                                    ->send();
+                            } else {
+                                $record->delete();
+                                Notification::make()
+                                    ->title('Đã xóa vĩnh viễn')
+                                    ->success() ->send();
+                            }
+                        }),
                 ])->label('Hành động')->icon('heroicon-m-ellipsis-vertical')->color('gray')->button()->size('sm'),
             ])
-            ->toolbarActions([
+            ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->modalHeading('Xóa chỉ tiêu năm đã chọn')
-                        ->visible(fn() => $canEdit),
+                        ->label('Xóa đã chọn')
+                        ->modalHeading('Xóa các chỉ tiêu năm đã chọn')
+                        ->modalDescription('Các chỉ tiêu đã có học viên sẽ được tự động chuyển sang trạng thái Tạm dừng.')
+                        ->modalSubmitActionLabel('Bắt đầu xử lý')
+                        ->visible(fn() => $canEdit)
+                        ->action(function ($records) {
+                            $deleted = 0;
+                            $deactivated = 0;
+
+                            foreach ($records as $record) {
+                                $hasStudents = Student::where('major', $record->major_name)
+                                    ->where('program_type', $record->program_name)
+                                    ->exists();
+
+                                if ($hasStudents) {
+                                    $record->update(['status' => AnnualQuota::STATUS_INACTIVE]);
+                                    $deactivated++;
+                                } else {
+                                    $record->delete();
+                                    $deleted++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Xử lý hoàn tất')
+                                ->body("Đã xóa $deleted chỉ tiêu năm và chuyển Tạm dừng $deactivated chỉ tiêu có học viên.")
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ])
             ->defaultSort('year', 'desc');

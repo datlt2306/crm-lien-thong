@@ -96,7 +96,16 @@ class UsersTable {
                         ->label(fn($record) => $record->is_active ? 'Vô hiệu hóa' : 'Kích hoạt')
                         ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
                         ->color(fn($record) => $record->is_active ? 'danger' : 'success')
-                        ->action(fn($record) => $record->update(['is_active' => !$record->is_active]))
+                        ->action(function ($record) {
+                            $newStatus = !$record->is_active;
+                            $record->update(['is_active' => $newStatus]);
+                            
+                            // Đồng bộ trạng thái với CTV nếu có
+                            $collaborator = $record->collaborator;
+                            if ($collaborator) {
+                                $collaborator->update(['is_active' => $newStatus]);
+                            }
+                        })
                         ->requiresConfirmation(),
                     DeleteAction::make()
                         ->label('Xóa')

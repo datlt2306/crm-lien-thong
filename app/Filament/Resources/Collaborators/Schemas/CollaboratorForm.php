@@ -105,18 +105,17 @@ class CollaboratorForm {
                     ->required()
                     ->default('active')
                     ->formatStateUsing(fn($state) => match (true) {
-                        $state === 'active', $state === 1, $state === '1' => 'Kích hoạt',
-                        $state === 'pending', $state === 2, $state === '2' => 'Chờ duyệt',
-                        $state === 'inactive', $state === 3, $state === '3' => 'Vô hiệu',
-                        default => '—',
+                        In_array($state, ['active', 1, '1'], true) => 'active',
+                        in_array($state, ['pending', 2, '2'], true) => 'pending',
+                        in_array($state, ['inactive', 3, '3'], true) => 'inactive',
+                        default => $state,
                     })
                     ->dehydrateStateUsing(function ($state) {
-                        // Chuẩn hóa giá trị lưu DB: số (1,2,3) hoặc dữ liệu cũ -> enum đúng
                         return match (true) {
-                            $state === 'active', $state === 1, $state === '1' => 'active',
-                            $state === 'pending', $state === 2, $state === '2' => 'pending',
-                            $state === 'inactive', $state === 3, $state === '3' => 'inactive',
-                            default => \in_array((string) $state, ['active', 'pending', 'inactive'], true) ? $state : 'active',
+                            in_array($state, ['active', 1, '1'], true) => 'active',
+                            in_array($state, ['pending', 2, '2'], true) => 'pending',
+                            in_array($state, ['inactive', 3, '3'], true) => 'inactive',
+                            default => in_array((string) $state, ['active', 'pending', 'inactive'], true) ? $state : 'active',
                         };
                     })
                     ->helperText('Chọn trạng thái cho cộng tác viên')

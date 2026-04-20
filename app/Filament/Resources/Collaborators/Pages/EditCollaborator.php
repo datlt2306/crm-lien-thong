@@ -32,20 +32,15 @@ class EditCollaborator extends EditRecord {
             $data['ref_id'] = request()->getSchemeAndHttpHost() . '/ref/' . $data['ref_id'];
         }
 
-        // Xử lý status field - chuyển từ string sang boolean cho UI
-        if (isset($data['status'])) {
-            if (is_string($data['status'])) {
-                $data['status'] = $data['status'] === 'active';
-            }
-        }
+        // Xử lý status field - Đã bỏ ép kiểu boolean vì Select dùng string keys
 
         // Load thông tin User nếu có email
         if (!empty($data['email'])) {
             $user = User::where('email', $data['email'])->first();
             if ($user) {
-                // Không load password từ User, chỉ để trống
-                $data['password'] = '';
-                $data['password_confirmation'] = '';
+                // Hiển thị dummy password để người dùng thấy là đã có mật khẩu
+                $data['password'] = '********';
+                $data['password_confirmation'] = '********';
             }
         }
 
@@ -56,14 +51,50 @@ class EditCollaborator extends EditRecord {
         // Debug: Log data trước khi xử lý
         \Illuminate\Support\Facades\Log::info('EditCollaborator - Data before save:', $data);
 
-        // Cập nhật mật khẩu nếu có
-        if (!empty($data['email'])) {
-            $user = User::where('email', $data['email'])->first();
+        // Đồng bộ thông tin sang tài khoản User
+        $originalEmail = $this->record->getOriginal('email') ?: $this->record->email;
+        $currentEmail = $data['email'] ?? $this->record->email;
+
+        if (!empty($currentEmail)) {
+            // Tìm User dựa trên email cũ hoặc email mới
+            $user = User::where('email', $originalEmail)->first();
+            
             if ($user) {
-                $password = !empty($data['password']) ? $data['password'] : '123456';
-                $user->update([
-                    'password' => Hash::make($password)
-                ]);
+                $userUpdate = [];
+                
+                // Cập nhật các thông tin nếu có thay đổi
+                if (!empty($data['email']) && $data['email'] !== $user->email) {
+                    $userUpdate['email'] = $data['email'];
+                }
+                
+                // CHỈ CẬP NHẬT mật khẩu nếu có nhập mới và khác với chuỗi dummy '********'
+                if (!empty($data['password']) && $data['password'] !== '********') {
+                    $userUpdate['password'] = Hash::make($data['password']);
+                    \Illuminate\Support\Facades\Log::info("EditCollaborator: Updated password for user {$user->email}");
+                }
+                
+                if (!empty($data['full_name']) && $data['full_name'] !== $user->name) {
+                    $userUpdate['name'] = $data['full_name'];
+                }
+
+                if (!empty($userUpdate)) {
+                    $user->update($userUpdate);
+                }
+            } else {
+                // Nếu chưa có User nhưng CTV có email -> Tự động tạo User
+                // Nếu mật khẩu nhập vào là dummy hoặc rỗng thì dùng mặc định 123456
+                $password = (!empty($data['password']) && $data['password'] !== '********') 
+                    ? $data['password'] 
+                    : '123456';
+                    
+                User::create([
+                    'name' => $data['full_name'] ?? $this->record->full_name,
+                    'email' => $currentEmail,
+                    'password' => Hash::make($password),
+                    'role' => 'ctv',
+                ])->assignRole('ctv');
+                
+                \Illuminate\Support\Facades\Log::info("EditCollaborator: Created new user account for {$currentEmail}");
             }
         }
 

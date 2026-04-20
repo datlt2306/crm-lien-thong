@@ -2,10 +2,14 @@
 
 namespace App\Filament\Resources\Quotas\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Notifications\Notification;
+use App\Models\Student;
+use App\Models\Quota;
 use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
@@ -140,6 +144,30 @@ class QuotasTable {
                         ->label('Chỉnh sửa')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
                             in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ])),
+                    DeleteAction::make()
+                        ->label('Xóa')
+                        ->modalHeading('Xóa chỉ tiêu tuyển sinh')
+                        ->modalDescription('Nếu chỉ tiêu này đã có học viên đăng ký, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
+                        ->modalSubmitActionLabel('Xóa/Tạm dừng')
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ]))
+                        ->action(function ($record) {
+                            $hasStudents = Student::where('quota_id', $record->id)->exists();
+
+                            if ($hasStudents) {
+                                $record->update(['status' => Quota::STATUS_INACTIVE]);
+                                Notification::make()
+                                    ->title('Đã chuyển sang Tạm dừng')
+                                    ->body("Chỉ tiêu này đã có học viên đăng ký nên không thể xóa. Trạng thái đã được cập nhật thành Tạm dừng.")
+                                    ->warning()
+                                    ->send();
+                            } else {
+                                $record->delete();
+                                Notification::make()
+                                    ->title('Đã xóa vĩnh viễn')
+                                    ->success() ->send();
+                            }
+                        }),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -148,16 +176,37 @@ class QuotasTable {
                     ->size('sm')
                     ->tooltip('Các hành động khả dụng')
             ])
-            ->toolbarActions([
+            ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa chỉ tiêu đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các chỉ tiêu đã chọn? Hành động này không thể hoàn tác.')
-                        ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy')
+                        ->modalHeading('Xóa các chỉ tiêu đã chọn')
+                        ->modalDescription('Các chỉ tiêu đã có học viên sẽ được tự động chuyển sang trạng thái Tạm dừng.')
+                        ->modalSubmitActionLabel('Bắt đầu xử lý')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ])),
+                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin']))
+                        ->action(function ($records) {
+                            $deleted = 0;
+                            $deactivated = 0;
+
+                            foreach ($records as $record) {
+                                $hasStudents = Student::where('quota_id', $record->id)->exists();
+
+                                if ($hasStudents) {
+                                    $record->update(['status' => Quota::STATUS_INACTIVE]);
+                                    $deactivated++;
+                                } else {
+                                    $record->delete();
+                                    $deleted++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Xử lý hoàn tất')
+                                ->body("Đã xóa $deleted chỉ tiêu và chuyển Tạm dừng $deactivated chỉ tiêu có học viên.")
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

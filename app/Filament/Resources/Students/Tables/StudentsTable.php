@@ -5,17 +5,18 @@ namespace App\Filament\Resources\Students\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
+use App\Models\Payment;
+use App\Models\Commission;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Notifications\Notification;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use App\Exports\StudentsExcelExport;
 use App\Models\Student;
-use App\Models\Payment;
 use App\Services\StudentFeeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -726,10 +727,33 @@ class StudentsTable {
                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa học viên')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Hành động này không thể hoàn tác.')
-                        ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Auth::user()->can('student_delete')),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Nếu học viên đã có dữ liệu tài chính, hệ thống sẽ tự động chuyển sang trạng thái Ngừng hoạt động.')
+                        ->modalSubmitActionLabel('Xóa/Vô hiệu hóa')
+                        ->visible(fn() => Auth::user()->can('student_delete'))
+                        ->action(function ($record) {
+                            // Kiểm tra dữ liệu tài chính
+                            $hasFinancialData = Payment::where('student_id', $record->id)->exists() || 
+                                              Commission::where('student_id', $record->id)->exists();
+
+                            if ($hasFinancialData) {
+                                // Nếu có dữ liệu tài chính -> Chỉ vô hiệu hóa
+                                $record->update(['is_active' => false]);
+                                
+                                Notification::make()
+                                    ->title('Đã chuyển sang Ngừng hoạt động')
+                                    ->body("Học viên {$record->full_name} đã có dữ liệu tài chính nên không thể xóa vĩnh viễn. Hệ thống đã tự động chuyển trạng thái.")
+                                    ->warning()
+                                    ->send();
+                            } else {
+                                // Nếu không có dữ liệu -> Xóa cứng
+                                $record->delete();
+                                
+                                Notification::make()
+                                    ->title('Đã xóa vĩnh viễn')
+                                    ->success()
+                                    ->send();
+                            }
+                        }),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -756,10 +780,32 @@ class StudentsTable {
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa học viên đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Hành động này không thể hoàn tác.')
-                        ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Auth::user()->can('student_delete')),
+                        ->modalDescription('Các học viên đã có dữ liệu tài chính sẽ được tự động chuyển sang trạng thái Ngừng hoạt động thay vì xóa vĩnh viễn.')
+                        ->modalSubmitActionLabel('Bắt đầu xử lý')
+                        ->visible(fn() => Auth::user()->can('student_delete'))
+                        ->action(function ($records) {
+                            $deletedCount = 0;
+                            $deactivatedCount = 0;
+
+                            foreach ($records as $record) {
+                                $hasFinancialData = Payment::where('student_id', $record->id)->exists() || 
+                                                  Commission::where('student_id', $record->id)->exists();
+
+                                if ($hasFinancialData) {
+                                    $record->update(['is_active' => false]);
+                                    $deactivatedCount++;
+                                } else {
+                                    $record->delete();
+                                    $deletedCount++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Xử lý hoàn tất')
+                                ->body("Đã xóa vĩnh viễn $deletedCount mục và chuyển Ngừng hoạt động $deactivatedCount mục có dữ liệu tài chính.")
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ])
             ->emptyStateHeading('Không có học viên')

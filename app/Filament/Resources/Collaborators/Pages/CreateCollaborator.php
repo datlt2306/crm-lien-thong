@@ -46,7 +46,7 @@ class CreateCollaborator extends CreateRecord {
         // Collaborator do Filament sắp tạo → lỗi UNIQUE. Tạo User sau khi Collaborator
         // đã tồn tại, UserObserver sẽ thấy Collaborator có sẵn và không tạo thêm.
         if (!empty($data['email'])) {
-            $this->pendingUserPassword = $data['password'] ?? '123456';
+            $this->pendingUserPassword = !empty($data['password']) ? $data['password'] : '123456';
         }
 
         unset($data['password'], $data['password_confirmation']);
