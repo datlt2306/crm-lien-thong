@@ -27,45 +27,47 @@ class CommissionPoliciesTable {
                 TextColumn::make('program_type')
                     ->label('Hệ đào tạo')
                     ->badge()
-                    ->color(fn($state) => match ($state) {
-                        'REGULAR' => 'success',
-                        'PART_TIME' => 'warning',
-                        'DISTANCE' => 'info',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn($state) => match ($state) {
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'VHVLV',
-                        'DISTANCE' => 'Từ xa',
-                        default => 'Tất cả',
-                    }),
+                    ->color(fn($state) => 'info') // Since it can be multiple, just use info color
+                    ->formatStateUsing(fn($state) => is_array($state) 
+                        ? collect($state)->map(fn($s) => match ($s) {
+                            'REGULAR' => 'Chính quy',
+                            'PART_TIME' => 'VHVLV',
+                            'DISTANCE' => 'Từ xa',
+                            default => $s,
+                        })->join(', ')
+                        : match ($state) {
+                            'REGULAR' => 'Chính quy',
+                            'PART_TIME' => 'VHVLV',
+                            'DISTANCE' => 'Từ xa',
+                            default => 'Tất cả',
+                        }),
                 TextColumn::make('payout_rules')
                     ->label('Gói chia tiền')
                     ->html()
                     ->getStateUsing(function ($record) {
-                        $rules = $record->payout_rules;
+                        $payoutRules = $record->payout_rules;
                         $html = '';
                         
-                        // 1. Hiển thị cấu hình Gói chia tiền mới (JSON)
-                        if (!empty($rules) && is_array($rules)) {
-                            $lines = [];
-                            foreach ($rules as $rule) {
-                                if (empty($rule['amount_vnd'])) continue;
-                                
-                                $recipient = ($rule['recipient_type'] ?? '') === 'direct_ctv' 
-                                    ? '<span class="text-primary-600 font-bold">• CTV trực tiếp</span>' 
-                                    : '<span class="text-info-600 font-bold">• CTV chỉ định</span>';
-                                
-                                $amount = number_format($rule['amount_vnd']) . 'đ';
-                                
-                                $trigger = ($rule['payout_trigger'] ?? '') === 'payment_verified' 
-                                    ? '<span class="bg-success-100 text-success-700 px-1 rounded text-xs">Mùng 5</span>' 
-                                    : '<span class="bg-warning-100 text-warning-700 px-1 rounded text-xs">Nhập học</span>';
-                                
-                                $lines[] = "<div>{$recipient}: <strong>{$amount}</strong> {$trigger}</div>";
-                            }
-                            if (!empty($lines)) {
-                                $html = '<div class="text-sm space-y-1">' . implode('', $lines) . '</div>';
+                        if (!empty($payoutRules) && is_array($payoutRules)) {
+                            // Check if it's the new nested structure or old flat structure
+                            $isNested = !isset($payoutRules[0]); 
+
+                            if ($isNested) {
+                                foreach ($payoutRules as $type => $rules) {
+                                    $typeLabel = match ($type) {
+                                        'REGULAR' => '🎓 Chính quy',
+                                        'PART_TIME' => '🕒 VHVLV',
+                                        'DISTANCE' => '🌐 Từ xa',
+                                        'default' => '⚙️ Mặc định',
+                                        default => $type
+                                    };
+                                    
+                                    $html .= "<div class='mb-2 last:mb-0'><div class='font-bold text-xs uppercase text-gray-500'>{$typeLabel}</div>";
+                                    $html .= self::renderRulesHtml($rules);
+                                    $html .= "</div>";
+                                }
+                            } else {
+                                $html = self::renderRulesHtml($payoutRules);
                             }
                         }
 
@@ -149,5 +151,28 @@ class CommissionPoliciesTable {
                 ]),
             ])
             ->defaultSort('id', 'desc');
+    }
+
+    private static function renderRulesHtml(array $rules): string {
+        $lines = [];
+        foreach ($rules as $rule) {
+            if (empty($rule['amount_vnd'])) continue;
+            
+            $recipient = ($rule['recipient_type'] ?? '') === 'direct_ctv' 
+                ? '<span class="text-primary-600 font-bold">• CTV trực tiếp</span>' 
+                : '<span class="text-info-600 font-bold">• CTV chỉ định</span>';
+            
+            $amount = number_format($rule['amount_vnd']) . 'đ';
+            
+            $trigger = ($rule['payout_trigger'] ?? '') === 'payment_verified' 
+                ? '<span class="bg-success-100 text-success-700 px-1 rounded text-xs">Mùng 5</span>' 
+                : '<span class="bg-warning-100 text-warning-700 px-1 rounded text-xs">Nhập học</span>';
+            
+            $lines[] = "<div>{$recipient}: <strong>{$amount}</strong> {$trigger}</div>";
+        }
+        
+        if (empty($lines)) return '';
+        
+        return '<div class="text-sm space-y-1 mt-1">' . implode('', $lines) . '</div>';
     }
 }

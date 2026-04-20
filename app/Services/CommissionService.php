@@ -38,7 +38,14 @@ class CommissionService {
 
             // 3. Tạo các dòng hoa hồng (Items) dựa trên quy tắc chia tiền (Split Rules)
             if ($policy && !empty($policy->payout_rules)) {
-                $this->createCommissionsFromRules($commission, $payment, $policy->payout_rules);
+                $programKey = strtoupper($payment->program_type);
+                $rules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
+                
+                if (!empty($rules)) {
+                    $this->createCommissionsFromRules($commission, $payment, $rules);
+                } else {
+                    $this->createDirectCommission($commission, $payment, CommissionItem::STATUS_PAYABLE);
+                }
             } else {
                 // Fallback nếu không có quy tắc split: tạo 1 dòng mặc định cho CTV chính
                 $this->createDirectCommission($commission, $payment, CommissionItem::STATUS_PAYABLE);
@@ -153,7 +160,8 @@ class CommissionService {
             })
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
-                    ->orWhere('program_type', strtoupper($programType));
+                    ->orWhereJsonContains('program_type', strtoupper($programType))
+                    ->orWhere('program_type', '[]'); // Case for empty array if null wasn't set
             })
             ->where(function ($query) use ($collaboratorId) {
                 $query->whereNull('collaborator_id')
@@ -175,7 +183,10 @@ class CommissionService {
         if ($policy) {
             // Nếu có quy tắc chia tiền JSON, ưu tiên lấy dòng 'direct_ctv' trong đó
             if (!empty($policy->payout_rules)) {
-                $directRule = collect($policy->payout_rules)->firstWhere('recipient_type', 'direct_ctv');
+                $programKey = strtoupper($programType);
+                $rules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
+                
+                $directRule = collect($rules)->firstWhere('recipient_type', 'direct_ctv');
                 if ($directRule) {
                     return (float) ($directRule['amount_vnd'] ?? 0);
                 }

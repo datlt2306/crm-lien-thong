@@ -26,6 +26,7 @@ class CommissionPolicy extends Model {
 
     protected $casts = [
         'amount_vnd' => 'decimal:2',
+        'program_type' => 'array',
         'payout_rules' => 'array',
         'percent' => 'decimal:2',
         'priority' => 'integer',
