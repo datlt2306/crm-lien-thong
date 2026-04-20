@@ -28,19 +28,18 @@ class StudentsTable {
             ->recordUrl(function (Student $record) {
                 $user = Auth::user();
 
-                // Super admin, admissions, document luôn được phép
-                if (in_array($user->role, ['super_admin', 'admissions', 'document', 'accountant'])) {
-                    return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
-                }
-
-                // CTV chỉ được phép nếu payment chưa verified
-                if ($user->role === 'ctv') {
-                    $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
-
-                    // Nếu có payment verified, CTV không được phép edit
-                    if (!$hasVerifiedPayment) {
-                        return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
+                // Kiểm tra xem user có quyền chỉnh sửa sinh viên không
+                if ($user->can('student_update')) {
+                    // Nếu là CTV, chỉ được phép nếu payment chưa verified
+                    if ($user->hasRole('ctv')) {
+                        $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
+                        if (!$hasVerifiedPayment) {
+                            return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
+                        }
+                        return null;
                     }
+                    
+                    return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
                 }
 
                 return null;
@@ -420,17 +419,11 @@ class StudentsTable {
                         ->visible(function (Student $record) {
                             $user = Auth::user();
 
-                            // Super admin, admissions, document, accountant luôn được phép
-                            if (in_array($user->role, ['super_admin', 'admissions', 'document', 'accountant'])) {
+                            if ($user->can('student_update')) {
+                                if ($user->hasRole('ctv')) {
+                                    return $record->payment?->status !== Payment::STATUS_VERIFIED;
+                                }
                                 return true;
-                            }
-
-                            // CTV chỉ được phép nếu payment chưa verified
-                            if ($user->role === 'ctv') {
-                                $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
-
-                                // Nếu có payment verified, CTV không được phép edit
-                                return !$hasVerifiedPayment;
                             }
 
                             return false;
@@ -496,9 +489,9 @@ class StudentsTable {
 
                             if ($hasSubmittedOrVerifiedPayment) return false;
 
-                            if (!in_array($user->role, ['super_admin', 'ctv'])) return false;
+                            if (!$user->can('student_update')) return false;
 
-                            if ($user->role === 'ctv') {
+                            if ($user->hasRole('ctv')) {
                                 $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
                                 return !$hasVerifiedPayment;
                             }
@@ -553,8 +546,8 @@ class StudentsTable {
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
 
-                            // Chỉ cho phép Super Admin, Document (Cán bộ hồ sơ) và Admissions thấy nút này
-                            if (!in_array($user->role, ['super_admin', 'document', 'admissions'])) {
+                            // Kiểm tra quyền thay đổi trạng thái nhập học
+                            if (!$user->can('student_change_status')) {
                                 return false;
                             }
 
@@ -634,7 +627,7 @@ class StudentsTable {
                         ])
                         ->visible(
                             fn(Student $record): bool =>
-                            (in_array(Auth::user()->role, ['accountant', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                            Auth::user()->can('payment_verify') &&
                                 $record->payment &&
                                 in_array($record->payment->status, [\App\Models\Payment::STATUS_SUBMITTED, \App\Models\Payment::STATUS_REVERTED])
                         )
@@ -674,7 +667,7 @@ class StudentsTable {
                         ])
                         ->visible(
                             fn(Student $record): bool =>
-                            in_array(Auth::user()->role, ['accountant', 'super_admin']) && $record->payment
+                            Auth::user()->can('payment_upload_receipt') && $record->payment
                         )
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
@@ -708,7 +701,7 @@ class StudentsTable {
                             $user = Auth::user();
                             return $record->payment && 
                                    $record->payment->status === \App\Models\Payment::STATUS_VERIFIED &&
-                                   (in_array($user->role, ['accountant', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant')));
+                                   $user->can('payment_reverse');
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
@@ -744,7 +737,7 @@ class StudentsTable {
                         ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Bạn có thể khôi phục từ thùng rác.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Auth::user()->role === 'super_admin'),
+                        ->visible(fn() => Auth::user()->can('student_delete')),
 
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục')
@@ -768,7 +761,7 @@ class StudentsTable {
                     ->label('Xuất Excel')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'admissions', 'document', 'accountant']))
+                    ->visible(fn() => Auth::user()->can('student_export'))
                     ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
                         // Lấy query đã áp dụng filter và search từ bảng hiện tại thay vì lấy full
                         $query = $livewire->getFilteredTableQuery();
@@ -784,7 +777,7 @@ class StudentsTable {
                         ->modalDescription('Bạn có chắc chắn muốn xóa các học viên đã chọn? Bạn có thể khôi phục từ thùng rác sau này.')
                         ->modalSubmitActionLabel('Xóa')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin'])),
+                        ->visible(fn() => Auth::user()->can('student_delete')),
                     
                     \Filament\Actions\RestoreBulkAction::make()
                         ->label('Khôi phục đã chọn'),

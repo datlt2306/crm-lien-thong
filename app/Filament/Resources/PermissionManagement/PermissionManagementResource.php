@@ -22,8 +22,7 @@ class PermissionManagementResource extends Resource {
     protected static ?int $navigationSort = 2;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        return $user && $user->role === 'super_admin';
+        return \Illuminate\Support\Facades\Gate::allows('role_manage');
     }
 
     public static function form(Schema $schema): Schema {

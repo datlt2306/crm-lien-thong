@@ -25,7 +25,7 @@ class PaymentPolicy {
 
     public function verify(User $user, Payment $payment): bool {
         // Kế toán và cán bộ hồ sơ đều có thể xác nhận số tiền sinh viên nộp đăng ký
-        return $user->can('verify_payment') || $user->hasRole(['accountant', 'document']);
+        return $user->can('payment_verify') || $user->hasRole(['accountant', 'document']);
     }
 
     public function uploadReceipt(User $user, Payment $payment): bool {

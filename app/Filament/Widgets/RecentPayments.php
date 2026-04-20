@@ -51,13 +51,13 @@ class RecentPayments extends BaseWidget {
                         ]);
                     }),
                 Action::make('verify')->label('Verify')->icon('heroicon-o-check')
-                    ->visible(fn(Payment $r) => $r->status === Payment::STATUS_SUBMITTED && Gate::allows('verify_payment'))
+                    ->visible(fn(Payment $r) => $r->status === Payment::STATUS_SUBMITTED && Gate::allows('payment_verify'))
                     ->requiresConfirmation()
                     ->action(function (Payment $record) {
                         $record->markAsVerified(Auth::id());
                     }),
                 Action::make('reject')->label('Reject')->icon('heroicon-o-x-mark')
-                    ->visible(fn(Payment $r) => $r->status === Payment::STATUS_SUBMITTED && Gate::allows('verify_payment'))
+                    ->visible(fn(Payment $r) => $r->status === Payment::STATUS_SUBMITTED && Gate::allows('payment_verify'))
                     ->requiresConfirmation()
                     ->action(function (Payment $record) {
                         $record->update(['status' => Payment::STATUS_NOT_PAID]);
@@ -73,7 +73,7 @@ class RecentPayments extends BaseWidget {
             ->latest('created_at')
             ->limit(10);
 
-        if ($user && $user->role === 'ctv') {
+        if ($user && !$user->can('payment_view_all')) {
             $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
                 $query->where('primary_collaborator_id', $collaborator->id);

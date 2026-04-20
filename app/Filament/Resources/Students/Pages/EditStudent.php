@@ -74,12 +74,13 @@ class EditStudent extends EditRecord {
                         return false;
                     }
 
-                    if (!in_array($user->role, ['super_admin', 'ctv'])) {
+                    if (!$user->can('student_update')) {
                         return false;
                     }
 
                     // CTV không được phép confirm nếu payment đã verified
-                    if ($user->role === 'ctv') {
+                    // Chúng ta giả định role 'ctv' vẫn dùng tên role cho logic nghiệp vụ đặc thù
+                    if ($user->hasRole('ctv')) {
                         $hasVerifiedPayment = Payment::where('student_id', $record->id)
                             ->where('status', Payment::STATUS_VERIFIED)
                             ->exists();
@@ -181,8 +182,8 @@ class EditStudent extends EditRecord {
                 ->visible(function () use ($record): bool {
                     $user = Auth::user();
 
-                    // Chỉ CTV mới được upload bill
-                    if ($user->role !== 'ctv') {
+                    // Chỉ CTV mới được upload bill (dựa trên quyền hạn)
+                    if (!$user->can('payment_upload_receipt')) {
                         return false;
                     }
 
@@ -192,8 +193,13 @@ class EditStudent extends EditRecord {
                         return false;
                     }
 
-                    // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được upload bill
-                    $canUpload = $record->collaborator_id === $collaborator->id;
+                    // Chỉ CTV (hoặc người có quyền) có ref_id trùng với collaborator_id của sinh viên mới được upload bill
+                    // Logic check collaborator_id vẫn giữ nguyên cho CTV
+                    if ($user->hasRole('ctv')) {
+                        if ($record->collaborator_id !== $collaborator->id) {
+                            return false;
+                        }
+                    }
 
                     // Kiểm tra payment status
                     if (!$record->payment) {
@@ -202,7 +208,7 @@ class EditStudent extends EditRecord {
                     }
 
                     // Chỉ được upload khi payment ở trạng thái NOT_PAID
-                    return $canUpload && $record->payment->status === Payment::STATUS_NOT_PAID;
+                    return $record->payment?->status === Payment::STATUS_NOT_PAID;
                 })
                 ->action(function (array $data) use ($record) {
                     // Tìm collaborator của user hiện tại
@@ -352,8 +358,9 @@ class EditStudent extends EditRecord {
                         ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
                 ])
                 ->visible(function () use ($record): bool {
-                    // Kế toán & cán bộ hồ sơ được phép xác nhận thanh toán
-                    return (in_array(Auth::user()->role, ['accountant', 'document']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))) &&
+                    $user = Auth::user();
+                    // Kế toán & cán bộ hồ sơ được phép xác nhận thanh toán (dựa trên quyền)
+                    return $user->can('payment_verify') &&
                         // Sinh viên phải có payment record
                         $record->payment &&
                         // Payment phải ở trạng thái chờ xác minh hoặc đã hoàn trả (có thể xác nhận lại)
@@ -425,7 +432,7 @@ class EditStudent extends EditRecord {
                 ->visible(function () use ($record): bool {
                     // Chỉ hiển thị cho cán bộ hồ sơ
                     $user = Auth::user();
-                    if (!$user || $user->role !== 'document') {
+                    if (!$user || !$user->can('payment_reverse')) {
                         return false;
                     }
                     
@@ -475,7 +482,7 @@ class EditStudent extends EditRecord {
                 ->modalDescription('Chỉ super admin được xóa. Hệ thống sẽ xóa mềm (có thể khôi phục).')
                 ->modalSubmitActionLabel('Xóa')
                 ->modalCancelActionLabel('Hủy')
-                ->visible(fn(): bool => Auth::user()?->role === 'super_admin'),
+                ->visible(fn(): bool => Auth::user()?->can('student_delete')),
         ];
     }
 
@@ -580,36 +587,21 @@ class EditStudent extends EditRecord {
             return false;
         }
 
-        // Nếu là super_admin, admissions, document thì luôn được phép
-        if (in_array($user->role, ['super_admin', 'admissions', 'document'])) {
-            return true;
-        }
+        if ($user->can('student_update')) {
+            // CTV có quyền update nhưng cần kiểm tra payment verified
+            if ($user->hasRole('ctv')) {
+                if (isset($parameters['record'])) {
+                    $recordId = $parameters['record'];
+                    if (is_array($recordId)) {
+                        $recordId = $recordId['id'] ?? $recordId[0] ?? null;
+                    }
+                    if ($recordId && is_numeric($recordId)) {
+                        $hasVerifiedPayment = \App\Models\Payment::where('student_id', $recordId)
+                            ->where('status', \App\Models\Payment::STATUS_VERIFIED)
+                            ->exists();
 
-        // Nếu là accountant thì luôn được phép
-        if ($user->role === 'accountant') {
-            return true;
-        }
-
-        // Nếu là CTV, cần kiểm tra payment đã được verified chưa
-        if ($user->role === 'ctv') {
-            // Lấy record ID từ parameters
-            if (isset($parameters['record'])) {
-                $recordId = $parameters['record'];
-                // Đảm bảo recordId là giá trị đơn, không phải array hoặc collection
-                if (is_array($recordId)) {
-                    $recordId = $recordId['id'] ?? $recordId[0] ?? null;
-                }
-                if ($recordId && is_numeric($recordId)) {
-                    $student = Student::where('id', $recordId)->first();
-                    if ($student && $student instanceof Student) {
-                    // Kiểm tra xem student có payment nào đã được verified không
-                    $hasVerifiedPayment = \App\Models\Payment::where('student_id', $student->id)
-                        ->where('status', \App\Models\Payment::STATUS_VERIFIED)
-                        ->exists();
-
-                    // Nếu có payment đã verified, CTV không được phép edit
-                    if ($hasVerifiedPayment) {
-                        return false;
+                        if ($hasVerifiedPayment) {
+                            return false;
                         }
                     }
                 }

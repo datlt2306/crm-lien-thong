@@ -16,4 +16,18 @@ class EditPermissionManagement extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    protected function afterSave(): void
+    {
+        $data = $this->form->getState();
+        $permissionIds = [];
+
+        foreach ($data as $key => $value) {
+            if (str_starts_with($key, 'perms_') && is_array($value)) {
+                $permissionIds = array_merge($permissionIds, $value);
+            }
+        }
+
+        $this->record->syncPermissions($permissionIds);
+    }
 }

@@ -7,11 +7,12 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
 
 class PermissionManagementForm {
     public static function configure(Schema $schema): Schema {
         return $schema
-            ->schema([
+            ->components([
                 Section::make('📋 Thông tin vai trò')
                     ->description('Thiết lập thông tin cơ bản của vai trò')
                     ->icon('heroicon-o-shield-check')
@@ -36,20 +37,52 @@ class PermissionManagementForm {
                     ->columns(2)
                     ->collapsible(),
 
-                Section::make('🔐 Phân quyền')
-                    ->description('Chọn các quyền cho vai trò này')
+                Section::make('🔐 Phân quyền chi tiết')
+                    ->description('Chọn các quyền cho vai trò này (Đã phân theo nhóm)')
                     ->icon('heroicon-o-key')
                     ->schema([
-                        CheckboxList::make('permissions')
-                            ->label('Danh sách quyền')
-                            ->relationship('permissions', 'name')
-                            ->searchable()
-                            ->bulkToggleable()
-                            ->gridDirection('row')
-                            ->columns(3)
-                            ->helperText('Chọn các quyền mà vai trò này có thể thực hiện'),
+                        Grid::make(2)
+                            ->schema([
+                                self::getGroupSection('🎓 Sinh viên', 'student_'),
+                                self::getGroupSection('💰 Tài chính', 'payment_'),
+                                self::getGroupSection('📈 Hoa hồng', 'commission_'),
+                                self::getGroupSection('👥 Nhân viên', 'user_'),
+                                self::getGroupSection('🤝 Cộng tác viên', 'collaborator_'),
+                                self::getGroupSection('⚙️ Hệ thống & Báo cáo', ['audit_log_', 'role_', 'setting_', 'report_', 'database_']),
+                            ]),
                     ])
                     ->collapsible(),
             ]);
+    }
+
+    protected static function getGroupSection(string $label, string|array $prefixes): Section {
+        $prefixes = (array) $prefixes;
+        
+        return Section::make($label)
+            ->compact()
+            ->collapsible()
+            ->schema([
+                CheckboxList::make('perms_' . (is_array($prefixes) ? $prefixes[0] : $prefixes))
+                    ->label('')
+                    ->options(function () use ($prefixes) {
+                        $query = \Spatie\Permission\Models\Permission::query();
+                        $query->where(function ($q) use ($prefixes) {
+                            foreach ($prefixes as $prefix) {
+                                $q->orWhere('name', 'like', $prefix . '%');
+                            }
+                        });
+                        
+                        return $query->get()->pluck('name', 'id')->map(fn($name) => __("permissions.{$name}") ?? $name);
+                    })
+                    ->dehydrated(true)
+                    ->afterStateHydrated(function (CheckboxList $component, ?\Spatie\Permission\Models\Role $record) {
+                        if (!$record) return;
+                        $component->state($record->permissions->pluck('id')->toArray());
+                    })
+                    ->gridDirection('row')
+                    ->columns(1) // Một cột cho mỗi nhóm để nhìn rõ hơn
+                    ->bulkToggleable(),
+            ])
+            ->columnSpan(1);
     }
 }

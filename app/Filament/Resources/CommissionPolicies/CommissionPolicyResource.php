@@ -25,7 +25,7 @@ class CommissionPolicyResource extends Resource {
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
     public static function shouldRegisterNavigation(): bool {
-        return Gate::allows('manage_commission');
+        return Gate::allows('commission_view_any');
     }
 
     public static function form(Schema $schema): Schema {
