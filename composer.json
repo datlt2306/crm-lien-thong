@@ -18,6 +18,7 @@
         "livewire/livewire": "^3.0",
         "maatwebsite/excel": "*",
         "masbug/flysystem-google-drive-ext": "^2.5",
+        "spatie/laravel-backup": "^10.2",
         "spatie/laravel-permission": "^6.21"
     },
     "require-dev": {
@@ -74,6 +75,9 @@
         }
     },
     "config": {
+        "platform": {
+            "php": "8.3.6"
+        },
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
