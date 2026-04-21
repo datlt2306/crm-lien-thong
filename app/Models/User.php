@@ -37,6 +37,10 @@ class User extends Authenticatable implements FilamentUser {
         'password',
         'role',
         'is_active',
+        'google_id',
+        'google_token',
+        'google_refresh_token',
+        'google_avatar',
     ];
 
     /**

@@ -5,6 +5,7 @@ use App\Http\Controllers\PublicStudentController;
 use App\Http\Controllers\PublicCollaboratorController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\CollaboratorRegistrationController;
+use App\Http\Controllers\Auth\GoogleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,10 @@ use App\Http\Controllers\CollaboratorRegistrationController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+// Google Authentication Routes
+Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
 Route::get('/', function () {
     return redirect('/admin/login');
