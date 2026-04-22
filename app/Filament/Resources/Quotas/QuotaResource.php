@@ -48,13 +48,8 @@ class QuotaResource extends Resource {
             return $query->whereNull('id');
         }
 
-        // Super admin thấy tất cả
-        if ($user->role === 'super_admin') {
-            return $query;
-        }
-
-        // Quản trị viên và CTV thấy tất cả chỉ tiêu
-        if (in_array($user->role, ['super_admin', 'ctv'])) {
+        // Quản trị viên và CTV thấy tất cả chỉ tiêu dựa trên quyền
+        if ($user->can('quota_view_any')) {
             return $query;
         }
 
@@ -71,35 +66,19 @@ class QuotaResource extends Resource {
     }
 
     public static function canViewAny(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) {
-            return false;
-        }
-        return in_array($user->role, ['super_admin', 'ctv']);
+        return \Illuminate\Support\Facades\Auth::user()?->can('quota_view_any') ?? false;
     }
 
     public static function canCreate(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) {
-            return false;
-        }
-        return in_array($user->role, ['super_admin', ]);
+        return \Illuminate\Support\Facades\Auth::user()?->can('quota_create') ?? false;
     }
 
     public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) {
-            return false;
-        }
-        return in_array($user->role, ['super_admin', ]);
+        return \Illuminate\Support\Facades\Auth::user()?->can('quota_update') ?? false;
     }
 
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) {
-            return false;
-        }
-        return in_array($user->role, ['super_admin', ]);
+        return \Illuminate\Support\Facades\Auth::user()?->can('quota_delete') ?? false;
     }
 
     public static function getModalWidth(): string {

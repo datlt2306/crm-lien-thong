@@ -33,6 +33,8 @@ class PermissionSeeder extends Seeder {
             'payment_view_bill',
             'payment_verify',
             'payment_reverse',
+            'payment_refund',
+            'payment_upload_bill',
             'payment_upload_receipt',
             'payment_update_receipt',
             'payment_report',
@@ -69,6 +71,20 @@ class PermissionSeeder extends Seeder {
             'report_view_all',
             'report_view_finance',
             'report_view_enrollment',
+
+            // Recruitment & Quotas
+            'intake_view_any',
+            'intake_create',
+            'intake_update',
+            'intake_delete',
+            'annual_quota_view_any',
+            'annual_quota_create',
+            'annual_quota_update',
+            'annual_quota_delete',
+            'quota_view_any',
+            'quota_create',
+            'quota_update',
+            'quota_delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -93,6 +109,7 @@ class PermissionSeeder extends Seeder {
             'payment_view_any',
             'payment_view',
             'payment_view_bill',
+            'payment_upload_bill',
             'payment_upload_receipt',
             'payment_update_receipt',
             'student_view_any',
@@ -100,6 +117,9 @@ class PermissionSeeder extends Seeder {
             'student_create',
             'student_update',
             'audit_log_view',
+            'intake_view_any',
+            'annual_quota_view_any',
+            'quota_view_any',
         ]);
 
         // Gán permissions cho accountant
@@ -112,12 +132,18 @@ class PermissionSeeder extends Seeder {
             'payment_view_any',
             'payment_view',
             'payment_view_bill',
+            'payment_upload_bill',
             'payment_upload_receipt',
             'payment_update_receipt',
             'payment_verify',
+            'payment_reverse',
+            'payment_refund',
             'report_view_finance',
             'audit_log_view',
             'audit_log_view_all',
+            'intake_view_any',
+            'annual_quota_view_any',
+            'quota_view_any',
         ]);
 
         // Gán permissions cho admissions
@@ -128,6 +154,15 @@ class PermissionSeeder extends Seeder {
             'student_update',
             'collaborator_view_any',
             'report_view_enrollment',
+            'intake_view_any',
+            'intake_create',
+            'intake_update',
+            'annual_quota_view_any',
+            'annual_quota_create',
+            'annual_quota_update',
+            'quota_view_any',
+            'quota_create',
+            'quota_update',
         ]);
 
         // Gán permissions cho document
@@ -138,12 +173,18 @@ class PermissionSeeder extends Seeder {
             'payment_view_any',
             'payment_view',
             'payment_view_bill',
+            'payment_upload_bill',
             'payment_upload_receipt',
             'payment_update_receipt',
             'payment_verify',
+            'payment_reverse',
+            'payment_refund',
             'commission_view_any',
             'commission_view',
             'audit_log_view_all',
+            'intake_view_any',
+            'annual_quota_view_any',
+            'quota_view_any',
         ]);
 
         $this->command->info('Permissions and roles created successfully!');

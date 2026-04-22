@@ -167,4 +167,21 @@ class Payment extends Model {
     public function commission(): HasOne {
         return $this->hasOne(Commission::class);
     }
+
+    /**
+     * Kiểm tra xem đã có bất kỳ mục hoa hồng nào được xác nhận chi hoặc đã chi chưa
+     */
+    public function hasConfirmedCommission(): bool {
+        if (!$this->commission) {
+            return false;
+        }
+
+        return $this->commission->items()
+            ->whereIn('status', [
+                CommissionItem::STATUS_PAID,
+                CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                CommissionItem::STATUS_RECEIVED_CONFIRMED
+            ])
+            ->exists();
+    }
 }

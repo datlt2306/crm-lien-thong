@@ -20,9 +20,11 @@ return [
     'payment_view' => 'Xem file Phiếu thu',
     'payment_view_bill' => 'Xem Bill (Minh chứng nộp tiền)',
     'payment_verify' => 'Kế toán duyệt thanh toán',
-    'payment_reverse' => 'Hoàn trả/Hủy thanh toán',
-    'payment_upload_receipt' => 'Tải lên Phiếu thu Helen',
-    'payment_update_receipt' => 'Cập nhật/Sửa Phiếu thu',
+    'payment_reverse' => 'Hủy xác nhận thanh toán (Khi chưa có phiếu thu)',
+    'payment_refund' => 'Hoàn trả tiền (Khi đã có phiếu thu)',
+    'payment_upload_bill' => 'Tải Bill lên (Minh chứng nộp tiền)',
+    'payment_upload_receipt' => 'Tải Phiếu thu lên',
+    'payment_update_receipt' => 'Sửa Phiếu thu',
     'payment_report' => 'Xem báo cáo tài chính',
 
     // Hoa hồng
@@ -56,6 +58,22 @@ return [
     'setting_manage' => 'Cấu hình hệ thống',
     'database_backup' => 'Sao lưu dữ liệu',
     'report_view_all' => 'Xem tất cả báo cáo tổng hợp',
-    'report_view_finance' => 'Báo cáo doanh thu',
     'report_view_enrollment' => 'Báo cáo tuyển sinh',
+    'report_view_finance' => 'Báo cáo doanh thu',
+
+    // Đợt tuyển sinh & Chỉ tiêu
+    'intake_view_any' => 'Xem danh sách đợt tuyển sinh',
+    'intake_create' => 'Tạo mới đợt tuyển sinh',
+    'intake_update' => 'Sửa đợt tuyển sinh',
+    'intake_delete' => 'Xóa đợt tuyển sinh',
+
+    'annual_quota_view_any' => 'Xem danh sách chỉ tiêu năm',
+    'annual_quota_create' => 'Thiết lập chỉ tiêu năm',
+    'annual_quota_update' => 'Sửa chỉ tiêu năm',
+    'annual_quota_delete' => 'Xóa chỉ tiêu năm',
+
+    'quota_view_any' => 'Xem danh sách chỉ tiêu chi tiết',
+    'quota_create' => 'Giao chỉ tiêu chi tiết',
+    'quota_update' => 'Sửa chỉ tiêu chi tiết',
+    'quota_delete' => 'Xóa chỉ tiêu chi tiết',
 ];

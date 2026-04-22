@@ -46,6 +46,7 @@ class PermissionManagementForm {
                                 self::getGroupSection('🎓 Sinh viên', 'student_'),
                                 self::getGroupSection('💰 Tài chính', 'payment_'),
                                 self::getGroupSection('📈 Hoa hồng', 'commission_'),
+                                self::getGroupSection('📅 Tuyển sinh & Chỉ tiêu', ['intake_', 'quota_', 'annual_quota_']),
                                 self::getGroupSection('👥 Nhân viên', 'user_'),
                                 self::getGroupSection('🤝 Cộng tác viên', 'collaborator_'),
                                 self::getGroupSection('⚙️ Hệ thống & Báo cáo', ['audit_log_', 'role_', 'setting_', 'report_', 'database_']),

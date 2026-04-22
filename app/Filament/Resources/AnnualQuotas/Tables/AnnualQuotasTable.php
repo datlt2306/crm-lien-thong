@@ -26,7 +26,8 @@ class AnnualQuotasTable {
 
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $canEdit = $user && in_array($user->role, ['super_admin', ]);
+        $canEdit = $user && $user->can('annual_quota_update');
+        $canDelete = $user && $user->can('annual_quota_delete');
 
         return $table
             ->recordUrl(fn($r) => ($canEdit && $r) ? \App\Filament\Resources\AnnualQuotas\AnnualQuotaResource::getUrl('edit', ['record' => $r]) : null)
@@ -116,7 +117,7 @@ class AnnualQuotasTable {
                         ->modalHeading('Xóa chỉ tiêu năm')
                         ->modalDescription('Nếu chỉ tiêu này đã có hồ sơ học viên, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
                         ->modalSubmitActionLabel('Xóa/Tạm dừng')
-                        ->visible(fn() => $canEdit)
+                        ->visible(fn() => $canDelete)
                         ->action(function ($record) {
                             // AnnualQuota có thể liên kết qua major_name/program_name/year hoặc qua quan hệ nếu có
                             // Ở đây ta check theo major_name và program_name trong Student

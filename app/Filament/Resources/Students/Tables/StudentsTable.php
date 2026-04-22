@@ -480,17 +480,20 @@ class StudentsTable {
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
                             
-                            // Chỉ CTV mới được quyền Gửi Kế toán (submit bill)
-                            if ($user->role !== 'ctv') {
-                                return false;
-                            }
-
-                            // Nếu đã được kế toán xác minh (VERIFIED) thì không cho CTV sửa bill nữa
+                            // Nếu đã được kế toán xác minh (VERIFIED) thì không cho sửa bill nữa
                             if ($record->payment?->status === Payment::STATUS_VERIFIED) {
                                 return false;
                             }
 
-                            if (!$user->can('student_update')) return false;
+                            if (!$user->can('payment_upload_bill')) return false;
+
+                            // Ownership check for CTV: Only allow if they own the student
+                            if ($user->hasRole('ctv')) {
+                                $collaborator = Collaborator::where('email', $user->email)->first();
+                                if (!$collaborator || $record->collaborator_id !== $collaborator->id) {
+                                    return false;
+                                }
+                            }
 
                             return true;
                         })
@@ -785,13 +788,36 @@ class StudentsTable {
                         ->modalSubmitActionLabel('Xác nhận hoàn trả')
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
-                            return $record->payment && 
-                                   $record->payment->status === \App\Models\Payment::STATUS_VERIFIED &&
-                                   $user->can('payment_reverse');
+                            if (!$record->payment || $record->payment->status !== \App\Models\Payment::STATUS_VERIFIED) {
+                                return false;
+                            }
+
+                            // Chặn hoàn trả nếu đã xác nhận chi hoa hồng
+                            if ($record->payment->hasConfirmedCommission()) {
+                                return false;
+                            }
+
+                            // Nếu đã có phiếu thu, yêu cầu quyền Hoàn trả (Refund)
+                            if ($record->payment->receipt_path) {
+                                return $user->can('payment_refund');
+                            }
+
+                            // Nếu chưa có phiếu thu, chỉ yêu cầu quyền Hủy xác nhận (Reverse)
+                            return $user->can('payment_reverse');
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             if (!$payment) return;
+
+                            // Kiểm tra lại lần cuối trước khi thực hiện
+                            if ($payment->hasConfirmedCommission()) {
+                                \Filament\Notifications\Notification::make()
+                                    ->danger()
+                                    ->title('Không thể hoàn trả')
+                                    ->body('Hoa hồng liên quan đã được xác nhận chi hoặc đã chi trả cho CTV. Vui lòng xử lý hoa hồng trước.')
+                                    ->send();
+                                return;
+                            }
 
                             // Chuyển trạng thái thanh toán về Hoàn trả (Reverted)
                             $payment->update([

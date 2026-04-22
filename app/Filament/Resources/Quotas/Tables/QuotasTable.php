@@ -138,19 +138,16 @@ class QuotasTable {
                 ActionGroup::make([
                     ViewAction::make()
                         ->label('Xem chi tiết')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            !in_array(\Illuminate\Support\Facades\Auth::user()->role, ['ctv'])),
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_view_any')),
                     EditAction::make()
                         ->label('Chỉnh sửa')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ])),
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_update')),
                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa chỉ tiêu tuyển sinh')
                         ->modalDescription('Nếu chỉ tiêu này đã có học viên đăng ký, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
                         ->modalSubmitActionLabel('Xóa/Tạm dừng')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin', ]))
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete'))
                         ->action(function ($record) {
                             $hasStudents = Student::where('quota_id', $record->id)->exists();
 
@@ -183,8 +180,7 @@ class QuotasTable {
                         ->modalHeading('Xóa các chỉ tiêu đã chọn')
                         ->modalDescription('Các chỉ tiêu đã có học viên sẽ được tự động chuyển sang trạng thái Tạm dừng.')
                         ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin']))
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete'))
                         ->action(function ($records) {
                             $deleted = 0;
                             $deactivated = 0;

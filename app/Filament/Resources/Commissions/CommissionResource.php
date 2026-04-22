@@ -254,15 +254,14 @@ class CommissionResource extends Resource {
                         ->color('success')
                         ->form([
                             \Filament\Forms\Components\FileUpload::make('bill')
-                                ->label('Bill thanh toán')
-                                ->required()
+                                ->label('Bill thanh toán (Không bắt buộc)')
                                 ->disk('local')
                                 ->directory('commission-bills')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120), // 5MB
                         ])
                         ->modalHeading('Xác nhận đã thanh toán')
-                        ->modalDescription('Xác nhận đã thanh toán hoa hồng cho CTV và upload bill.')
+                        ->modalDescription('Xác nhận đã thanh toán hoa hồng cho CTV. Bạn có thể tải bill lên nếu muốn lưu trữ.')
                         ->modalSubmitActionLabel('Xác nhận thanh toán')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (CommissionItem $record) use ($user): bool {
@@ -271,7 +270,7 @@ class CommissionResource extends Resource {
                                 && in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]);
                         })
                         ->action(function (CommissionItem $record, array $data) {
-                            $record->markAsPaymentConfirmed($data['bill'], \Illuminate\Support\Facades\Auth::user()->id);
+                            $record->markAsPaymentConfirmed($data['bill'] ?? null, \Illuminate\Support\Facades\Auth::user()->id);
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã xác nhận thanh toán')
@@ -457,6 +456,82 @@ class CommissionResource extends Resource {
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã hoàn tác chốt sổ thành công')
                                 ->success()
+                                ->send();
+                        }),
+
+                    Action::make('revert_payment')
+                        ->label('Hoàn trả tiền')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận hoàn trả tiền & Hủy trạng thái')
+                        ->modalDescription('Hành động này sẽ: 
+                            1. Chuyển trạng thái thanh toán về "Hoàn trả". 
+                            2. Xóa thông tin Phiếu thu cũ.
+                            3. Đưa học viên về trạng thái "Mới" để CTV có thể nộp lại (nếu cần).')
+                        ->form([
+                            \Filament\Forms\Components\Textarea::make('reason')
+                                ->label('Lý do hoàn trả')
+                                ->required()
+                                ->placeholder('Nhập lý do hoàn trả tiền...'),
+                        ])
+                        ->modalSubmitActionLabel('Xác nhận hoàn trả')
+                        ->visible(function (CommissionItem $record): bool {
+                            $user = Auth::user();
+                            $payment = $record->commission?->payment;
+                            
+                            if (!$payment || $payment->status !== \App\Models\Payment::STATUS_VERIFIED) {
+                                return false;
+                            }
+
+                            // Chặn hoàn trả nếu đã xác nhận chi hoa hồng (kiểm tra toàn bộ commission liên quan đến payment này)
+                            if ($payment->hasConfirmedCommission()) {
+                                return false;
+                            }
+
+                            // Nếu đã có phiếu thu, yêu cầu quyền Hoàn trả (Refund)
+                            if ($payment->receipt_path) {
+                                return $user->can('payment_refund');
+                            }
+
+                            // Nếu chưa có phiếu thu, chỉ yêu cầu quyền Hủy xác nhận (Reverse)
+                            return $user->can('payment_reverse');
+                        })
+                        ->action(function (array $data, CommissionItem $record) {
+                            $payment = $record->commission?->payment;
+                            $student = $record->commission?->student;
+                            
+                            if (!$payment || !$student) return;
+
+                            // Kiểm tra lại lần cuối trước khi thực hiện
+                            if ($payment->hasConfirmedCommission()) {
+                                \Filament\Notifications\Notification::make()
+                                    ->danger()
+                                    ->title('Không thể hoàn trả')
+                                    ->body('Hoa hồng liên quan đã được xác nhận chi hoặc đã chi trả cho CTV. Vui lòng xử lý hoa hồng trước.')
+                                    ->send();
+                                return;
+                            }
+
+                            // Chuyển trạng thái thanh toán về Hoàn trả (Reverted)
+                            $payment->update([
+                                'status' => \App\Models\Payment::STATUS_REVERTED,
+                                'edit_reason' => $data['reason'] ?? null,
+                                'verified_at' => null,
+                                'verified_by' => null,
+                                'receipt_path' => null,
+                                'receipt_number' => null,
+                                'receipt_uploaded_by' => null,
+                                'receipt_uploaded_at' => null,
+                            ]);
+
+                            // Đưa học viên về trạng thái Mới để CTV có thể nộp lại
+                            $student->update(['status' => \App\Models\Student::STATUS_NEW]);
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title('Đã hoàn trả trạng thái thành công')
+                                ->body('Hồ sơ học viên đã được đưa về trạng thái Mới.')
                                 ->send();
                         }),
                 ])

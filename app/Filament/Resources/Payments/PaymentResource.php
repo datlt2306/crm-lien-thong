@@ -165,7 +165,7 @@ class PaymentResource extends Resource {
                     ])
                     ->visible(
                         fn(Payment $record): bool =>
-                        Auth::user()->role === 'ctv' &&
+                        Auth::user()->can('payment_upload_bill') &&
                             $record->status === Payment::STATUS_NOT_PAID &&
                             self::canUploadBillForPayment($record)
                     )
@@ -238,7 +238,7 @@ class PaymentResource extends Resource {
                     })
                     ->visible(
                         fn(Payment $record): bool =>
-                        Auth::user()->role === 'ctv' &&
+                        Auth::user()->can('payment_upload_bill') &&
                             $record->status === Payment::STATUS_SUBMITTED &&
                             !empty($record->bill_path) &&
                             self::canEditBillForPayment($record)
@@ -502,17 +502,21 @@ class PaymentResource extends Resource {
     private static function canUploadBillForPayment(Payment $payment): bool {
         $user = Auth::user();
 
-        if ($user->role !== 'ctv') {
+        if (!$user->can('payment_upload_bill')) {
             return false;
         }
 
-        $collaborator = Collaborator::where('email', $user->email)->first();
-        if (!$collaborator) {
-            return false;
+        if ($user->hasRole('ctv')) {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if (!$collaborator) {
+                return false;
+            }
+
+            // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được upload bill
+            return $payment->student->collaborator_id === $collaborator->id;
         }
 
-        // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được upload bill
-        return $payment->student->collaborator_id === $collaborator->id;
+        return true;
     }
 
     /**
@@ -521,17 +525,21 @@ class PaymentResource extends Resource {
     private static function canEditBillForPayment(Payment $payment): bool {
         $user = Auth::user();
 
-        if ($user->role !== 'ctv') {
+        if (!$user->can('payment_upload_bill')) {
             return false;
         }
 
-        $collaborator = Collaborator::where('email', $user->email)->first();
-        if (!$collaborator) {
-            return false;
+        if ($user->hasRole('ctv')) {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if (!$collaborator) {
+                return false;
+            }
+
+            // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được chỉnh sửa bill
+            return $payment->student->collaborator_id === $collaborator->id;
         }
 
-        // Chỉ CTV có ref_id trùng với collaborator_id của sinh viên mới được chỉnh sửa bill
-        return $payment->student->collaborator_id === $collaborator->id;
+        return true;
     }
 
 

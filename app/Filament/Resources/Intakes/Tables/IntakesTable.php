@@ -69,7 +69,6 @@ class IntakesTable {
 
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $canEdit = $user && in_array($user->role, ['super_admin']);
 
         $dedupedQuotaIds = Quota::query()
             ->selectRaw('MAX(id) as id')
@@ -88,7 +87,7 @@ class IntakesTable {
 
         return $table
             ->query($query)
-            ->recordUrl(fn($r) => ($canEdit && $r?->intake_id) ? self::getEditUrlForQuota($r) : null)
+            ->recordUrl(fn($r) => ($user?->can('intake_view') && $r?->intake_id) ? self::getEditUrlForQuota($r) : null)
             ->columns([
                 TextColumn::make('intake.name')
                     ->label('Tên đợt tuyển sinh')
@@ -192,17 +191,16 @@ class IntakesTable {
             ])
             ->recordActions([
                 ActionGroup::make([
-                    Action::make('edit_intake')
+                    Action::make('edit')
                         ->label('Chỉnh sửa')
-                        ->icon('heroicon-o-pencil-square')
-                        ->url(fn(Quota $record) => self::getEditUrlForQuota($record))
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin'])),
+                        ->url(fn($record) => self::getEditUrlForQuota($record))
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_update')),
                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa chỉ tiêu tuyển sinh')
                         ->modalDescription('Nếu chỉ tiêu này đã có học viên đăng ký, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
                         ->modalSubmitActionLabel('Xóa/Tạm dừng')
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_delete'))
                         ->action(function ($record) {
                             $hasStudents = Student::where('quota_id', $record->id)->exists();
 
@@ -235,8 +233,7 @@ class IntakesTable {
                         ->modalHeading('Xóa các chỉ tiêu đã chọn')
                         ->modalDescription('Các chỉ tiêu đã có học viên sẽ được tự động chuyển sang trạng thái Tạm dừng.')
                         ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user() &&
-                            in_array(\Illuminate\Support\Facades\Auth::user()->role, ['super_admin']))
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete'))
                         ->action(function ($records) {
                             $deleted = 0;
                             $deactivated = 0;

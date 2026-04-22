@@ -23,8 +23,7 @@ class IntakeResource extends Resource {
     protected static ?int $navigationSort = 3; // Trước "Đợt tuyển & Chỉ tiêu" (4): tạo đợt (tên + khoảng thời gian) trước, gán chỉ tiêu sau
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'ctv', 'admissions', 'accountant', 'document']);
+        return static::canViewAny();
     }
 
     public static function form(Schema $schema): Schema {
@@ -49,18 +48,29 @@ class IntakeResource extends Resource {
             return $query->whereNull('id');
         }
 
-        // Sau khi bỏ đơn vị, tất cả các vai trò quản lý đều thấy toàn bộ đợt tuyển sinh
-        if (in_array($user->role, ['super_admin', 'admissions', 'accountant', 'document'])) {
-            return $query;
-        }
-
-        // CTV thấy toàn bộ đợt tuyển sinh (read-only)
-        if ($user->role === 'ctv') {
+        // Theo ma trận phân quyền, tất cả những người có quyền xem đều thấy toàn bộ đợt tuyển sinh
+        if ($user->can('intake_view_any')) {
             return $query;
         }
 
         // Các role khác không thấy gì
         return $query->whereNull('id');
+    }
+
+    public static function canViewAny(): bool {
+        return \Illuminate\Support\Facades\Auth::user()?->can('intake_view_any') ?? false;
+    }
+
+    public static function canCreate(): bool {
+        return \Illuminate\Support\Facades\Auth::user()?->can('intake_create') ?? false;
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool {
+        return \Illuminate\Support\Facades\Auth::user()?->can('intake_update') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool {
+        return \Illuminate\Support\Facades\Auth::user()?->can('intake_delete') ?? false;
     }
 
     public static function getPages(): array {

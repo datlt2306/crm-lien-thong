@@ -25,11 +25,7 @@ class AnnualQuotaResource extends Resource {
     protected static ?int $navigationSort = 4;
 
     public static function shouldRegisterNavigation(): bool {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) {
-            return false;
-        }
-        return in_array($user->role, ['super_admin', 'ctv']);
+        return static::canViewAny();
     }
 
     public static function form(Schema $schema): Schema {
@@ -46,12 +42,11 @@ class AnnualQuotaResource extends Resource {
         if (!$user) {
             return $q->whereNull('id');
         }
-        if ($user->role === 'super_admin') {
+        
+        if ($user->can('annual_quota_view_any')) {
             return $q;
         }
-        if ($user->role === 'ctv') {
-            return $q;
-        }
+
         return $q->whereNull('id');
     }
 
@@ -64,22 +59,18 @@ class AnnualQuotaResource extends Resource {
     }
 
     public static function canViewAny(): bool {
-        $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin', 'ctv']);
+        return \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_view_any') ?? false;
     }
 
     public static function canCreate(): bool {
-        $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin']);
+        return \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_create') ?? false;
     }
 
     public static function canEdit($record): bool {
-        $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin']);
+        return \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_update') ?? false;
     }
 
     public static function canDelete($record): bool {
-        $u = \Illuminate\Support\Facades\Auth::user();
-        return $u && in_array($u->role, ['super_admin']);
+        return \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_delete') ?? false;
     }
 }
