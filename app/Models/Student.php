@@ -187,6 +187,10 @@ class Student extends Model {
         return $this->hasOne(Payment::class);
     }
 
+    public function commission() {
+        return $this->hasOne(Commission::class);
+    }
+
     public function auditLogs() {
         return $this->hasMany(AuditLog::class)->latest();
     }

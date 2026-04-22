@@ -40,8 +40,8 @@ class CommissionItem extends Model {
             self::STATUS_PAYABLE => 'Có thể thanh toán',
             self::STATUS_PAID => 'Đã thanh toán',
             self::STATUS_CANCELLED => 'Đã huỷ',
-            self::STATUS_PAYMENT_CONFIRMED => 'Đã xác nhận thanh toán',
-            self::STATUS_RECEIVED_CONFIRMED => 'Đã xác nhận nhận tiền',
+            self::STATUS_PAYMENT_CONFIRMED => 'Đã chốt & Đã chi',
+            self::STATUS_RECEIVED_CONFIRMED => 'CTV đã nhận tiền',
         ];
     }
 
@@ -113,7 +113,7 @@ class CommissionItem extends Model {
     /**
      * Đánh dấu chủ đơn vị đã xác nhận thanh toán
      */
-    public function markAsPaymentConfirmed(string $billPath, int $userId): void {
+    public function markAsPaymentConfirmed(?string $billPath, int $userId): void {
         $this->update([
             'status' => self::STATUS_PAYMENT_CONFIRMED,
             'payment_bill_path' => $billPath,

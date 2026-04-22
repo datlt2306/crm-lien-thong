@@ -56,7 +56,6 @@ class CommissionResource extends Resource {
         return $table
             ->query(CommissionItem::query())
             // Hiển thị filter như segmented control phía trên bảng
-            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContent)
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('commission.student.full_name')
                     ->label('Họ và tên')
@@ -178,11 +177,11 @@ class CommissionResource extends Resource {
                         if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
                             return 'Chưa nhận được hoa hồng';
                         }
-                        if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
-                            return 'Chờ xác nhận nhận tiền';
+                        if ($state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
+                            return 'Đã chốt & Đã chi';
                         }
-                        if ($user->role === 'ctv' && $state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            return 'Đã nhận tiền thành công';
+                        if ($state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            return 'CTV đã nhận tiền';
                         }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
                     }),
@@ -436,6 +435,40 @@ class CommissionResource extends Resource {
                                 \Filament\Notifications\Notification::make()->title("Đã xử lý phiếu thu thành công")->success()->send();
                             }
                         }),
+                    Action::make('rollback_payment')
+                        ->label('Hoàn tác Chốt sổ')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('danger')
+                        ->visible(fn($record) => $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED && in_array(Auth::user()->role, ['super_admin', 'admin', 'accountant']))
+                        ->requiresConfirmation()
+                        ->modalHeading('Hoàn tác trạng thái Chốt sổ')
+                        ->modalDescription('Học viên này sẽ quay trở lại trạng thái "Có thể thanh toán" và xuất hiện trong danh sách Chốt sổ lần sau.')
+                        ->form([
+                            \Filament\Forms\Components\Textarea::make('reason')
+                                ->label('Lý do hoàn tác')
+                                ->required()
+                                ->placeholder('Nhập lý do tại sao bạn muốn hoàn tác việc chốt sổ này...'),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->update([
+                                'status' => CommissionItem::STATUS_PAYABLE,
+                                'payment_bill_path' => null,
+                                'payment_confirmed_at' => null,
+                                'payment_confirmed_by' => null,
+                                'meta' => array_merge($record->meta ?? [], [
+                                    'rollback_history' => array_merge($record->meta['rollback_history'] ?? [], [[
+                                        'reason' => $data['reason'],
+                                        'at' => now()->toDateTimeString(),
+                                        'by' => Auth::user()->name,
+                                    ]])
+                                ]),
+                            ]);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Đã hoàn tác chốt sổ thành công')
+                                ->success()
+                                ->send();
+                        }),
                 ])
                 ->label('Thao tác')
                 ->icon('heroicon-m-ellipsis-vertical')
@@ -446,42 +479,30 @@ class CommissionResource extends Resource {
             ->bulkActions([
                 BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('bulk_confirm_payment')
-                        ->label('Xác nhận thanh toán hàng loạt')
-                        ->icon('heroicon-o-currency-dollar')
+                        ->label('Chốt sổ & Xác nhận chi hàng loạt')
+                        ->icon('heroicon-o-check-badge')
                         ->color('success')
-                        ->form([
-                            \Filament\Forms\Components\FileUpload::make('bill')
-                                ->label('Bill thanh toán chung')
-                                ->required()
-                                ->disk('local')
-                                ->directory('commission-bills')
-                                ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                ->maxSize(5120) // 5MB
-                                ->helperText('Upload một bill thanh toán chung cho tất cả các hoa hồng đã chọn'),
-                            \Filament\Forms\Components\Textarea::make('note')
-                                ->label('Ghi chú')
-                                ->rows(3)
-                                ->placeholder('Ghi chú về việc thanh toán hàng loạt này...')
-                                ->helperText('Ghi chú tùy chọn cho việc thanh toán hàng loạt'),
-                        ])
-                        ->modalHeading('Xác nhận thanh toán hàng loạt')
-                        ->modalDescription('Xác nhận đã thanh toán hoa hồng cho tất cả các CTV đã chọn. Một bill chung sẽ được áp dụng cho tất cả.')
-                        ->modalSubmitActionLabel('Xác nhận thanh toán tất cả')
+                        ->requiresConfirmation()
+                        ->modalHeading('Chốt sổ & Xác nhận đã chi tiền')
+                        ->modalDescription('Hệ thống sẽ đánh dấu các bản ghi này là "Đã chốt & Đã chi". Những sinh viên này sẽ không xuất hiện trong danh sách Chốt sổ lệ phí lần sau.')
+                        ->modalSubmitActionLabel('Xác nhận hoàn tất chi trả')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Auth::user()->role === 'super_admin')
-                        ->action(function (array $data, $records) {
+                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'admin', 'accountant']))
+                        ->action(function ($records) {
                             $userId = Auth::user()->id;
-                            $billPath = $data['bill'];
-                            $note = $data['note'] ?? null;
 
                             $successCount = 0;
                             $errorCount = 0;
 
                             foreach ($records as $record) {
                                 try {
-                                    // Chỉ xử lý các commission có thể thanh toán
-                                    if (in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])) {
-                                        $record->markAsPaymentConfirmed($billPath, $userId);
+                                    // Cho phép chốt những ai đang có thể thanh toán, chờ nhập học, hoặc đã thanh toán cũ
+                                    if (in_array($record->status, [
+                                        CommissionItem::STATUS_PAYABLE, 
+                                        CommissionItem::STATUS_PENDING,
+                                        CommissionItem::STATUS_PAID
+                                    ])) {
+                                        $record->markAsPaymentConfirmed(null, $userId);
                                         $successCount++;
                                     }
                                 } catch (\Exception $e) {
@@ -506,12 +527,6 @@ class CommissionResource extends Resource {
                         })
                         ->deselectRecordsAfterCompletion(),
 
-                    DeleteBulkAction::make()
-                        ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa hoa hồng đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các hoa hồng đã chọn? Hành động này không thể hoàn tác.')
-                        ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy'),
                 ]),
             ])
             ->headerActions([
@@ -548,11 +563,6 @@ class CommissionResource extends Resource {
         ];
     }
 
-    public static function getWidgets(): array {
-        return [
-            \App\Filament\Resources\Commissions\Widgets\CommissionSummary::class,
-        ];
-    }
 
     public static function getNavigationBadge(): ?string {
         try {
