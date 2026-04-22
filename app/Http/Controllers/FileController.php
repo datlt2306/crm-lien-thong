@@ -17,7 +17,7 @@ class FileController extends Controller {
         if (!$user) abort(403);
 
         // Kiểm tra quyền qua hệ thống Permission hoặc Role cứng (Fallback)
-        if ($user->can('payment_view') || 
+        if ($user->can('payment_view_bill') || 
             in_array($user->role, ['super_admin', 'admin', 'accountant', 'document'])) {
             return $this->serveFile($payment->bill_path);
         }

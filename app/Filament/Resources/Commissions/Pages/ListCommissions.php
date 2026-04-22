@@ -24,12 +24,9 @@ class ListCommissions extends ListRecords {
             return false;
         }
 
-        // Các vai trò được quyền xem báo cáo hoa hồng & đối soát
-        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'accountant', 'ctv'])) {
-            return true;
-        }
-
-        return false;
+        // Kiểm tra qua quyền hạn động hoặc vai trò cứng (Fallback)
+        return $user->can('commission_view_any') || 
+            in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'accountant', 'ctv', 'document']);
     }
 
 

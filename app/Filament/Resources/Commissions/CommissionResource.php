@@ -27,11 +27,10 @@ class CommissionResource extends Resource {
 
     public static function shouldRegisterNavigation(): bool {
         $user = Auth::user();
-        // Ẩn menu "Hoa hồng & Đối soát" cho cán bộ hồ sơ
-        if ($user && $user->role === 'document') {
-            return false;
-        }
-        return true; // Cho phép các role khác thấy menu, quyền truy cập sẽ được kiểm tra ở page level
+        if (!$user) return false;
+
+        // Cho phép hiển thị nếu có quyền xem danh sách hoa hồng
+        return $user->can('commission_view_any');
     }
 
     public static function form(Schema $schema): Schema {
@@ -582,8 +581,8 @@ class CommissionResource extends Resource {
                 }
 
 
-                if ($user->role === 'accountant') {
-                    // Kế toán có thể xem tất cả commissions để đối soát
+                if (in_array($user->role, ['accountant', 'document'])) {
+                    // Kế toán và Cán bộ hồ sơ có thể xem tất cả commissions để đối soát
                     return;
                 }
             });
@@ -601,7 +600,7 @@ class CommissionResource extends Resource {
             $user = Auth::user();
             if (!$user) return null;
 
-            if ($user->role === 'super_admin' || $user->role === 'accountant') {
+            if (in_array($user->role, ['super_admin', 'accountant', 'document'])) {
                 return (string) CommissionItem::count();
             }
 

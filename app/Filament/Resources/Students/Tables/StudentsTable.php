@@ -657,8 +657,8 @@ class StudentsTable {
                             $user = Auth::user();
                             if (!$user->can('payment_verify')) return false;
                             
-                            // Nếu là kế toán, cho phép xác nhận ngay cả khi chưa có record payment (tạo mới luôn)
-                            if ($user->role === 'accountant') {
+                            // Cho phép xác nhận ngay cả khi chưa có record payment (tạo mới luôn) hoặc đang ở các trạng thái chờ
+                            if (in_array($user->role, ['accountant', 'document', 'super_admin'])) {
                                 return !$record->payment || in_array($record->payment->status, [
                                     \App\Models\Payment::STATUS_NOT_PAID,
                                     \App\Models\Payment::STATUS_SUBMITTED,
@@ -674,7 +674,7 @@ class StudentsTable {
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
                             
-                            // Nếu kế toán xác nhận ngay mà chưa có record payment (thanh toán trực tiếp)
+                            // Nếu xác nhận ngay mà chưa có record payment (thanh toán trực tiếp)
                             if (!$payment) {
                                 $amount = (int) app(\App\Services\StudentFeeService::class)->getExpectedFeeForStudent($record);
                                 $payment = \App\Models\Payment::create([
@@ -709,7 +709,7 @@ class StudentsTable {
                             \Filament\Notifications\Notification::make()->title('Xác minh thành công')->success()->send();
                         }),
 
-                    // Nút riêng biệt cho Kế toán Upload Phiếu Thu
+                    // Nút riêng biệt cho Kế toán/Hồ sơ Upload Phiếu Thu
                     Action::make('upload_receipt')
                         ->label('Tải lên Phiếu thu')
                         ->icon('heroicon-o-document-arrow-up')
@@ -746,15 +746,15 @@ class StudentsTable {
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
-                            if (!$record->is_active || !$user->can('payment_upload_receipt')) return false;
+                            if (!$user->can('payment_upload_receipt')) return false;
 
                             // Nếu đã có phiếu thu rồi thì ẩn nút này đi
                             if ($record->payment && $record->payment->receipt_path) {
                                 return false;
                             }
 
-                            // Chỉ Kế toán hoặc Super Admin mới được đẩy phiếu thu chính thức
-                            return in_array($user->role, ['accountant', 'super_admin']);
+                            // Chỉ Kế toán, Hồ sơ hoặc Super Admin mới được đẩy phiếu thu chính thức
+                            return in_array($user->role, ['accountant', 'document', 'super_admin']);
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;

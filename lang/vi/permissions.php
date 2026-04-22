@@ -17,15 +17,12 @@ return [
 
     // Tài chính & Thu phí
     'payment_view_any' => 'Xem danh sách phiếu thu',
-    'payment_view' => 'Xem chi tiết phiếu thu',
-    'payment_create' => 'Lập phiếu thu mới',
-    'payment_update' => 'Sửa thông tin phiếu thu',
-    'payment_delete' => 'Xóa phiếu thu',
+    'payment_view' => 'Xem file Phiếu thu',
+    'payment_view_bill' => 'Xem Bill (Minh chứng nộp tiền)',
     'payment_verify' => 'Kế toán duyệt thanh toán',
     'payment_reverse' => 'Hoàn trả/Hủy thanh toán',
-    'payment_upload_receipt' => 'Tải lên biên lai/minh chứng',
+    'payment_upload_receipt' => 'Tải lên Phiếu thu Helen',
     'payment_report' => 'Xem báo cáo tài chính',
-    'payment_view_all' => 'Xem toàn bộ phiếu thu hệ thống',
 
     // Hoa hồng
     'commission_view_any' => 'Xem danh sách hoa hồng',

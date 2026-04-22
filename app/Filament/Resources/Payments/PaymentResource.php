@@ -283,6 +283,44 @@ class PaymentResource extends Resource {
                             ->success()
                             ->send();
                     }),
+                Action::make('upload_receipt')
+                    ->label('Tải lên phiếu thu')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('primary')
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('receipt_number')
+                            ->label('Số phiếu thu')
+                            ->required()
+                            ->helperText('Nhập số phiếu thu từ Helen'),
+                        \Filament\Forms\Components\FileUpload::make('receipt')
+                            ->label('File phiếu thu')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120) // 5MB
+                            ->disk('google')
+                            ->getUploadedFileNameForStorageUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file, Payment $record) {
+                                return $record->generateStandardReceiptPath($file->getClientOriginalExtension());
+                            })
+                            ->required()
+                            ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
+                    ])
+                    ->visible(function (Payment $record) {
+                        return $record->status === Payment::STATUS_VERIFIED 
+                            && empty($record->receipt_path)
+                            && (auth()->user()->can('payment_upload_receipt') || auth()->user()->hasRole(['accountant', 'document']));
+                    })
+                    ->action(function (array $data, Payment $record) {
+                        $record->update([
+                            'receipt_number' => $data['receipt_number'] ?? null,
+                            'receipt_path' => $data['receipt'] ?? null,
+                            'receipt_uploaded_by' => Auth::id(),
+                            'receipt_uploaded_at' => now(),
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Đã tải lên phiếu thu thành công')
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('verify')
                     ->label('Xác nhận')
                     ->icon('heroicon-o-check-circle')

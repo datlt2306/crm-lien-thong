@@ -30,14 +30,11 @@ class PermissionSeeder extends Seeder {
             // Financial Management
             'payment_view_any',
             'payment_view',
-            'payment_create',
-            'payment_update',
-            'payment_delete',
+            'payment_view_bill',
             'payment_verify',
             'payment_reverse',
             'payment_upload_receipt',
             'payment_report',
-            'payment_view_all', // Xem tất cả thay vì chỉ của mình
 
             // Commission Management
             'commission_view_any',
@@ -92,6 +89,7 @@ class PermissionSeeder extends Seeder {
         $ctv->syncPermissions([
             'commission_view_any',
             'payment_view_any',
+            'payment_view_bill',
             'payment_upload_receipt',
             'student_view_any',
             'student_create',
@@ -107,6 +105,7 @@ class PermissionSeeder extends Seeder {
             'commission_view',
             'payment_view_any',
             'payment_view',
+            'payment_view_bill',
             'payment_upload_receipt',
             'payment_verify',
             'report_view_finance',
@@ -130,6 +129,7 @@ class PermissionSeeder extends Seeder {
             'student_update',
             'payment_view_any',
             'payment_view',
+            'payment_view_bill',
             'payment_upload_receipt',
             'payment_verify',
             'commission_view_any',
