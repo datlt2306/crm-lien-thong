@@ -65,7 +65,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn(): bool => in_array(Auth::user()->role, ['super_admin']))
+                    ->visible(fn(): bool => Auth::user()->can('payment_view_any') && Auth::user()->role !== 'ctv')
                     ->formatStateUsing(function ($record) {
                         $studentCtv = $record->student->collaborator;
                         return $studentCtv ? $studentCtv->full_name : '—';
@@ -306,7 +306,7 @@ class PaymentResource extends Resource {
                     ->visible(function (Payment $record) {
                         return $record->status === Payment::STATUS_VERIFIED 
                             && empty($record->receipt_path)
-                            && (auth()->user()->can('payment_upload_receipt') || auth()->user()->hasRole(['accountant', 'document']));
+                            && auth()->user()->can('payment_upload_receipt');
                     })
                     ->action(function (array $data, Payment $record) {
                         $record->update([
@@ -344,7 +344,7 @@ class PaymentResource extends Resource {
                     ->visible(
                         fn(Payment $record): bool =>
                         $record->status === Payment::STATUS_SUBMITTED &&
-                            in_array(Auth::user()->role, ['super_admin', 'accountant', 'document'])
+                            Auth::user()->can('payment_verify')
                     )
                     ->action(function (array $data, Payment $record) {
                         \Illuminate\Support\Facades\DB::transaction(function () use ($data, $record) {
@@ -467,8 +467,8 @@ class PaymentResource extends Resource {
             return $query->whereNull('payments.id');
         }
 
-        // Super admin và Admin thấy tất cả
-        if (in_array($user->role, ['super_admin', 'admin'])) {
+        // Nếu có quyền xem toàn bộ hệ thống
+        if ($user->can('payment_view_all')) {
             return $query;
         }
 
@@ -478,7 +478,7 @@ class PaymentResource extends Resource {
         }
 
         // Cán bộ văn phòng (Kế toán, Hồ sơ) thấy các payment cần xác minh hoặc đã xác nhận
-        if ($user->can('payment_view_any') || $user->hasRole(['accountant', 'document'])) {
+        if ($user->can('payment_view_any')) {
             return $query->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]);
         }
 

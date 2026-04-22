@@ -441,7 +441,6 @@ class StudentsTable {
                         ->modalHeading(fn($record) => $record->status === Student::STATUS_SUBMITTED ? 'Cập nhật minh chứng nộp tiền' : 'Gửi Kế toán & Minh chứng')
                         ->modalDescription('Cập nhật số tiền và tải lên hóa đơn/bill chuyển khoản để Kế toán đối soát.')
                         ->modalSubmitActionLabel('Gửi xác nhận')
-                        ->modalCancelActionLabel('Hủy')
                         ->form([
                             \Filament\Forms\Components\Placeholder::make('amount_display')
                                 ->label('Số tiền dự kiến (VNĐ)')
@@ -658,7 +657,7 @@ class StudentsTable {
                             if (!$user->can('payment_verify')) return false;
                             
                             // Cho phép xác nhận ngay cả khi chưa có record payment (tạo mới luôn) hoặc đang ở các trạng thái chờ
-                            if (in_array($user->role, ['accountant', 'document', 'super_admin'])) {
+                            if ($user->can('payment_verify')) {
                                 return !$record->payment || in_array($record->payment->status, [
                                     \App\Models\Payment::STATUS_NOT_PAID,
                                     \App\Models\Payment::STATUS_SUBMITTED,
@@ -711,50 +710,50 @@ class StudentsTable {
 
                     // Nút riêng biệt cho Kế toán/Hồ sơ Upload Phiếu Thu
                     Action::make('upload_receipt')
-                        ->label('Tải lên Phiếu thu')
-                        ->icon('heroicon-o-document-arrow-up')
+                        ->label(fn(Student $record) => ($record->payment && $record->payment->receipt_path) ? 'Cập nhật Phiếu thu' : 'Tải lên Phiếu thu')
+                        ->icon(fn(Student $record) => ($record->payment && $record->payment->receipt_path) ? 'heroicon-o-pencil-square' : 'heroicon-o-document-arrow-up')
                         ->color('info')
-                        ->modalHeading('Tải lên Phiếu thu chính thức')
-                        ->modalDescription('Tải lên bản scan phiếu thu hoặc hóa đơn chính thức của nhà trường.')
-                        ->form([
-                            \Filament\Forms\Components\FileUpload::make('receipt')
-                                ->label('Phiếu thu (Bản cứng scan)')
-                                ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                ->maxSize(5120)
-                                ->disk('google')
-                                ->directory('/')
-                                ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
-                                    $year = now()->format('Y');
-                                    $profileCode = $record->profile_code;
-                                    $fullName = $record->full_name;
-                                    $major = $record->major;
-                                    $ext = $file->getClientOriginalExtension();
-                                    
-                                    $systemCode = match (strtoupper((string)$record->program_type)) {
-                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
-                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                        'DISTANCE', 'TỪ XA' => 'TX',
-                                        default => $record->program_type
-                                    };
+                        ->modalHeading('Tải lên Phiếu thu')
+                        ->modalDescription('Tải lên bản scan phiếu thu từ nhà trường.')
+                        ->form(function (Student $record): array {
+                            $payment = $record->payment;
+                            $hasReceipt = $payment && $payment->receipt_path;
 
-                                    // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
-                                    $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
-                                    
-                                    return "Phiếu thu/{$year}/{$fileName}";
-                                })
-                                ->required(),
-                        ])
+                            return [
+                                \Filament\Forms\Components\FileUpload::make('receipt')
+                                    ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'Phiếu thu (Bản cứng scan)')
+                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                    ->maxSize(5120)
+                                    ->disk('google')
+                                    ->directory('/')
+                                    ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
+                                        $year = now()->format('Y');
+                                        $profileCode = $record->profile_code;
+                                        $fullName = $record->full_name;
+                                        $major = $record->major;
+                                        $ext = $file->getClientOriginalExtension();
+                                        
+                                        $systemCode = match (strtoupper((string)$record->program_type)) {
+                                            'REGULAR', 'CHÍNH QUY' => 'CQ',
+                                            'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                            'DISTANCE', 'TỪ XA' => 'TX',
+                                            default => $record->program_type
+                                        };
+
+                                        // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
+                                        $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
+                                        
+                                        return "Phiếu thu/{$year}/{$fileName}";
+                                    })
+                                    ->required(!$hasReceipt)
+                            ];
+                        })
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
-                            if (!$user->can('payment_upload_receipt')) return false;
-
-                            // Nếu đã có phiếu thu rồi thì ẩn nút này đi
                             if ($record->payment && $record->payment->receipt_path) {
-                                return false;
+                                return $user->can('payment_update_receipt');
                             }
-
-                            // Chỉ Kế toán, Hồ sơ hoặc Super Admin mới được đẩy phiếu thu chính thức
-                            return in_array($user->role, ['accountant', 'document', 'super_admin']);
+                            return $user->can('payment_upload_receipt');
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
@@ -823,16 +822,15 @@ class StudentsTable {
                         ->requiresConfirmation()
                         ->visible(function (Student $record) {
                             $user = Auth::user();
-                            if (!$user) return false;
+                            if (!$user || !$user->can('student_change_status')) return false;
 
-                            // Chỉ CTV mới được quyền Ngưng hoạt động (theo yêu cầu người dùng)
-                            if ($user->role !== 'ctv') {
-                                return false;
+                            // Đối với CTV (hoặc người chỉ có quyền cơ bản): Chỉ được ngưng hoạt động khi CHƯA nộp tiền
+                            if ($user->role === 'ctv') {
+                                $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
+                                return $canToggle;
                             }
 
-                            // Đối với CTV: Chỉ được ngưng hoạt động khi CHƯA nộp tiền (hoặc chưa có payment record)
-                            $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
-                            return $canToggle;
+                            return true;
                         }),
 
                     Action::make('force_delete_inactive')
@@ -845,12 +843,7 @@ class StudentsTable {
                         ->action(fn($record) => $record->forceDelete())
                         ->visible(function (Student $record) {
                             $user = Auth::user();
-                            if ($record->is_active || !$user->can('student_delete')) return false;
-
-                            // Chặn Kế toán: Không được xóa vĩnh viễn
-                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
-                                return false;
-                            }
+                            if ($record->is_active || !$user->can('student_force_delete')) return false;
 
                             return true;
                         }),
@@ -862,14 +855,7 @@ class StudentsTable {
                         ->modalSubmitActionLabel('Xóa/Vô hiệu hóa')
                         ->visible(function (Student $record) {
                             $user = Auth::user();
-                            if (!$user->can('student_delete')) return false;
-
-                            // Chặn Kế toán: Không được xóa học viên
-                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
-                                return false;
-                            }
-
-                            return true;
+                            return $user->can('student_delete');
                         })
                         ->action(function ($record) {
                             // Kiểm tra dữ liệu tài chính

@@ -37,7 +37,7 @@ class Dashboard extends BaseDashboard {
         $user = Auth::user();
         $role = $user?->role;
 
-        if (in_array($role, ['super_admin', 'admin'])) {
+        if ($user->can('report_view_all')) {
             return [
                 AdminKpiStats::class,
                 CollaboratorStatsWidget::class,
@@ -54,7 +54,7 @@ class Dashboard extends BaseDashboard {
             ];
         }
 
-        if ($role === 'accountant') {
+        if ($user->can('report_view_finance')) {
             return [
                 SimpleAccountantStats::class,
                 SimplePaymentsTable::class,

@@ -16,22 +16,8 @@ class ListPayments extends ListRecords {
             return false;
         }
 
-        // Super admin, admin và organization_owner có thể xem payments
-        if (in_array($user->role, ['super_admin', 'admin', ])) {
-            return true;
-        }
-
-        // CTV có thể xem payments của mình
-        if ($user->role === 'ctv') {
-            return true;
-        }
-
-        // Kế toán có quyền xem để xử lý phiếu thu
-        if ($user->role === 'accountant') {
-            return true;
-        }
-
-        return false;
+        // Cho phép truy cập nếu có quyền xem danh sách thanh toán
+        return $user->can('payment_view_any');
     }
 
     public function getTitle(): string {

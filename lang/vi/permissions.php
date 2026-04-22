@@ -22,6 +22,7 @@ return [
     'payment_verify' => 'Kế toán duyệt thanh toán',
     'payment_reverse' => 'Hoàn trả/Hủy thanh toán',
     'payment_upload_receipt' => 'Tải lên Phiếu thu Helen',
+    'payment_update_receipt' => 'Cập nhật/Sửa Phiếu thu',
     'payment_report' => 'Xem báo cáo tài chính',
 
     // Hoa hồng
@@ -49,7 +50,8 @@ return [
 
 
     // Hệ thống & Báo cáo
-    'audit_log_view' => 'Xem nhật ký hoạt động',
+    'audit_log_view' => 'Xem nhật ký hoạt động học viên',
+    'audit_log_view_all' => 'Xem toàn bộ nhật ký hệ thống',
     'role_manage' => 'Quản lý vai trò & Phân quyền',
     'setting_manage' => 'Cấu hình hệ thống',
     'database_backup' => 'Sao lưu dữ liệu',

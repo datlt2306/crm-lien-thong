@@ -22,7 +22,7 @@ class OptimizedDashboardLoader extends Widget {
         // Preload cache cho các widget chính
         $cacheKeys = [];
 
-        if (in_array($role, ['super_admin', 'admin'])) {
+        if ($user->can('report_view_all')) {
             $cacheKeys = [
                 'admin:kpi',
                 'admin:chart',
@@ -35,7 +35,7 @@ class OptimizedDashboardLoader extends Widget {
                 "ctv:wallet:{$user->id}",
                 "ctv:students:{$user->id}"
             ];
-        } elseif ($role === 'accountant') {
+        } elseif ($user->can('report_view_finance')) {
             $cacheKeys = [
                 'accountant:pending_receipts',
                 'accountant:financial_summary',

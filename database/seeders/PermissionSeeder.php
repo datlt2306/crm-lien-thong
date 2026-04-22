@@ -34,6 +34,7 @@ class PermissionSeeder extends Seeder {
             'payment_verify',
             'payment_reverse',
             'payment_upload_receipt',
+            'payment_update_receipt',
             'payment_report',
 
             // Commission Management
@@ -61,6 +62,7 @@ class PermissionSeeder extends Seeder {
 
             // System & Tools
             'audit_log_view',
+            'audit_log_view_all',
             'role_manage',
             'setting_manage',
             'database_backup',
@@ -89,11 +91,15 @@ class PermissionSeeder extends Seeder {
         $ctv->syncPermissions([
             'commission_view_any',
             'payment_view_any',
+            'payment_view',
             'payment_view_bill',
             'payment_upload_receipt',
+            'payment_update_receipt',
             'student_view_any',
+            'student_view',
             'student_create',
             'student_update',
+            'audit_log_view',
         ]);
 
         // Gán permissions cho accountant
@@ -107,9 +113,11 @@ class PermissionSeeder extends Seeder {
             'payment_view',
             'payment_view_bill',
             'payment_upload_receipt',
+            'payment_update_receipt',
             'payment_verify',
             'report_view_finance',
             'audit_log_view',
+            'audit_log_view_all',
         ]);
 
         // Gán permissions cho admissions
@@ -131,9 +139,11 @@ class PermissionSeeder extends Seeder {
             'payment_view',
             'payment_view_bill',
             'payment_upload_receipt',
+            'payment_update_receipt',
             'payment_verify',
             'commission_view_any',
             'commission_view',
+            'audit_log_view_all',
         ]);
 
         $this->command->info('Permissions and roles created successfully!');

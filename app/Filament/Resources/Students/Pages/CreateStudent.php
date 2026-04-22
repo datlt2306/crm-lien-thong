@@ -84,6 +84,6 @@ class CreateStudent extends CreateRecord {
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'ctv', 'accountant', 'admissions']);
+        return $user && $user->can('student_create');
     }
 }

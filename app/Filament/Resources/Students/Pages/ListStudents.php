@@ -46,8 +46,7 @@ class ListStudents extends ListRecords {
     protected function getHeaderActions(): array {
         $actions = [];
 
-        // Super_admin, organization_owner, CTV và kế toán đều có thể tạo mới
-        if (in_array(Auth::user()?->role, ['super_admin', 'ctv', 'accountant'])) {
+        if (Auth::user()?->can('student_create')) {
             $actions[] = CreateAction::make()
                 ->label('Thêm học viên mới');
         }

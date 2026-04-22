@@ -46,4 +46,8 @@ class DebugWidget extends BaseWidget {
             Stat::make('User ID', (string) ($user->id ?? 'N/A'))->color('secondary'),
         ];
     }
+
+    public static function canView(): bool {
+        return Auth::user()?->can('setting_manage') ?? false;
+    }
 }

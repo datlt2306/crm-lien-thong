@@ -66,18 +66,12 @@ class CollaboratorResource extends Resource {
         $user = Auth::user();
 
         if (!$user) {
-            return $query;
-        }
-
-        // Super admin thấy tất cả
-        if ($user->role === 'super_admin') {
-            return $query;
-        }
-
-
-        if ($user->role === 'ctv') {
-            // CTV không được xem danh sách CTV khác
             return $query->whereNull('id');
+        }
+
+        // Cho phép xem nếu có quyền
+        if ($user->can('collaborator_view_any')) {
+            return $query;
         }
 
         // Mặc định: không thấy gì
@@ -89,15 +83,8 @@ class CollaboratorResource extends Resource {
             $user = Auth::user();
             if (!$user) return null;
 
-            if ($user->role === 'super_admin') {
-                // Super admin thấy tổng số CTV
+            if ($user->can('collaborator_view_any')) {
                 return (string) Collaborator::count();
-            }
-
-
-            if ($user->role === 'ctv') {
-                // CTV không thấy badge vì không thấy menu
-                return null;
             }
 
             return null;

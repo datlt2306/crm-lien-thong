@@ -157,7 +157,7 @@ class CommissionResource extends Resource {
                         }
                         return $payment->receipt_number;
                     })
-                    ->visible(fn(): bool => in_array(Auth::user()->role, ['accountant', 'super_admin']) || (Auth::user()->roles && Auth::user()->roles->contains('name', 'accountant'))),
+                    ->visible(fn(): bool => Auth::user()->can('payment_view')),
 
                 \Filament\Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
@@ -173,7 +173,7 @@ class CommissionResource extends Resource {
                         };
                     })
                     ->formatStateUsing(function (string $state, CommissionItem $record) use ($user) {
-                        if ($user->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
+                        if (Auth::user()->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
                             return 'Chưa nhận được hoa hồng';
                         }
                         if ($state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
@@ -189,7 +189,7 @@ class CommissionResource extends Resource {
                     ->label('Đã thanh toán lúc')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->visible(fn(): bool => Auth::user()->role === 'super_admin'), // Chỉ hiển thị cho super admin
+                    ->visible(fn(): bool => Auth::user()->can('commission_view_any') && Auth::user()->role !== 'ctv'),
 
             ])
             ->filters([
@@ -236,7 +236,7 @@ class CommissionResource extends Resource {
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (CommissionItem $record) use ($user): bool {
-                            return $record->status === CommissionItem::STATUS_PENDING && $user->role === 'super_admin';
+                            return $record->status === CommissionItem::STATUS_PENDING && $user->can('commission_update');
                         })
                         ->action(function (CommissionItem $record) {
                             $record->markAsPayable();
@@ -266,7 +266,7 @@ class CommissionResource extends Resource {
                         ->modalSubmitActionLabel('Xác nhận thanh toán')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (CommissionItem $record) use ($user): bool {
-                            return $user->role === 'super_admin'
+                            return $user->can('commission_payout')
                                 && $record->role === 'direct'
                                 && in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]);
                         })
@@ -335,9 +335,7 @@ class CommissionResource extends Resource {
                             $payment = $record->commission->payment;
                             if (!$payment || !$payment->receipt_path) return false;
                             
-                            // Cho phép Admin, Kế toán và CTV đều xem được phiếu thu
-                            return in_array($user->role, ['super_admin', 'accountant', 'ctv']) || 
-                                   ($user->roles && $user->roles->contains('name', 'accountant'));
+                            return $user->can('payment_view');
                         }),
 
                     Action::make('manage_receipt')
@@ -354,63 +352,53 @@ class CommissionResource extends Resource {
                             $payment = $record->commission->payment;
                             $hasReceipt = $payment && $payment->receipt_path;
 
-                            $form = [
+                            return [
                                 \Filament\Forms\Components\TextInput::make('receipt_number')
                                     ->label('Mã số phiếu thu')
                                     ->maxLength(255)
                                     ->default($payment ? $payment->receipt_number : '')
                                     ->helperText('Nhập mã số phiếu thu từ Helen'),
+
+                                \Filament\Forms\Components\FileUpload::make('receipt')
+                                    ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'File phiếu thu')
+                                    ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                    ->maxSize(5120)
+                                    ->disk('google')
+                                    ->directory('/')
+                                    ->getUploadedFileNameForStorageUsing(function ($file, CommissionItem $record) {
+                                        $payment = $record->commission->payment;
+                                        $student = $payment->student;
+                                        $year = now()->format('Y');
+                                        $profileCode = $student->profile_code;
+                                        $fullName = $student->full_name;
+                                        $major = $student->major;
+                                        $ext = $file->getClientOriginalExtension();
+                                        
+                                        $systemCode = match (strtoupper((string)$student->program_type)) {
+                                            'REGULAR', 'CHÍNH QUY' => 'CQ',
+                                            'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                            'DISTANCE', 'TỪ XA' => 'TX',
+                                            default => $student->program_type
+                                        };
+
+                                        // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
+                                        $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
+                                        
+                                        return "Phiếu thu/{$year}/{$fileName}";
+                                    })
+                                    ->required(!$hasReceipt)
                             ];
-
-                            if ($hasReceipt) {
-                                $form[] = \Filament\Forms\Components\ViewField::make('current_receipt')
-                                    ->label('Phiếu thu hiện tại')
-                                    ->view('components.bill-viewer')
-                                    ->viewData([
-                                        'payment' => $payment,
-                                        'fileUrl' => route('files.receipt.view', $payment->id),
-                                        'fileName' => basename($payment->receipt_path),
-                                    ]);
-                            }
-
-                            $form[] = \Filament\Forms\Components\FileUpload::make('receipt')
-                                ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'File phiếu thu')
-                                ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                ->maxSize(5120)
-                                ->disk('google')
-                                ->directory('/')
-                                ->getUploadedFileNameForStorageUsing(function ($file, CommissionItem $record) {
-                                    $payment = $record->commission->payment;
-                                    $student = $payment->student;
-                                    $year = now()->format('Y');
-                                    $profileCode = $student->profile_code;
-                                    $fullName = $student->full_name;
-                                    $major = $student->major;
-                                    $ext = $file->getClientOriginalExtension();
-                                    
-                                    $systemCode = match (strtoupper((string)$student->program_type)) {
-                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
-                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                        'DISTANCE', 'TỪ XA' => 'TX',
-                                        default => $student->program_type
-                                    };
-
-                                    // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
-                                    $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
-                                    
-                                    return "Phiếu thu/{$year}/{$fileName}";
-                                })
-                                ->required(!$hasReceipt);
-
-                            return $form;
                         })
                         ->visible(function (CommissionItem $record) use ($user): bool {
-                            if ($user->role !== 'accountant' && !($user->roles && $user->roles->contains('name', 'accountant'))) {
-                                return false;
-                            }
                             $payment = $record->commission?->payment;
                             if ($payment && $payment->receipt_path) {
-                                return false;
+                                if (!$user->can('payment_update_receipt')) {
+                                    return false;
+                                }
+                            } else {
+                                if (!$user->can('payment_upload_receipt')) {
+                                    return false;
+                                }
                             }
                             return in_array($record->status, [
                                 CommissionItem::STATUS_PAYABLE,
@@ -438,7 +426,7 @@ class CommissionResource extends Resource {
                         ->label('Hoàn tác Chốt sổ')
                         ->icon('heroicon-o-arrow-path')
                         ->color('danger')
-                        ->visible(fn($record) => $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED && in_array(Auth::user()->role, ['super_admin', 'admin', 'accountant']))
+                        ->visible(fn($record) => $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED && Auth::user()->can('commission_payout'))
                         ->requiresConfirmation()
                         ->modalHeading('Hoàn tác trạng thái Chốt sổ')
                         ->modalDescription('Học viên này sẽ quay trở lại trạng thái "Có thể thanh toán" và xuất hiện trong danh sách Chốt sổ lần sau.')
@@ -489,7 +477,7 @@ class CommissionResource extends Resource {
                         ->modalDescription('Hệ thống sẽ đánh dấu các bản ghi này là "Đã chốt & Đã chi". Những sinh viên này sẽ không xuất hiện trong danh sách Chốt sổ lệ phí lần sau.')
                         ->modalSubmitActionLabel('Xác nhận hoàn tất chi trả')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'admin', 'accountant']))
+                        ->visible(fn() => Auth::user()->can('commission_payout'))
                         ->action(function ($records) {
                             $batchId = (string) \Illuminate\Support\Str::uuid();
                             $userId = Auth::user()->id;
@@ -566,23 +554,19 @@ class CommissionResource extends Resource {
             ->modifyQueryUsing(function ($query) {
                 $user = Auth::user();
 
-                if ($user->role === 'super_admin') {
-                    return;
-                }
-
                 if ($user->role === 'ctv') {
                     // CTV chỉ thấy commission của chính mình (role nào xem role đó)
-                    $collaborator = Collaborator::where('email', $user->email)->first();
+                    $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
                         $query->where('recipient_collaborator_id', $collaborator->id);
                     } else {
                         $query->whereNull('id');
                     }
+                    return;
                 }
 
-
-                if (in_array($user->role, ['accountant', 'document'])) {
-                    // Kế toán và Cán bộ hồ sơ có thể xem tất cả commissions để đối soát
+                // Nếu có quyền xem bất kỳ (Hồ sơ, Kế toán, Admin)
+                if ($user->can('commission_view_any')) {
                     return;
                 }
             });
@@ -600,12 +584,12 @@ class CommissionResource extends Resource {
             $user = Auth::user();
             if (!$user) return null;
 
-            if (in_array($user->role, ['super_admin', 'accountant', 'document'])) {
-                return (string) CommissionItem::count();
-            }
+            if ($user->can('commission_view_any')) {
+                if ($user->role !== 'ctv') {
+                    return (string) CommissionItem::count();
+                }
 
-            if ($user->role === 'ctv') {
-                $collaborator = Collaborator::where('email', $user->email)->first();
+                $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                 if (!$collaborator) return '0';
                 
                 return (string) CommissionItem::where('recipient_collaborator_id', $collaborator->id)->count();

@@ -107,20 +107,19 @@ class StudentResource extends Resource {
             return $query->whereNull('students.id');
         }
 
-        // Nhóm Admin (Thấy tất cả)
-        if (in_array($user->role, ['super_admin', 'admin'])) {
+        // 1. Quyền xem tất cả (Admin, Super Admin)
+        if ($user->can('student_view_any') && in_array($user->role, ['super_admin', 'admin'])) {
             return $query;
         }
 
-        // Nhóm Cán bộ văn phòng (Kế toán, Hồ sơ, Tuyển sinh): Chỉ thấy học viên ĐANG HOẠT ĐỘNG
-        if (in_array($user->role, ['organization_owner', 'admissions', 'document', 'accountant']) || 
-            (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['organization_owner', 'admissions', 'document', 'accountant']))) {
-            return $query->where('is_active', true);
-        }
-
-        // CTV thấy sinh viên của mình (bao gồm cả Inactive để họ có thể kích hoạt lại nếu muốn)
+        // 2. CTV: Chỉ thấy sinh viên của mình (bao gồm cả Inactive)
         if ($user->role === 'ctv') {
             return $query->whereRelation('collaborator', 'email', $user->email);
+        }
+
+        // 3. Nhân sự văn phòng: Nếu có quyền xem danh sách thì thấy tất cả (vì đã có Tab lọc Active/Inactive)
+        if ($user->can('student_view_any')) {
+            return $query;
         }
 
         // Mặc định không thấy gì

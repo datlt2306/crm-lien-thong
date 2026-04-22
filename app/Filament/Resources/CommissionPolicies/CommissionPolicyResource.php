@@ -26,7 +26,7 @@ class CommissionPolicyResource extends Resource {
 
     public static function canAccess(array $parameters = []): bool {
         $user = \Illuminate\Support\Facades\Auth::user();
-        return $user && in_array($user->role, ['super_admin', 'admin']);
+        return $user && $user->can('setting_manage');
     }
 
     public static function shouldRegisterNavigation(): bool {

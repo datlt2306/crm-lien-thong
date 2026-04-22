@@ -30,7 +30,7 @@ class AuditLogResource extends Resource
 {
     public static function canAccess(array $parameters = []): bool
     {
-        return Auth::check() && in_array(Auth::user()->role, ['super_admin', 'admin', 'accountant', 'admissions', 'document', 'ctv']);
+        return Auth::check() && (Auth::user()->can('audit_log_view') || Auth::user()->can('audit_log_view_all'));
     }
 
     protected static ?string $model = AuditLog::class;
@@ -41,12 +41,12 @@ class AuditLogResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return Auth::user()?->role === 'ctv' ? 'Nhật ký học viên' : 'Nhật ký hệ thống';
+        return Auth::user()?->can('audit_log_view_all') ? 'Nhật ký hệ thống' : 'Nhật ký học viên';
     }
 
     public static function getPluralLabel(): string
     {
-        return Auth::user()?->role === 'ctv' ? 'Nhật ký học viên' : 'Nhật ký hệ thống';
+        return Auth::user()?->can('audit_log_view_all') ? 'Nhật ký hệ thống' : 'Nhật ký học viên';
     }
 
     public static function table(Table $table): Table
@@ -140,7 +140,7 @@ class AuditLogResource extends Resource
             ])
             ->actions([
                 ViewAction::make()
-                    ->visible(fn () => Auth::user()->role !== 'ctv'),
+                    ->visible(fn () => Auth::user()->can('audit_log_view_all')),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -152,7 +152,7 @@ class AuditLogResource extends Resource
 
     public static function infolist(Schema $schema): Schema
     {
-        $isAdmin = in_array(Auth::user()?->role, ['super_admin', 'admin', 'organization_owner']);
+        $isAdmin = Auth::user()?->can('audit_log_view_all');
 
         return $schema
             ->components([
@@ -235,32 +235,27 @@ class AuditLogResource extends Resource
             return $query->whereNull('id');
         }
 
-        // 1. Quản trị viên: Xem được toàn bộ nhật ký (Hệ thống, Tài chính, Xóa dữ liệu)
-        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner'])) {
+        // 1. Nếu có quyền xem toàn bộ nhật ký (Hệ thống, Tài chính, Xóa dữ liệu)
+        if ($user->can('audit_log_view_all')) {
             return $query;
         }
 
-        // 2. CTV: Chỉ xem được nhật ký liên quan đến học viên của mình
-        if ($user->role === 'ctv') {
+        // 2. Nếu chỉ có quyền xem nhật ký học viên: Chỉ xem được nhật ký liên quan đến học viên của mình
+        if ($user->can('audit_log_view')) {
             $collab = $user->collaborator;
             if ($collab) {
                 return $query->whereHas('student', function ($q) use ($collab) {
                     $q->where('collaborator_id', $collab->id);
                 });
             }
-            return $query->whereRaw('1=0');
+            
+            // Nếu là staff có quyền này nhưng không phải CTV, có thể cho xem tất cả học viên (tùy nghiệp vụ)
+            // Ở đây giả định là chỉ xem được học viên có gắn StudentID
+            return $query->whereNotNull('student_id');
         }
 
-        // 3. Kế toán: Xem được nhật ký Tài chính và các nhật ký liên quan đến học viên
-        if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
-            return $query->where(function (Builder $q) {
-                $q->where('event_group', AuditLog::GROUP_FINANCIAL)
-                  ->orWhereNotNull('student_id');
-            });
-        }
-
-        // 4. Các vai trò khác: Chỉ xem được nhật ký liên quan đến học viên, ẩn hoàn toàn Nhật ký hệ thống & Xóa dữ liệu
-        return $query->whereNotNull('student_id');
+        // Mặc định ẩn tất cả
+        return $query->whereRaw('1=0');
     }
 
     /**

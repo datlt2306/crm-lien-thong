@@ -66,9 +66,14 @@ class UserResource extends Resource {
             return $query->whereNull('id');
         }
 
-        // Mặc định cho staff: không thấy admin accounts
-        return $query->where('role', '!=', 'super_admin');
-
+        // Cho phép xem nếu có quyền
+        if ($user->can('user_view_any')) {
+            // Nếu không phải super_admin thì ẩn các tài khoản super_admin
+            if ($user->role !== 'super_admin') {
+                return $query->where('role', '!=', 'super_admin');
+            }
+            return $query;
+        }
 
         // Mặc định: không thấy gì
         return $query->whereNull('id');
@@ -79,10 +84,9 @@ class UserResource extends Resource {
             $user = Auth::user();
             if (!$user) return null;
 
-            if ($user->role === 'super_admin') {
+            if ($user->can('user_view_any')) {
                 return (string) User::count();
             }
-
 
             return null;
         } catch (\Throwable) {
