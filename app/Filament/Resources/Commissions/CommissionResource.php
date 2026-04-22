@@ -380,7 +380,28 @@ class CommissionResource extends Resource {
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120)
                                 ->disk('google')
-                                ->directory('receipts')
+                                ->directory('/')
+                                ->getUploadedFileNameForStorageUsing(function ($file, CommissionItem $record) {
+                                    $payment = $record->commission->payment;
+                                    $student = $payment->student;
+                                    $year = now()->format('Y');
+                                    $profileCode = $student->profile_code;
+                                    $fullName = $student->full_name;
+                                    $major = $student->major;
+                                    $ext = $file->getClientOriginalExtension();
+                                    
+                                    $systemCode = match (strtoupper((string)$student->program_type)) {
+                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
+                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                        'DISTANCE', 'TỪ XA' => 'TX',
+                                        default => $student->program_type
+                                    };
+
+                                    // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
+                                    $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
+                                    
+                                    return "Phiếu thu/{$year}/{$fileName}";
+                                })
                                 ->required(!$hasReceipt);
 
                             return $form;

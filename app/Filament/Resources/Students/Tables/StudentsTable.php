@@ -265,8 +265,8 @@ class StudentsTable {
                         if ($payment->bill_path) {
                             $url = $payment->bill_url;
                             $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 text-primary-600 hover:underline' title='Xem hóa đơn sv nộp'>
-                                <svg class='w-4 h-4' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' /></svg>
-                                Bill nộp tiền
+                                <svg style='width: 16px; height: 16px; display: inline-block;' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z' /><path stroke-linecap='round' stroke-linejoin='round' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /></svg>
+                                <span>Xem bill nộp tiền</span>
                             </a>";
                         }
                         
@@ -275,12 +275,12 @@ class StudentsTable {
                             $isVerified = $payment->status === Payment::STATUS_VERIFIED;
                             $url = $payment->receipt_url;
                             $colorClass = $isVerified ? 'text-success-600' : 'text-warning-600';
-                            $label = $isVerified ? 'Phiếu thu' : 'Phiếu thu (Chờ xác nhận)';
+                            $label = $isVerified ? 'Xem Phiếu thu' : 'Phiếu thu (Chờ xác nhận)';
                             $title = $isVerified ? 'Xem phiếu thu chính thức' : 'Phiếu thu đã tải lên, chờ xác minh thanh toán';
                             
                             $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 {$colorClass} hover:underline' title='{$title}'>
-                                <svg class='w-4 h-4' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z' /></svg>
-                                {$label}
+                                <svg style='width: 16px; height: 16px; display: inline-block;' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M9 14.25l6-6m4.5-3.493V21a.75.75 0 01-1.154.633L15 19.167l-3.346 2.466a.75.75 0 01-.808 0L7.5 19.167l-3.346 2.466A.75.75 0 013 21V3.757c0-1.156.985-2.026 2.129-2.107l8.742-.624a6.963 6.963 0 015.13 2.133zM9 8.25h.008v.008H9V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm5.25 7.5h.008v.008h-.008v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' /></svg>
+                                <span>[MỚI] {$label}</span>
                             </a>";
                         }
                         
@@ -436,11 +436,15 @@ class StudentsTable {
                         }),
 
                     Action::make('confirm_payment')
-                        ->label(fn() => Auth::user()?->role === 'accountant' ? 'Tiếp nhận & Thu tiền' : 'Gửi Kế toán')
+                        ->label(function() {
+                            $user = Auth::user();
+                            if (!$user) return 'Gửi Kế toán';
+                            return $user->role === 'accountant' ? 'Tiếp nhận & Thu tiền' : 'Gửi Kế toán';
+                        })
                         ->icon('heroicon-o-paper-airplane')
-                        ->color('primary')
+                        ->color('warning')
                         ->requiresConfirmation()
-                        ->modalHeading('Gửi Kế toán & Minh chứng')
+                        ->modalHeading(fn($record) => $record->status === Student::STATUS_SUBMITTED ? 'Cập nhật minh chứng nộp tiền' : 'Gửi Kế toán & Minh chứng')
                         ->modalDescription('Cập nhật số tiền và tải lên hóa đơn/bill chuyển khoản để Kế toán đối soát.')
                         ->modalSubmitActionLabel('Gửi xác nhận')
                         ->modalCancelActionLabel('Hủy')
@@ -456,7 +460,7 @@ class StudentsTable {
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120)
                                 ->disk('google')
-                                ->directory('bills')
+                                ->directory('/')
                                 ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
                                     // Sử dụng logic chuẩn hóa từ Model Payment
                                     $year = now()->format('Y');
@@ -482,25 +486,24 @@ class StudentsTable {
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
+                            if (!$record->is_active) return false;
 
-                            if ($record->status === Student::STATUS_ENROLLED || $record->status === Student::STATUS_SUBMITTED) {
+                            // Chặn Kế toán: Kế toán không dùng nút "Gửi" này mà dùng nút "Xác nhận nộp tiền" (verify_payment) bên dưới
+                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
                                 return false;
                             }
 
-                            $hasSubmittedOrVerifiedPayment = in_array(
-                                $record->payment?->status,
-                                [\App\Models\Payment::STATUS_SUBMITTED, \App\Models\Payment::STATUS_VERIFIED],
-                                true
-                            );
+                            // Đã nhập học thì không cho sửa nữa
+                            if ($record->status === Student::STATUS_ENROLLED) {
+                                return false;
+                            }
 
-                            if ($hasSubmittedOrVerifiedPayment) return false;
+                            // Nếu đã được kế toán xác minh (VERIFIED) thì không cho CTV sửa bill nữa
+                            if ($record->payment?->status === Payment::STATUS_VERIFIED) {
+                                return false;
+                            }
 
                             if (!$user->can('student_update')) return false;
-
-                            if ($user->hasRole('ctv')) {
-                                $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
-                                return !$hasVerifiedPayment;
-                            }
 
                             return true;
                         })
@@ -511,6 +514,11 @@ class StudentsTable {
 
                             $payment = $record->payment;
                             if ($payment) {
+                                // Xóa file cũ nếu tải lên file mới
+                                if ($billPath && $payment->bill_path && $billPath !== $payment->bill_path) {
+                                    Storage::disk('google')->delete($payment->bill_path);
+                                }
+
                                 $payment->update([
                                     'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
@@ -635,10 +643,25 @@ class StudentsTable {
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120)
                                 ->disk('google')
-                                ->directory('Phiếu thu')
+                                ->directory('/')
                                 ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
-                                    $year = now()->year;
-                                    return "PHIEU_THU_{$record->profile_code}_{$record->full_name}_{$year}." . $file->getClientOriginalExtension();
+                                    $year = now()->format('Y');
+                                    $profileCode = $record->profile_code;
+                                    $fullName = $record->full_name;
+                                    $major = $record->major;
+                                    $ext = $file->getClientOriginalExtension();
+                                    
+                                    $systemCode = match (strtoupper((string)$record->program_type)) {
+                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
+                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                        'DISTANCE', 'TỪ XA' => 'TX',
+                                        default => $record->program_type
+                                    };
+
+                                    // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
+                                    $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
+                                    
+                                    return "Phiếu thu/{$year}/{$fileName}";
                                 })
                                 ->helperText('Bạn có thể tải lên phiếu thu ngay bây giờ hoặc bổ sung sau bằng hành động "Tải lên Phiếu thu".'),
                         ])
@@ -711,16 +734,36 @@ class StudentsTable {
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120)
                                 ->disk('google')
-                                ->directory('Phiếu thu')
+                                ->directory('/')
                                 ->getUploadedFileNameForStorageUsing(function ($file, Student $record) {
-                                    $year = now()->year;
-                                    return "PHIEU_THU_{$record->profile_code}_{$record->full_name}_{$year}." . $file->getClientOriginalExtension();
+                                    $year = now()->format('Y');
+                                    $profileCode = $record->profile_code;
+                                    $fullName = $record->full_name;
+                                    $major = $record->major;
+                                    $ext = $file->getClientOriginalExtension();
+                                    
+                                    $systemCode = match (strtoupper((string)$record->program_type)) {
+                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
+                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                        'DISTANCE', 'TỪ XA' => 'TX',
+                                        default => $record->program_type
+                                    };
+
+                                    // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
+                                    $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
+                                    
+                                    return "Phiếu thu/{$year}/{$fileName}";
                                 })
                                 ->required(),
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
                             if (!$record->is_active || !$user->can('payment_upload_receipt')) return false;
+
+                            // Nếu đã có phiếu thu rồi thì ẩn nút này đi
+                            if ($record->payment && $record->payment->receipt_path) {
+                                return false;
+                            }
 
                             // Chỉ Kế toán hoặc Super Admin mới được đẩy phiếu thu chính thức
                             return in_array($user->role, ['accountant', 'super_admin']);
