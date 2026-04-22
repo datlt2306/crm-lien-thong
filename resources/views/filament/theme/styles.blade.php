@@ -67,4 +67,57 @@
             right: -1rem !important;
         }
     }
+
+    /* Sidebar contrast improvement for Light Mode */
+    html:not(.dark) .fi-sidebar {
+        background-color: #ffffff !important;
+        border-right: 1px solid #e5e7eb !important;
+    }
+
+    html:not(.dark) .fi-sidebar-item-button {
+        color: #374151 !important; /* text-gray-700 */
+    }
+
+    html:not(.dark) .fi-sidebar-item-button:hover {
+        background-color: #f3f4f6 !important;
+        color: #000000 !important;
+    }
+
+    html:not(.dark) .fi-sidebar-item-active .fi-sidebar-item-button {
+        background-color: #f9fafb !important;
+        color: var(--primary-600) !important;
+        font-weight: 700 !important;
+    }
+
+    html:not(.dark) .fi-sidebar-group-label {
+        color: #111827 !important; /* text-gray-900 */
+        font-weight: 800 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.65rem !important;
+        margin-top: 1rem !important;
+    }
+
+    html:not(.dark) .fi-sidebar-item-icon {
+        color: #4b5563 !important; /* text-gray-600 */
+    }
+
+    html:not(.dark) .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--primary-600) !important;
+    }
+
+    html:not(.dark) .fi-sidebar-item-badge {
+        background-color: #fee2e2 !important; /* light red for badges if needed, or stick to default */
+        color: #b91c1c !important;
+    }
+
+    /* Hide sidebar scrollbar */
+    .fi-sidebar-nav {
+        scrollbar-width: none !important; /* Firefox */
+        -ms-overflow-style: none !important; /* IE and Edge */
+    }
+
+    .fi-sidebar-nav::-webkit-scrollbar {
+        display: none !important; /* Chrome, Safari and Opera */
+    }
 </style>

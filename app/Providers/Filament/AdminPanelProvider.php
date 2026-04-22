@@ -48,6 +48,10 @@ class AdminPanelProvider extends PanelProvider {
                 fn(): string => view('components.user-name-display')->render() . view('components.referral-link')->render() . view('components.notification-bell')->render()
             )
             ->renderHook(
+                'panels::sidebar.footer',
+                fn(): string => view('components.sidebar-footer')->render()
+            )
+            ->renderHook(
                 'panels::head.end',
                 fn(): string => view('filament.theme.styles')->render()
             )

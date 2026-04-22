@@ -12,9 +12,13 @@ use Spatie\Permission\Traits\HasRoles;
 use App\Traits\HasAuditLog;
 
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
+use Filament\Models\Contracts\HasName;
 use Filament\Panel;
 
-class User extends Authenticatable implements FilamentUser {
+use Illuminate\Support\Facades\Storage;
+
+class User extends Authenticatable implements FilamentUser, HasAvatar, HasName {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles, HasAuditLog;
 
@@ -96,5 +100,29 @@ class User extends Authenticatable implements FilamentUser {
 
     public function collaborator() {
         return $this->hasOne(Collaborator::class, 'email', 'email');
+    }
+
+    /**
+     * Lấy ảnh đại diện cho Filament
+     */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        if ($this->google_avatar && str_starts_with($this->google_avatar, 'http')) {
+            return $this->google_avatar;
+        }
+
+        if ($this->avatar && Storage::disk('public')->exists($this->avatar)) {
+            return Storage::url($this->avatar);
+        }
+
+        return null;
+    }
+
+    /**
+     * Lấy tên hiển thị cho Filament
+     */
+    public function getFilamentName(): string
+    {
+        return $this->name;
     }
 }
