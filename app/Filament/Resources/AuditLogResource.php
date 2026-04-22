@@ -78,6 +78,15 @@ class AuditLogResource extends Resource
                 TextColumn::make('user_role')
                     ->label('Vai trò')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'super_admin' => 'Quản trị cấp cao',
+                        'admin' => 'Quản trị viên',
+                        'accountant' => 'Kế toán',
+                        'admissions' => 'Tuyển sinh',
+                        'document' => 'Hồ sơ',
+                        'ctv' => 'Cộng tác viên',
+                        default => $state,
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'admin', 'super_admin' => 'danger',
                         'accountant' => 'success',

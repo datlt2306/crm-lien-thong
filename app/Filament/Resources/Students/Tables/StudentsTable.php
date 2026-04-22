@@ -434,11 +434,7 @@ class StudentsTable {
                         }),
 
                     Action::make('confirm_payment')
-                        ->label(function() {
-                            $user = Auth::user();
-                            if (!$user) return 'Gửi Kế toán';
-                            return $user->role === 'accountant' ? 'Tiếp nhận & Thu tiền' : 'Gửi Kế toán';
-                        })
+                        ->label('Gửi Kế toán')
                         ->icon('heroicon-o-paper-airplane')
                         ->color('warning')
                         ->requiresConfirmation()
@@ -484,15 +480,9 @@ class StudentsTable {
                         ])
                         ->visible(function (Student $record): bool {
                             $user = Auth::user();
-                            if (!$record->is_active) return false;
-
-                            // Chặn Kế toán: Kế toán không dùng nút "Gửi" này mà dùng nút "Xác nhận nộp tiền" (verify_payment) bên dưới
-                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
-                                return false;
-                            }
-
-                            // Đã nhập học thì không cho sửa nữa
-                            if ($record->status === Student::STATUS_ENROLLED) {
+                            
+                            // Chỉ CTV mới được quyền Gửi Kế toán (submit bill)
+                            if ($user->role !== 'ctv') {
                                 return false;
                             }
 
@@ -835,23 +825,14 @@ class StudentsTable {
                             $user = Auth::user();
                             if (!$user) return false;
 
-                            // Chặn Kế toán: Không bao giờ được ngưng hoạt động học viên
-                            if ($user->role === 'accountant' || ($user->roles && $user->roles->contains('name', 'accountant'))) {
+                            // Chỉ CTV mới được quyền Ngưng hoạt động (theo yêu cầu người dùng)
+                            if ($user->role !== 'ctv') {
                                 return false;
                             }
 
-                            // Super Admin & Admin luôn thấy để xử lý mọi tình huống
-                            if (in_array($user->role, ['super_admin', 'admin'])) return true;
-
                             // Đối với CTV: Chỉ được ngưng hoạt động khi CHƯA nộp tiền (hoặc chưa có payment record)
-                            if ($user->role === 'ctv') {
-                                // Nếu chưa có payment hoặc payment đang ở trạng thái NOT_PAID
-                                $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
-                                return $canToggle;
-                            }
-
-                            // Các role văn phòng khác (Kế toán, Hồ sơ) cũng thấy nếu họ có quyền update
-                            return $user->can('student_update');
+                            $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
+                            return $canToggle;
                         }),
 
                     Action::make('force_delete_inactive')

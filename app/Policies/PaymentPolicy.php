@@ -7,28 +7,36 @@ use App\Models\User;
 
 class PaymentPolicy {
     public function viewAny(User $user): bool {
-        return $user->hasRole(['super_admin', 'admin', 'accountant', 'ctv', 'document']);
+        return $user->can('payment_view_any') || $user->hasRole(['super_admin', 'admin', 'accountant', 'document', 'ctv']);
     }
 
     public function view(User $user, Payment $payment): bool {
+        // Nếu có quyền xem chi tiết (được set qua UI phân quyền)
+        if ($user->can('payment_view')) {
+            return true;
+        }
+
+        // Mặc định cho phép Admin/Kế toán/Hồ sơ (Fallback cho các role cũ)
         if ($user->hasRole(['super_admin', 'admin', 'accountant', 'document'])) {
             return true;
         }
+
+        // CTV chỉ được xem của mình
         if ($user->hasRole('ctv')) {
             return in_array($user->id, [
                 $payment->primary_collaborator_id,
                 $payment->sub_collaborator_id,
             ]);
         }
+
         return false;
     }
 
     public function verify(User $user, Payment $payment): bool {
-        // Kế toán và cán bộ hồ sơ đều có thể xác nhận số tiền sinh viên nộp đăng ký
-        return $user->can('payment_verify') || $user->hasRole(['accountant', 'document']);
+        return $user->can('payment_verify') || $user->hasRole(['super_admin', 'admin', 'accountant', 'document']);
     }
 
     public function uploadReceipt(User $user, Payment $payment): bool {
-        return $user->hasRole('accountant');
+        return $user->can('payment_upload_receipt') || $user->hasRole(['super_admin', 'admin', 'accountant']);
     }
 }

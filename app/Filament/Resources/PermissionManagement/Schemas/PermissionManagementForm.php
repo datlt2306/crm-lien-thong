@@ -75,9 +75,20 @@ class PermissionManagementForm {
                         return $query->get()->pluck('name', 'id')->map(fn($name) => __("permissions.{$name}") ?? $name);
                     })
                     ->dehydrated(true)
-                    ->afterStateHydrated(function (CheckboxList $component, ?\Spatie\Permission\Models\Role $record) {
+                    ->afterStateHydrated(function (CheckboxList $component, ?\Spatie\Permission\Models\Role $record) use ($prefixes) {
                         if (!$record) return;
-                        $component->state($record->permissions->pluck('id')->toArray());
+                        
+                        // Chỉ lấy các permission ID thuộc về group này (dựa trên prefix)
+                        $groupPermissionIds = $record->permissions()
+                            ->where(function ($q) use ($prefixes) {
+                                foreach ($prefixes as $prefix) {
+                                    $q->orWhere('name', 'like', $prefix . '%');
+                                }
+                            })
+                            ->pluck('id')
+                            ->toArray();
+                            
+                        $component->state($groupPermissionIds);
                     })
                     ->gridDirection('row')
                     ->columns(1) // Một cột cho mỗi nhóm để nhìn rõ hơn

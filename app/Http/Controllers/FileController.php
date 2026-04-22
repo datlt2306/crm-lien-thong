@@ -11,20 +11,19 @@ use App\Models\Collaborator;
 
 class FileController extends Controller {
     public function viewBill($paymentId) {
-        // Tìm payment
         $payment = Payment::findOrFail($paymentId);
         $user = Auth::user();
 
         if (!$user) abort(403);
 
-        // Admin, Super Admin và Kế toán đều có quyền xem Bill SV để đối soát
-        if (in_array($user->role, ['super_admin', 'admin', 'accountant']) || 
-            ($user->roles && $user->roles->contains('name', 'accountant'))) {
+        // Kiểm tra quyền qua hệ thống Permission hoặc Role cứng (Fallback)
+        if ($user->can('payment_view') || 
+            in_array($user->role, ['super_admin', 'admin', 'accountant', 'document'])) {
             return $this->serveFile($payment->bill_path);
         }
 
         // CTV xem bill của học viên mình quản lý
-        if ($user->role === 'ctv') {
+        if ($user->hasRole('ctv')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
                 return $this->serveFile($payment->bill_path);
@@ -50,13 +49,14 @@ class FileController extends Controller {
 
         if (!$user) abort(403);
 
-        // Admin, Super Admin và Kế toán xem được tất cả minh chứng chi
-        if (in_array($user->role, ['super_admin', 'admin', 'accountant'])) {
+        // Kiểm tra quyền qua hệ thống Permission hoặc Role cứng (Fallback)
+        if ($user->can('commission_view') || 
+            in_array($user->role, ['super_admin', 'admin', 'accountant'])) {
             return $this->serveFile($commissionItem->payment_bill_path);
         }
 
         // CTV xem bill của chính mình
-        if ($user->role === 'ctv') {
+        if ($user->hasRole('ctv')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $commissionItem->recipient_collaborator_id === $collaborator->id) {
                 return $this->serveFile($commissionItem->payment_bill_path);
@@ -72,14 +72,14 @@ class FileController extends Controller {
 
         if (!$user) abort(403);
 
-        // Admin, Super Admin và Kế toán xem được tất cả phiếu thu
-        if (in_array($user->role, ['super_admin', 'admin', 'accountant']) || 
-            ($user->roles && $user->roles->contains('name', 'accountant'))) {
+        // Kiểm tra quyền qua hệ thống Permission hoặc Role cứng (Fallback)
+        if ($user->can('payment_view') || 
+            in_array($user->role, ['super_admin', 'admin', 'accountant', 'document'])) {
             return $this->serveFile($payment->receipt_path);
         }
 
         // CTV xem phiếu thu của học viên mình
-        if ($user->role === 'ctv') {
+        if ($user->hasRole('ctv')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
                 return $this->serveFile($payment->receipt_path);

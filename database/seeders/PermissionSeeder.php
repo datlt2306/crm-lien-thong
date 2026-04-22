@@ -104,15 +104,19 @@ class PermissionSeeder extends Seeder {
             'student_view',
             'student_update',
             'commission_view_any',
+            'commission_view',
             'payment_view_any',
+            'payment_view',
             'payment_upload_receipt',
             'payment_verify',
             'report_view_finance',
+            'audit_log_view',
         ]);
 
         // Gán permissions cho admissions
         $admissions->syncPermissions([
             'student_view_any',
+            'student_view',
             'student_create',
             'student_update',
             'collaborator_view_any',
@@ -122,9 +126,14 @@ class PermissionSeeder extends Seeder {
         // Gán permissions cho document
         $document->syncPermissions([
             'student_view_any',
+            'student_view',
             'student_update',
             'payment_view_any',
+            'payment_view',
             'payment_upload_receipt',
+            'payment_verify',
+            'commission_view_any',
+            'commission_view',
         ]);
 
         $this->command->info('Permissions and roles created successfully!');

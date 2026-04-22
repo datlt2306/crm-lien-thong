@@ -426,33 +426,36 @@ class PaymentResource extends Resource {
         $user = Auth::user();
 
         if (!$user) {
-            return $query;
+            return $query->whereNull('payments.id');
         }
 
-        // Super admin thấy tất cả
+        // Super admin và Admin thấy tất cả
         if (in_array($user->role, ['super_admin', 'admin'])) {
             return $query;
         }
 
+        // Nếu có quyền xem toàn bộ hệ thống
+        if ($user->can('payment_view_all')) {
+            return $query;
+        }
 
-        // Kế toán thấy các payment cần xác minh và đã xác nhận (để xác minh và upload phiếu thu)
-        if (self::isAccountant()) {
+        // Cán bộ văn phòng (Kế toán, Hồ sơ) thấy các payment cần xác minh hoặc đã xác nhận
+        if ($user->can('payment_view_any') || $user->hasRole(['accountant', 'document'])) {
             return $query->whereIn('status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED]);
         }
 
         // CTV thấy payments của mình
-        if ($user->role === 'ctv') {
+        if ($user->hasRole('ctv')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
-                // Lấy danh sách student IDs mà CTV này giới thiệu
-                $studentIds = \App\Models\Student::where('collaborator_id', $collaborator->id)->pluck('id');
-
-                return $query->whereIn('student_id', $studentIds);
+                return $query->whereIn('student_id', function ($q) use ($collaborator) {
+                    $q->select('id')->from('students')->where('collaborator_id', $collaborator->id);
+                });
             }
         }
 
-        // Fallback: không thấy gì
-        return $query->whereNull('id');
+        // Mặc định không thấy gì nếu không có quyền
+        return $query->whereNull('payments.id');
     }
 
     /**
