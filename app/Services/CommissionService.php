@@ -159,8 +159,14 @@ class CommissionService {
             })
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
-                    ->orWhereJsonContains('program_type', strtoupper($programType))
-                    ->orWhere('program_type', '[]'); // Case for empty array if null wasn't set
+                    ->orWhereJsonContains('program_type', strtoupper($programType));
+                
+                // Thêm kiểm tra mảng trống một cách an toàn cho PostgreSQL
+                if (DB::getDriverName() === 'pgsql') {
+                    $query->orWhereRaw('jsonb_array_length(program_type::jsonb) = 0');
+                } else {
+                    $query->orWhere('program_type', '[]');
+                }
             })
             ->where(function ($query) use ($collaboratorId) {
                 $query->whereNull('collaborator_id')

@@ -41,6 +41,11 @@ trait HasAuditLog
 
         $eventGroup = $this->getAuditLogGroup($eventType);
         
+        // ONLY log Financial and Deletion events as requested
+        if (!in_array($eventGroup, [AuditLog::GROUP_FINANCIAL, AuditLog::GROUP_ACCOUNT_DELETION])) {
+            return;
+        }
+        
         // Prepare data
         $oldValues = null;
         $newValues = null;

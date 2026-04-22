@@ -15,7 +15,9 @@ class ListStudents extends ListRecords {
 
     protected function getHeaderWidgets(): array
     {
-        return [];
+        return [
+            \App\Filament\Resources\Students\Widgets\StudentStatsWidget::class,
+        ];
     }
 
     public function getContentTabPosition(): \Filament\Resources\Pages\ListRecords\TabPosition
@@ -26,9 +28,10 @@ class ListStudents extends ListRecords {
     // Tiêm CSS để đẩy tab sang phải
     public function getTabs(): array
     {
-        $user = Auth::user();
-        // Ẩn tab đối với CTV để họ thấy tất cả học viên của mình trong một danh sách duy nhất
-        if (!$user || !in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant'])) {
+        // Chỉ hiển thị tab nếu có ít nhất 1 học viên ngừng hoạt động trong danh sách mà user được thấy
+        $hasDisabled = StudentResource::getEloquentQuery()->where('is_active', false)->exists();
+
+        if (!$hasDisabled) {
             return [];
         }
 

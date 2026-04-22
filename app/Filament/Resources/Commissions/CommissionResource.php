@@ -311,7 +311,7 @@ class CommissionResource extends Resource {
                         }),
 
                     Action::make('view_bill_student')
-                        ->label('Xem Bill nộp tiền (SV)')
+                        ->label('Xem bill nộp tiền')
                         ->icon('heroicon-o-eye')
                         ->color('info')
                         ->url(fn (CommissionItem $record) => $record->commission->payment?->bill_url)
@@ -329,7 +329,7 @@ class CommissionResource extends Resource {
                         ->visible(fn (CommissionItem $record): bool => !empty($record->payment_bill_path)),
 
                     Action::make('view_bill_receipt')
-                        ->label('Xem phiếu thu Helen')
+                        ->label('Xem phiếu thu')
                         ->icon('heroicon-o-receipt-percent')
                         ->url(fn (CommissionItem $record) => $record->commission->payment?->receipt_url)
                         ->openUrlInNewTab()

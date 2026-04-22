@@ -39,9 +39,15 @@ class AuditLogResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Hệ thống';
 
-    protected static ?string $navigationLabel = 'Nhật ký hệ thống';
+    public static function getNavigationLabel(): string
+    {
+        return Auth::user()?->role === 'ctv' ? 'Nhật ký học viên' : 'Nhật ký hệ thống';
+    }
 
-    protected static ?string $pluralLabel = 'Nhật ký hệ thống';
+    public static function getPluralLabel(): string
+    {
+        return Auth::user()?->role === 'ctv' ? 'Nhật ký học viên' : 'Nhật ký hệ thống';
+    }
 
     public static function table(Table $table): Table
     {
@@ -64,15 +70,6 @@ class AuditLogResource extends Resource
                         'ctv' => 'warning',
                         default => 'gray',
                     }),
-                TextColumn::make('event_group')
-                    ->label('Nhóm sự kiện')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        AuditLog::GROUP_FINANCIAL => 'success',
-                        AuditLog::GROUP_SECURITY => 'danger',
-                        AuditLog::GROUP_ACCOUNT_DELETION => 'warning',
-                        default => 'gray',
-                    }),
                 TextColumn::make('event_type')
                     ->label('Hành động')
                     ->searchable(),
@@ -90,14 +87,6 @@ class AuditLogResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                SelectFilter::make('event_group')
-                    ->label('Nhóm sự kiện')
-                    ->options([
-                        AuditLog::GROUP_FINANCIAL => 'Biến động tiền',
-                        AuditLog::GROUP_SECURITY => 'Bảo mật',
-                        AuditLog::GROUP_ACCOUNT_DELETION => 'Xóa tài khoản',
-                        AuditLog::GROUP_SYSTEM => 'Hệ thống',
-                    ]),
                 Filter::make('created_at')
                     ->form([
                         Forms\Components\DatePicker::make('from')->label('Từ ngày'),
@@ -132,7 +121,6 @@ class AuditLogResource extends Resource
                                 TextEntry::make('created_at')->label('Thời gian')->dateTime('d/m/Y H:i:s'),
                                 TextEntry::make('user.name')->label('Người thực hiện'),
                                 TextEntry::make('user_role')->label('Vai trò thực hiện'),
-                                TextEntry::make('event_group')->label('Nhóm sự kiện'),
                                 TextEntry::make('event_type')->label('Hành động cụ thể'),
                                                                  TextEntry::make('ip_address')
                                     ->label('Địa chỉ IP')

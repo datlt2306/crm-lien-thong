@@ -253,7 +253,7 @@ class StudentsTable {
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('payment_id_for_proof')
-                    ->label('Minh chứng')
+                    ->label('Hóa đơn')
                     ->state(fn(Student $record) => $record->id)
                     ->formatStateUsing(function ($state, Student $record) {
                         $payment = $record->payment;
@@ -266,7 +266,7 @@ class StudentsTable {
                             $url = $payment->bill_url;
                             $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 text-primary-600 hover:underline' title='Xem hóa đơn sv nộp'>
                                 <svg class='w-4 h-4' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' /></svg>
-                                Bill SV
+                                Bill nộp tiền
                             </a>";
                         }
                         
@@ -330,9 +330,40 @@ class StudentsTable {
                         if (!isset($data['value']) || $data['value'] === '') {
                             return $query;
                         }
+                        
+                        if ($data['value'] === Payment::STATUS_NOT_PAID) {
+                            return $query->where(function (Builder $q) {
+                                $q->whereDoesntHave('payment')
+                                  ->orWhereHas('payment', fn (Builder $pq) => $pq->where('status', Payment::STATUS_NOT_PAID));
+                            });
+                        }
+
                         return $query->whereHas('payment', function (Builder $paymentQuery) use ($data) {
                             $paymentQuery->where('status', $data['value']);
                         });
+                    }),
+
+                \Filament\Tables\Filters\TernaryFilter::make('missing_receipt')
+                    ->label('Thiếu phiếu thu')
+                    ->placeholder('Tất cả')
+                    ->trueLabel('Học viên thiếu phiếu thu')
+                    ->falseLabel('Học viên đã đủ phiếu thu')
+                    ->query(function (Builder $query, $state) {
+                        if ($state === '1' || $state === true) {
+                            return $query->whereHas('payment', function (Builder $q) {
+                                $q->where('status', Payment::STATUS_VERIFIED)
+                                  ->whereNull('receipt_path');
+                            });
+                        }
+
+                        if ($state === '0' || $state === false) {
+                            return $query->where(function (Builder $q) {
+                                $q->whereDoesntHave('payment')
+                                  ->orWhereHas('payment', fn (Builder $pq) => $pq->whereNotNull('receipt_path'));
+                            });
+                        }
+
+                        return $query;
                     }),
 
                 \Filament\Tables\Filters\SelectFilter::make('program_type')
