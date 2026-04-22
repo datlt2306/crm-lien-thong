@@ -45,7 +45,7 @@ class AdminPanelProvider extends PanelProvider {
             ->maxContentWidth('full')
             ->renderHook(
                 'panels::topbar.end',
-                fn(): string => view('components.user-name-display')->render() . view('components.notification-bell')->render()
+                fn(): string => view('components.user-name-display')->render() . view('components.referral-link')->render() . view('components.notification-bell')->render()
             )
             ->renderHook(
                 'panels::head.end',
