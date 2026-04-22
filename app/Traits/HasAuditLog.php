@@ -75,6 +75,12 @@ trait HasAuditLog
             $metadata = ['snapshot' => $oldValues]; // Save snapshot for deletions
         }
 
+        $metadata = $metadata ?: [];
+        if ($batchId = Request::input('audit_batch_id')) {
+            $metadata['batch_id'] = $batchId;
+            $metadata['batch_count'] = Request::input('audit_batch_count');
+        }
+
         AuditLog::create([
             'event_group' => $eventGroup,
             'event_type' => $eventType,

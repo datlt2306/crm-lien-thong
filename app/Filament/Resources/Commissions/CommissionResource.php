@@ -450,6 +450,9 @@ class CommissionResource extends Resource {
                                 ->placeholder('Nhập lý do tại sao bạn muốn hoàn tác việc chốt sổ này...'),
                         ])
                         ->action(function ($record, array $data) {
+                            // Merge reason into request so HasAuditLog trait captures it
+                            request()->merge(['audit_reason' => "Hoàn tác chốt sổ: " . $data['reason']]);
+                            
                             $record->update([
                                 'status' => CommissionItem::STATUS_PAYABLE,
                                 'payment_bill_path' => null,
@@ -489,38 +492,67 @@ class CommissionResource extends Resource {
                         ->modalCancelActionLabel('Hủy')
                         ->visible(fn() => in_array(Auth::user()->role, ['super_admin', 'admin', 'accountant']))
                         ->action(function ($records) {
+                            $batchId = (string) \Illuminate\Support\Str::uuid();
                             $userId = Auth::user()->id;
-
+                            
+                            $batchData = [];
+                            $totalAmount = 0;
                             $successCount = 0;
-                            $errorCount = 0;
 
                             foreach ($records as $record) {
-                                try {
-                                    // Cho phép chốt những ai đang có thể thanh toán, chờ nhập học, hoặc đã thanh toán cũ
-                                    if (in_array($record->status, [
-                                        CommissionItem::STATUS_PAYABLE, 
-                                        CommissionItem::STATUS_PENDING,
-                                        CommissionItem::STATUS_PAID
-                                    ])) {
-                                        $record->markAsPaymentConfirmed(null, $userId);
-                                        $successCount++;
-                                    }
-                                } catch (\Exception $e) {
-                                    $errorCount++;
+                                // Cho phép chốt những ai đang có thể thanh toán, chờ nhập học, hoặc đã thanh toán cũ
+                                if (in_array($record->status, [
+                                    CommissionItem::STATUS_PAYABLE, 
+                                    CommissionItem::STATUS_PENDING,
+                                    CommissionItem::STATUS_PAID
+                                ])) {
+                                    $studentName = $record->commission?->student?->full_name ?? 'N/A';
+                                    $collaboratorName = $record->recipient?->full_name ?? 'N/A';
+                                    $amount = (float)($record->amount ?? 0);
+
+                                    $batchData[] = [
+                                        'student' => $studentName,
+                                        'collaborator' => $collaboratorName,
+                                        'amount' => $amount,
+                                    ];
+                                    $totalAmount += $amount;
+
+                                    // Cập nhật âm thầm (không trigger trait HasAuditLog) để tránh rác 100 log lẻ
+                                    $record->updateQuietly([
+                                        'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                        'payment_confirmed_at' => now(),
+                                        'payment_confirmed_by' => $userId,
+                                    ]);
+                                    
+                                    $successCount++;
                                 }
                             }
 
-                            // Hiển thị thông báo kết quả
                             if ($successCount > 0) {
+                                // Tạo MỘT log duy nhất đại diện cho cả lô
+                                \App\Models\AuditLog::create([
+                                    'event_group' => \App\Models\AuditLog::GROUP_FINANCIAL,
+                                    'event_type' => \App\Models\AuditLog::TYPE_BATCH_CONFIRMED,
+                                    'user_id' => $userId,
+                                    'user_role' => Auth::user()->role,
+                                    'metadata' => [
+                                        'batch_id' => $batchId,
+                                        'batch_data' => $batchData,
+                                        'total_amount' => $totalAmount,
+                                    ],
+                                    'reason' => 'Chốt sổ & Xác nhận chi hàng loạt (' . $successCount . ' học viên)',
+                                    'ip_address' => request()->ip(),
+                                    'user_agent' => request()->userAgent(),
+                                    'created_at' => now(),
+                                ]);
+
                                 \Filament\Notifications\Notification::make()
-                                    ->title("Đã xác nhận thanh toán thành công {$successCount} hoa hồng")
-                                    ->body($errorCount > 0 ? "Có {$errorCount} hoa hồng không thể xử lý." : "Tất cả hoa hồng đã được xác nhận.")
+                                    ->title('Đã chốt sổ thành công cho ' . $successCount . ' học viên')
                                     ->success()
                                     ->send();
                             } else {
                                 \Filament\Notifications\Notification::make()
-                                    ->title('Không có hoa hồng nào được xác nhận')
-                                    ->body('Vui lòng kiểm tra lại trạng thái của các hoa hồng đã chọn.')
+                                    ->title('Không có học viên nào được chốt sổ')
                                     ->warning()
                                     ->send();
                             }
