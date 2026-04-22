@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Models\Payment;
 use App\Models\CommissionItem;
 use App\Models\Student;
-use App\Models\Wallet;
 use App\Services\DashboardCacheService;
 use App\Filament\Widgets\Concerns\WithDashboardFilters;
 use Carbon\CarbonImmutable;
@@ -33,11 +32,6 @@ class CtvUnifiedStats extends BaseWidget {
         });
 
         return [
-            Stat::make('Số dư ví', $stats['wallet_balance'])
-                ->description('Số tiền khả dụng')
-                ->descriptionIcon('heroicon-m-wallet')
-                ->color('success'),
-
             Stat::make('Hoa hồng chờ', $stats['pending_commission'])
                 ->description('Chờ xác nhận/nhập học')
                 ->descriptionIcon('heroicon-m-clock')
@@ -68,10 +62,6 @@ class CtvUnifiedStats extends BaseWidget {
     protected function calculateStats(array $filters, int $collabId): array {
         [$from, $to] = $this->getRangeBounds($filters);
 
-        // 1. Wallet Balance
-        $wallet = Wallet::where('collaborator_id', $collabId)->first();
-        $balance = $wallet ? $wallet->balance : 0;
-
         // 2. Pending Commission (Pending + Payable + Payment Confirmed)
         $pendingCommission = CommissionItem::where('recipient_collaborator_id', $collabId)
             ->whereIn('status', [
@@ -98,7 +88,6 @@ class CtvUnifiedStats extends BaseWidget {
         $conversionRate = $totalStudents > 0 ? round(($paidStudents / $totalStudents) * 100, 1) : 0;
 
         return [
-            'wallet_balance' => number_format($balance) . ' VND',
             'pending_commission' => number_format($pendingCommission) . ' VND',
             'paid_students' => $paidStudents,
             'total_students' => $totalStudents,

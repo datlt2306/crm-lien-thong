@@ -134,9 +134,15 @@ class AuditLogResource extends Resource
                                 TextEntry::make('user_role')->label('Vai trò thực hiện'),
                                 TextEntry::make('event_group')->label('Nhóm sự kiện'),
                                 TextEntry::make('event_type')->label('Hành động cụ thể'),
-                                TextEntry::make('ip_address')->label('Địa chỉ IP'),
+                                                                 TextEntry::make('ip_address')
+                                    ->label('Địa chỉ IP')
+                                    ->visible(fn () => Auth::user()->role !== 'ctv'),
+
                             ]),
-                        TextEntry::make('user_agent')->label('Thiết bị/Trình duyệt')->columnSpanFull(),
+                        TextEntry::make('user_agent')
+                            ->label('Thiết bị/Trình duyệt')
+                            ->columnSpanFull()
+                            ->visible(fn () => Auth::user()->role !== 'ctv'),
                     ]),
 
                 Section::make('Đối tượng tác động')
@@ -184,8 +190,8 @@ class AuditLogResource extends Resource
     {
         return [
             'index' => ListAuditLogs::route('/'),
-            'view' => ViewAuditLog::route('/{record}'),
             'timeline' => AuditTimeline::route('/timeline'),
+            'view' => ViewAuditLog::route('/{record}'),
         ];
     }
 

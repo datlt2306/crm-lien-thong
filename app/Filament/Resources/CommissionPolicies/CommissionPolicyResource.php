@@ -24,8 +24,13 @@ class CommissionPolicyResource extends Resource {
     protected static ?int $navigationSort = 3;
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
+    public static function canAccess(array $parameters = []): bool {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        return $user && in_array($user->role, ['super_admin', 'admin']);
+    }
+
     public static function shouldRegisterNavigation(): bool {
-        return Gate::allows('commission_view_any');
+        return static::canAccess();
     }
 
     public static function form(Schema $schema): Schema {

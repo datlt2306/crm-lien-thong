@@ -67,25 +67,23 @@ class StudentResource extends Resource {
             $version = \Illuminate\Support\Facades\Cache::get('crm-cache-dash:version', 1);
             $cacheKey = sprintf('students_navigation_badge:%s:%s:%s', $version, $user->id, $user->role);
 
-            return (string) Cache::remember($cacheKey, now()->addMinutes(2), function () use ($user) {
-                // Nhóm Admin & Cán bộ văn phòng đếm tất cả
-                if (in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']) || 
-                    (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant']))) {
-                    return Student::count();
+            return (string) Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user) {
+                $query = Student::query();
+
+                // Nhóm Admin & Super Admin đếm tất cả (cả active và inactive)
+                if (in_array($user->role, ['super_admin', 'admin'])) {
+                    return $query->count();
+                }
+
+                // Nhóm Cán bộ văn phòng (Kế toán, Hồ sơ, Tuyển sinh): Chỉ đếm học viên ĐANG HOẠT ĐỘNG
+                if (in_array($user->role, ['organization_owner', 'admissions', 'document', 'accountant']) || 
+                    (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['organization_owner', 'admissions', 'document', 'accountant']))) {
+                    return $query->where('is_active', true)->count();
                 }
 
                 // CTV đếm học viên của mình
                 if ($user->role === 'ctv') {
-                    return Student::whereRelation('collaborator', 'email', $user->email)->count();
-                }
-
-                // Kế toán & cán bộ hồ sơ đếm học viên đã được CTV xác nhận nộp tiền hoặc đã bị hoàn trả
-                if (
-                    $user->role === 'accountant'
-                    || $user->role === 'document'
-                    || ($user->roles && $user->roles->contains('name', 'accountant'))
-                ) {
-                    return Student::whereRelation('payment', fn($q) => $q->whereIn('status', ['submitted', 'verified', 'reverted']))->count();
+                    return $query->whereRelation('collaborator', 'email', $user->email)->count();
                 }
 
                 return 0;

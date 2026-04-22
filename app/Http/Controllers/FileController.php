@@ -13,21 +13,17 @@ class FileController extends Controller {
     public function viewBill($paymentId) {
         // Tìm payment
         $payment = Payment::findOrFail($paymentId);
-
-        // Kiểm tra quyền truy cập
         $user = Auth::user();
 
-        if (!$user) {
-            abort(403, 'Không có quyền truy cập');
-        }
+        if (!$user) abort(403);
 
-        // Super admin có thể xem tất cả
-        if ($user->role === 'super_admin') {
+        // Admin, Super Admin và Kế toán đều có quyền xem Bill SV để đối soát
+        if (in_array($user->role, ['super_admin', 'admin', 'accountant']) || 
+            ($user->roles && $user->roles->contains('name', 'accountant'))) {
             return $this->serveFile($payment->bill_path);
         }
 
-
-        // CTV có thể xem payment của mình
+        // CTV xem bill của học viên mình quản lý
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
@@ -35,41 +31,31 @@ class FileController extends Controller {
             }
         }
 
-        abort(403, 'Không có quyền truy cập file này');
+        abort(403, 'Bạn không có quyền xem minh chứng này');
     }
 
     public function publicViewBill(Request $request, $paymentId) {
-        // Tìm payment
         $payment = Payment::findOrFail($paymentId);
 
-        // Nếu yêu cầu phiếu thu (receipt)
         if ($request->query('type') === 'receipt') {
             return $this->serveFile($payment->receipt_path);
         }
 
-        // Mặc định xem minh chứng (bill)
         return $this->serveFile($payment->bill_path);
     }
 
-
     public function viewCommissionBill($commissionItemId) {
-        // Tìm commission item
         $commissionItem = \App\Models\CommissionItem::findOrFail($commissionItemId);
-
-        // Kiểm tra quyền truy cập
         $user = Auth::user();
 
-        if (!$user) {
-            abort(403, 'Không có quyền truy cập');
-        }
+        if (!$user) abort(403);
 
-        // Super admin có thể xem tất cả
-        if ($user->role === 'super_admin') {
+        // Admin, Super Admin và Kế toán xem được tất cả minh chứng chi
+        if (in_array($user->role, ['super_admin', 'admin', 'accountant'])) {
             return $this->serveFile($commissionItem->payment_bill_path);
         }
 
-
-        // CTV có thể xem commission bill của mình
+        // CTV xem bill của chính mình
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $commissionItem->recipient_collaborator_id === $collaborator->id) {
@@ -77,29 +63,22 @@ class FileController extends Controller {
             }
         }
 
-        abort(403, 'Không có quyền truy cập file này');
+        abort(403, 'Bạn không có quyền xem minh chứng chi này');
     }
 
     public function viewReceipt($paymentId) {
-        // Tìm payment
         $payment = Payment::findOrFail($paymentId);
-
-        // Kiểm tra quyền truy cập
         $user = Auth::user();
 
-        if (!$user) {
-            abort(403, 'Không có quyền truy cập');
-        }
-        // Super admin và accountant có thể xem receipt tự do
-        if (
-            in_array($user->role, ['super_admin', 'accountant']) ||
-            ($user->roles && $user->roles->contains('name', 'accountant'))
-        ) {
+        if (!$user) abort(403);
+
+        // Admin, Super Admin và Kế toán xem được tất cả phiếu thu
+        if (in_array($user->role, ['super_admin', 'admin', 'accountant']) || 
+            ($user->roles && $user->roles->contains('name', 'accountant'))) {
             return $this->serveFile($payment->receipt_path);
         }
 
-
-        // CTV chỉ được xem receipt của học viên do chính CTV đó quản lý (Chống IDOR tải chênh lệch)
+        // CTV xem phiếu thu của học viên mình
         if ($user->role === 'ctv') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
@@ -107,7 +86,7 @@ class FileController extends Controller {
             }
         }
 
-        abort(403, 'Không có quyền truy cập file này');
+        abort(403, 'Bạn không có quyền xem phiếu thu này');
     }
 
     private function serveFile($filePath) {
@@ -118,30 +97,38 @@ class FileController extends Controller {
         try {
             $disk = Storage::disk('google');
             
-            // Nếu filePath đã là một URL (hiếm gặp nhưng dự phòng)
+            // Nếu filePath đã là một URL đầy đủ
             if (filter_var($filePath, FILTER_VALIDATE_URL)) {
                 return redirect($filePath);
             }
 
-            // Lấy URL từ Disk
+            // Lấy URL từ Disk (thường là link download uc?id=)
             $url = $disk->url($filePath);
             
-            // Nếu là link Google Drive (dạng uc?id=), chuyển sang dạng view để xem được PDF/In ấn
+            // Chuyển đổi link download sang link xem trực tiếp (View) của Google Drive
+            // Hỗ trợ cả link cũ uc?id= và link mới
+            $fileId = null;
             if (str_contains($url, 'uc?id=')) {
-                $fileId = null;
                 parse_str(parse_url($url, PHP_URL_QUERY), $query);
                 $fileId = $query['id'] ?? null;
+            } elseif (preg_match('/[-\w]{25,}/', $filePath, $matches)) {
+                // Nếu filePath bản chất là một Google ID
+                $fileId = $matches[0];
+            }
 
-                if ($fileId) {
-                    // Trả về link view chính thức của Google Drive
-                    return redirect("https://docs.google.com/file/d/{$fileId}/view");
-                }
+            if ($fileId) {
+                // Dùng link drive.google.com chuẩn để xem được PDF/Ảnh và In ấn
+                return redirect("https://drive.google.com/file/d/{$fileId}/view");
             }
 
             return redirect($url);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('File View Error: ' . $e->getMessage());
-            abort(404, 'Không thể sinh liên kết cho file này. Lỗi: ' . $e->getMessage());
+            // Nếu lỗi Disk Google, thử kiểm tra xem filePath có phải là ID trực tiếp không
+            if (preg_match('/[-\w]{25,}/', $filePath, $matches)) {
+                return redirect("https://drive.google.com/file/d/{$matches[0]}/view");
+            }
+            abort(404, 'Không thể mở file. Lỗi: ' . $e->getMessage());
         }
     }
 }

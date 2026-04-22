@@ -7,7 +7,6 @@ use App\Models\CommissionItem;
 use App\Models\CommissionPolicy;
 use App\Models\Payment;
 use App\Models\Student;
-use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -211,31 +210,6 @@ class CommissionService {
     }
 
     /**
-     * Nạp tiền vào wallet
-     */
-    private function depositToWallet(int $collaboratorId, float $amount, string $description): void {
-        try {
-            $wallet = Wallet::firstOrCreate(
-                ['collaborator_id' => $collaboratorId],
-                [
-                    'balance' => 0,
-                    'total_received' => 0,
-                    'total_paid' => 0,
-                ]
-            );
-
-            $wallet->deposit($amount, $description);
-        } catch (\Throwable $e) {
-            // Không để lỗi ví làm hỏng quá trình tạo commission
-            Log::error('Wallet deposit failed', [
-                'collaborator_id' => $collaboratorId,
-                'amount' => $amount,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
      * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
      */
     public function confirmDirectReceived(CommissionItem $item, int $userId): void {
@@ -246,9 +220,6 @@ class CommissionService {
             if (!$lockedItem) return;
             if ($lockedItem->role !== 'direct') return;
             if ($lockedItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
-
-            // Nạp tiền vào ví của CTV cấp 1
-            $this->depositToWallet($lockedItem->recipient_collaborator_id, (float) $lockedItem->amount, 'CTV xác nhận nhận tiền (hoa hồng trực tiếp)');
 
             $lockedItem->markAsReceivedConfirmed($userId);
         });

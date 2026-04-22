@@ -33,13 +33,6 @@ class Collaborator extends Model {
     // Đã xóa: upline(), downlines(), allDownlines(), downlineCommissionConfigs(), uplineCommissionConfigs()
 
     /**
-     * Quan hệ: Wallet
-     */
-    public function wallet() {
-        return $this->hasOne(Wallet::class);
-    }
-
-    /**
      * Quan hệ: Commission items nhận được
      */
     public function commissionItems() {

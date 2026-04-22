@@ -200,6 +200,17 @@ class Student extends Model {
             $year = $student->created_at?->format('Y') ?? now()->format('Y');
             $student->profile_code = sprintf('HS%s%06d', $year, $student->id);
             $student->saveQuietly();
+            
+            // Refresh cache version
+            \Illuminate\Support\Facades\Cache::increment('crm-cache-dash:version');
+        });
+
+        static::saved(function (Student $student) {
+            \Illuminate\Support\Facades\Cache::increment('crm-cache-dash:version');
+        });
+
+        static::deleted(function (Student $student) {
+            \Illuminate\Support\Facades\Cache::increment('crm-cache-dash:version');
         });
 
         static::saving(function (Student $student) {

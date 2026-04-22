@@ -54,19 +54,17 @@ class CommissionItem extends Model {
         'meta' => 'array',
     ];
 
+    public function getBillUrlAttribute(): ?string {
+        if (!$this->payment_bill_path) return null;
+        return route('files.commission-bill.view', $this->id);
+    }
+
     public function commission(): BelongsTo {
         return $this->belongsTo(Commission::class);
     }
 
     public function recipient(): BelongsTo {
         return $this->belongsTo(Collaborator::class, 'recipient_collaborator_id');
-    }
-
-    /**
-     * Quan hệ: Wallet transaction liên quan
-     */
-    public function walletTransaction(): BelongsTo {
-        return $this->belongsTo(WalletTransaction::class, 'commission_item_id');
     }
 
     /**

@@ -24,15 +24,11 @@ class ListStudents extends ListRecords {
     }
 
     // Tiêm CSS để đẩy tab sang phải
-    public function getHeader(): ?\Illuminate\Contracts\View\View
-    {
-        return view('filament.components.list-students-header');
-    }
-
     public function getTabs(): array
     {
         $user = Auth::user();
-        if (!$user || !in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant', 'ctv'])) {
+        // Ẩn tab đối với CTV để họ thấy tất cả học viên của mình trong một danh sách duy nhất
+        if (!$user || !in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'admissions', 'document', 'accountant'])) {
             return [];
         }
 
@@ -40,8 +36,7 @@ class ListStudents extends ListRecords {
             'active' => Tab::make('Đang hoạt động')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true)),
             'disabled' => Tab::make('Ngừng hoạt động')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false))
-                ->icon('heroicon-m-no-symbol'),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false)),
         ];
     }
 

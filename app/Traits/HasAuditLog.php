@@ -96,7 +96,7 @@ trait HasAuditLog
             return AuditLog::GROUP_ACCOUNT_DELETION;
         }
 
-        if (in_array($class, [\App\Models\Payment::class, \App\Models\CommissionItem::class, \App\Models\WalletTransaction::class])) {
+        if (in_array($class, [\App\Models\Payment::class, \App\Models\CommissionItem::class])) {
             return AuditLog::GROUP_FINANCIAL;
         }
 

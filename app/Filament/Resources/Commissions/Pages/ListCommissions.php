@@ -18,8 +18,8 @@ class ListCommissions extends ListRecords {
             return false;
         }
 
-        // Super admin và organization_owner có thể xem commissions
-        if (in_array($user->role, ['super_admin', 'accountant', 'ctv'])) {
+        // Các vai trò được quyền xem báo cáo hoa hồng & đối soát
+        if (in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'accountant', 'ctv'])) {
             return true;
         }
 

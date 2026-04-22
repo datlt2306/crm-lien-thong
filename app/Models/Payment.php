@@ -138,6 +138,16 @@ class Payment extends Model {
         return "Phiếu thu/{$year}/{$fileName}";
     }
 
+    public function getReceiptUrlAttribute(): ?string {
+        if (!$this->receipt_path) return null;
+        return route('files.receipt.view', $this->id);
+    }
+
+    public function getBillUrlAttribute(): ?string {
+        if (!$this->bill_path) return null;
+        return route('files.bill.view', $this->id);
+    }
+
     public function student(): BelongsTo {
         return $this->belongsTo(Student::class);
     }

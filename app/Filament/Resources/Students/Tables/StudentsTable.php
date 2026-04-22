@@ -52,6 +52,14 @@ class StudentsTable {
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Hoạt động')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
                     ->searchable()
@@ -255,17 +263,17 @@ class StudentsTable {
                         
                         // Minh chứng từ SV/CTV
                         if ($payment->bill_path) {
-                            $url = route('files.bill.view', ['paymentId' => $payment->id]);
+                            $url = $payment->bill_url;
                             $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 text-primary-600 hover:underline' title='Xem hóa đơn sv nộp'>
                                 <svg class='w-4 h-4' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' /></svg>
                                 Bill SV
                             </a>";
                         }
                         
-                        // Phiếu thu từ Kế toán - Hiển thị ngay khi có file, nhưng phân biệt màu sắc theo trạng thái
+                        // Phiếu thu từ Kế toán
                         if ($payment->receipt_path) {
                             $isVerified = $payment->status === Payment::STATUS_VERIFIED;
-                            $url = route('files.receipt.view', ['paymentId' => $payment->id]);
+                            $url = $payment->receipt_url;
                             $colorClass = $isVerified ? 'text-success-600' : 'text-warning-600';
                             $label = $isVerified ? 'Phiếu thu' : 'Phiếu thu (Chờ xác nhận)';
                             $title = $isVerified ? 'Xem phiếu thu chính thức' : 'Phiếu thu đã tải lên, chờ xác minh thanh toán';
