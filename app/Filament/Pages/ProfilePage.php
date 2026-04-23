@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Pages\Page;
@@ -51,6 +52,7 @@ class ProfilePage extends Page {
             'current_password' => '',
             'password' => '',
             'password_confirmation' => '',
+            'telegram_chat_id' => $user->telegram_chat_id,
         ];
     }
 
@@ -154,6 +156,17 @@ class ProfilePage extends Page {
                 ])
                 ->columns(1)
                 ->columnSpanFull(),
+
+            Section::make('📢 Thông báo Telegram')
+                ->description('Nhận thông báo tức thì qua Telegram Bot')
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->components([
+                    TextInput::make('telegram_chat_id')
+                        ->label('Telegram Chat ID')
+                        ->placeholder('Ví dụ: 123456789')
+                        ->helperText('Chat với @userinfobot hoặc @GetIDsBot để lấy Chat ID của bạn. Bạn phải chat với Bot của hệ thống trước khi nhận tin.'),
+                ])
+                ->columnSpanFull(),
         ];
     }
 
@@ -205,6 +218,9 @@ class ProfilePage extends Page {
         /** @var User $user */
         $user->update($updateData);
 
+        // Cập nhật telegram_chat_id
+        $user->update(['telegram_chat_id' => $data['telegram_chat_id'] ?? null]);
+
         // Refresh user để lấy dữ liệu mới từ database
         $user->refresh();
 
@@ -219,6 +235,7 @@ class ProfilePage extends Page {
             'current_password' => '',
             'password' => '',
             'password_confirmation' => '',
+            'telegram_chat_id' => $user->telegram_chat_id,
         ];
 
         Notification::make()

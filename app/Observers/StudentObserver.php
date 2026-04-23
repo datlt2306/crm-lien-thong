@@ -29,6 +29,28 @@ class StudentObserver {
 
     public function created(Student $student): void {
         $this->bust();
+
+        // 1. Notify the individual collaborator
+        if ($student->collaborator_id && $student->collaborator) {
+            $user = \App\Models\User::where('email', $student->collaborator->email)->first();
+            if ($user) {
+                try {
+                    $user->notify(new \App\Notifications\StudentRegisteredNotification($student));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Collaborator): ' . $e->getMessage());
+                }
+            }
+        }
+
+        // 2. Notify Super Admins
+        $superAdmins = \App\Models\User::where('role', 'super_admin')->get();
+        foreach ($superAdmins as $admin) {
+            try {
+                $admin->notify(new \App\Notifications\StudentRegisteredNotification($student));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Telegram Notification Error (SuperAdmin): ' . $e->getMessage());
+            }
+        }
     }
 
     public function deleted(Student $student): void {

@@ -41,6 +41,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasName {
         'password',
         'role',
         'is_active',
+        'telegram_chat_id',
         'google_id',
         'google_token',
         'google_refresh_token',
@@ -81,7 +82,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasName {
      * Get or create notification preferences for the user.
      */
     public function getNotificationPreferences(): NotificationPreference {
-        return $this->notificationPreferences ?? $this->notificationPreferences()->create([]);
+        return $this->notificationPreferences()->firstOrCreate([]);
     }
 
     /**
@@ -94,8 +95,16 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasName {
             'email' => $preferences->wantsEmailFor($type),
             'push' => $preferences->wantsPushFor($type),
             'in_app' => $preferences->wantsInAppFor($type),
+            'telegram' => $preferences->wantsTelegramFor($type),
             default => false,
         };
+    }
+
+    /**
+     * Route notifications for the Telegram channel.
+     */
+    public function routeNotificationForTelegram(): ?string {
+        return $this->telegram_chat_id;
     }
 
     public function collaborator() {

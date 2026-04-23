@@ -39,6 +39,18 @@ class PaymentObserver {
                 // Tự động tạo hoa hồng dựa trên chính sách
                 $this->commissionService->createCommissionFromPayment($payment);
             } 
+            // Nếu CTV vừa upload bill (status chuyển sang SUBMITTED)
+            elseif ($newStatus === Payment::STATUS_SUBMITTED && $oldStatus !== Payment::STATUS_SUBMITTED) {
+                // Notify Super Admins and Staff who can upload receipt
+                $recipients = \App\Models\User::whereIn('role', ['super_admin', 'accountant', 'document'])->get();
+                foreach ($recipients as $user) {
+                    try {
+                        $user->notify(new \App\Notifications\PaymentBillUploadedNotification($payment));
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Bill Uploaded): ' . $e->getMessage());
+                    }
+                }
+            }
             // Nếu payment đang từ VERIFIED chuyển sang trạng thái khác (vd: bị hoàn hay hủy) thì cọng lại quota
             elseif ($oldStatus === Payment::STATUS_VERIFIED && $newStatus !== Payment::STATUS_VERIFIED) {
                 $this->quotaService->restoreQuotaOnPaymentReverted($payment);

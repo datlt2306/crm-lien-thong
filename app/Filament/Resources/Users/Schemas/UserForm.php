@@ -5,7 +5,9 @@ namespace App\Filament\Resources\Users\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 
 class UserForm {
     public static function configure(Schema $schema): Schema {
@@ -87,6 +89,45 @@ class UserForm {
                     ->helperText('Tải lên ảnh đại diện (khuyến nghị: 200x200px)')
                     ->disk('google')
                     ->directory('avatars'),
+
+                Section::make('🔔 Cấu hình thông báo')
+                    ->description('Thiết lập các loại thông báo người dùng này sẽ nhận được')
+                    ->icon('heroicon-o-bell')
+                    ->relationship('notificationPreferences')
+                    ->schema([
+                        Section::make('Telegram Notifications')
+                            ->compact()
+                            ->schema([
+                                Toggle::make('telegram_student_registered')
+                                    ->label('Sinh viên đăng ký mới'),
+                                Toggle::make('telegram_payment_bill_uploaded')
+                                    ->label('Sinh viên nộp hóa đơn mới'),
+                                Toggle::make('telegram_payment_verified')
+                                    ->label('Thanh toán được xác nhận'),
+                                Toggle::make('telegram_payment_rejected')
+                                    ->label('Thanh toán bị từ chối'),
+                                Toggle::make('telegram_commission_earned')
+                                    ->label('Nhận được hoa hồng mới'),
+                            ])
+                            ->columns(2),
+
+                        Section::make('Email Notifications')
+                            ->compact()
+                            ->schema([
+                                Toggle::make('email_student_registered')
+                                    ->label('Sinh viên đăng ký mới'),
+                                Toggle::make('email_payment_bill_uploaded')
+                                    ->label('Sinh viên nộp hóa đơn mới'),
+                                Toggle::make('email_payment_verified')
+                                    ->label('Thanh toán được xác nhận'),
+                                Toggle::make('email_payment_rejected')
+                                    ->label('Thanh toán bị từ chối'),
+                                Toggle::make('email_commission_earned')
+                                    ->label('Nhận được hoa hồng mới'),
+                            ])
+                            ->columns(2),
+                    ])
+                    ->collapsible(),
             ]);
     }
 }
