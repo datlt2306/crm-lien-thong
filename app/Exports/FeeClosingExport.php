@@ -15,7 +15,10 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class FeeClosingExport implements FromCollection, WithHeadings, WithMapping, WithEvents, ShouldAutoSize {
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+
+class FeeClosingExport implements FromCollection, WithHeadings, WithMapping, WithEvents, ShouldAutoSize, WithColumnFormatting {
     private int $rowNumber = 0;
     private float $totalAmount = 0;
 
@@ -28,28 +31,41 @@ class FeeClosingExport implements FromCollection, WithHeadings, WithMapping, Wit
 
         $collaboratorId = $this->data['collaborator_id'] ?? null;
         
-        return Student::query()
-            ->where('collaborator_id', $collaboratorId)
-            ->whereHas('payment', function ($query) use ($startDate, $endDate) {
+        \Illuminate\Support\Facades\Log::info('FeeClosingExport Query', [
+            'start_date' => $startDate->toDateTimeString(),
+            'end_date' => $endDate->toDateTimeString(),
+            'collaborator_id' => $collaboratorId,
+        ]);
+
+        $query = CommissionItem::query()
+            ->where('recipient_collaborator_id', $collaboratorId)
+            ->where('status', CommissionItem::STATUS_PAYABLE)
+            ->whereHas('commission.payment', function ($query) use ($startDate, $endDate) {
                 $query->where('status', Payment::STATUS_VERIFIED)
                     ->whereBetween('verified_at', [$startDate, $endDate]);
             })
-            ->whereHas('commission.items', function ($query) use ($collaboratorId) {
-                $query->where('recipient_collaborator_id', $collaboratorId)
-                    ->where('status', CommissionItem::STATUS_PAYABLE);
-            })
-            ->with(['payment'])
-            ->get();
+            ->with(['commission.student', 'commission.payment']);
+
+        \Illuminate\Support\Facades\Log::info('FeeClosingExport SQL', [
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings(),
+        ]);
+
+        $results = $query->get();
+        \Illuminate\Support\Facades\Log::info('FeeClosingExport Results', ['count' => $results->count()]);
+
+        return $results;
     }
 
     public function headings(): array {
         $startDate = Carbon::parse($this->data['start_date'])->format('d/m');
         $endDate = Carbon::parse($this->data['end_date'])->format('d/m/Y');
         
-        $title = $this->data['title'];
+        $title = $this->data['title'] ?? null;
         
         if (empty($title)) {
-            $collectorName = \App\Models\User::find($this->data['collector_user_id'])?->name ?? 'N/A';
+            $collectorId = $this->data['collector_user_id'] ?? null;
+            $collectorName = $collectorId ? (\App\Models\User::find($collectorId)?->name ?? 'N/A') : 'HỆ THỐNG';
             $title = "DANH SÁCH LỆ PHÍ {$collectorName} THU TỪ {$startDate} - {$endDate}";
         }
 
@@ -68,10 +84,22 @@ class FeeClosingExport implements FromCollection, WithHeadings, WithMapping, Wit
         ];
     }
 
-    public function map($student): array {
+    public function map($item): array {
         $this->rowNumber++;
-        $amount = $student->payment?->amount ?? 0;
+        $student = $item->commission?->student;
+        $amount = $item->commission?->payment?->amount ?? 0;
         $this->totalAmount += $amount;
+
+        if (!$student) {
+            return [
+                $this->rowNumber,
+                'N/A',
+                'N/A',
+                '',
+                $amount,
+                $this->data['note'] ?? 'Lệ phí hồ sơ',
+            ];
+        }
 
         // Map program type to shorthand like in the image (LTCQ, TỪ XA)
         $programShorthand = match (strtoupper((string)$student->program_type)) {
@@ -87,8 +115,8 @@ class FeeClosingExport implements FromCollection, WithHeadings, WithMapping, Wit
             $student->full_name,
             $student->dob ? Carbon::parse($student->dob)->format('d/m/y') : '',
             $student->birth_place,
-            number_format($amount, 0, ',', '.'),
-            $this->data['note'] ?: 'Lệ phí hồ sơ',
+            $amount,
+            $this->data['note'] ?? 'Lệ phí hồ sơ',
         ];
     }
 
@@ -126,12 +154,19 @@ class FeeClosingExport implements FromCollection, WithHeadings, WithMapping, Wit
                 
                 $sheet->mergeCells("A{$footerRow}:E{$footerRow}");
                 $sheet->setCellValue("A{$footerRow}", "CỘNG LỆ PHÍ HỒ SƠ TỪ NGÀY {$startDate}-{$endDate}");
-                $sheet->setCellValue("F{$footerRow}", number_format($this->totalAmount, 0, ',', '.'));
+                $sheet->setCellValue("F{$footerRow}", $this->totalAmount);
                 
                 $sheet->getStyle("A{$footerRow}:G{$footerRow}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$footerRow}:G{$footerRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
                 $sheet->getStyle("A{$footerRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("F{$footerRow}")->getNumberFormat()->setFormatCode('#,##0');
             },
+        ];
+    }
+
+    public function columnFormats(): array {
+        return [
+            'F' => '#,##0',
         ];
     }
 }

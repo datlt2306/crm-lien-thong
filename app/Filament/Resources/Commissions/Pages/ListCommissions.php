@@ -55,6 +55,15 @@ class ListCommissions extends ListRecords {
                         ->options(\App\Models\Collaborator::pluck('full_name', 'id'))
                         ->searchable()
                         ->required()
+                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
+                        ->dehydrated(true)
+                        ->default(function() {
+                            $user = Auth::user();
+                            if ($user->hasRole('ctv')) {
+                                return \App\Models\Collaborator::where('email', $user->email)->first()?->id;
+                            }
+                            return null;
+                        })
                         ->placeholder('Bắt buộc chọn một CTV')
                         ->helperText('Chọn CTV để lọc danh sách học viên'),
                     \Filament\Forms\Components\Select::make('collector_user_id')
@@ -64,20 +73,48 @@ class ListCommissions extends ListRecords {
                             ->pluck('name', 'id'))
                         ->searchable()
                         ->required()
+                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
                         ->default(fn() => Auth::id()),
                     TextInput::make('title')
                         ->label('Tiêu đề bảng kê')
+                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
                         ->placeholder('Ví dụ: DANH SÁCH LỆ PHÍ CÔ LY THU TỪ NGÀY 22/01-03/02/2026')
                         ->helperText('Để trống để tự động tạo theo mẫu: Danh sách lệ phí [Người thu] thu từ [Ngày] - [Ngày]'),
                     TextInput::make('note')
                         ->label('Ghi chú chung')
+                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
                         ->placeholder('Lệ phí hồ sơ')
                         ->default('Lệ phí hồ sơ'),
                 ])
                 ->action(function (array $data) {
-                    $startDate = Carbon::parse($data['start_date']);
-                    $endDate = Carbon::parse($data['end_date']);
+                    $user = Auth::user();
+                    if ($user->hasRole('ctv')) {
+                        $data['collaborator_id'] = \App\Models\Collaborator::where('email', $user->email)->first()?->id;
+                    }
                     
+                    $startDate = Carbon::parse($data['start_date'])->startOfDay();
+                    $endDate = Carbon::parse($data['end_date'])->endOfDay();
+                    $collaboratorId = $data['collaborator_id'];
+
+                    $count = \App\Models\CommissionItem::query()
+                        ->where('recipient_collaborator_id', $collaboratorId)
+                        ->where('status', \App\Models\CommissionItem::STATUS_PAYABLE)
+                        ->whereHas('commission.payment', function ($query) use ($startDate, $endDate) {
+                            $query->where('status', \App\Models\Payment::STATUS_VERIFIED)
+                                ->whereBetween('verified_at', [$startDate, $endDate]);
+                        })
+                        ->count();
+
+                    \Filament\Notifications\Notification::make()
+                        ->info()
+                        ->title('Thông tin đối soát')
+                        ->body("Tìm thấy {$count} mục hoa hồng phù hợp với tiêu chí.")
+                        ->send();
+
+                    if ($count === 0) {
+                        return;
+                    }
+
                     $filename = 'Chot-so-le-phi-' . $startDate->format('d-m') . '-to-' . $endDate->format('d-m-Y') . '.xlsx';
                     
                     return Excel::download(

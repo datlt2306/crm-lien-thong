@@ -183,6 +183,23 @@ class CommissionResource extends Resource {
                             return 'CTV đã nhận tiền';
                         }
                         return CommissionItem::getStatusOptions()[$state] ?? $state;
+                    })
+                    ->description(function (CommissionItem $record) {
+                        $payment = $record->commission?->payment;
+                        
+                        // 1. Ưu tiên hiển thị lý do nếu bị Hoàn trả tiền (SV rút hồ sơ)
+                        if ($payment && $payment->status === \App\Models\Payment::STATUS_REVERTED) {
+                            return "Lý do hoàn trả: " . ($payment->edit_reason ?? 'Không có ghi chú');
+                        }
+
+                        // 2. Hiển thị lý do nếu bị Hoàn tác chốt sổ (Kế toán ấn nhầm, cần sửa)
+                        $history = $record->meta['rollback_history'] ?? [];
+                        if (!empty($history)) {
+                            $lastRollback = end($history);
+                            return "Lý do hoàn tác: " . ($lastRollback['reason'] ?? 'N/A');
+                        }
+
+                        return null;
                     }),
 
                 \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
@@ -527,11 +544,18 @@ class CommissionResource extends Resource {
 
                             // Đưa học viên về trạng thái Mới để CTV có thể nộp lại
                             $student->update(['status' => \App\Models\Student::STATUS_NEW]);
+
+                            // HUỶ toàn bộ hoa hồng liên quan đến đợt thanh toán này
+                            if ($record->commission) {
+                                $record->commission->items()->update([
+                                    'status' => CommissionItem::STATUS_CANCELLED
+                                ]);
+                            }
                             
                             \Filament\Notifications\Notification::make()
                                 ->success()
                                 ->title('Đã hoàn trả trạng thái thành công')
-                                ->body('Hồ sơ học viên đã được đưa về trạng thái Mới.')
+                                ->body('Hồ sơ học viên đã được đưa về trạng thái Mới và các khoản hoa hồng liên quan đã được HUỶ.')
                                 ->send();
                         }),
                 ])

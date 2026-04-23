@@ -8,6 +8,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use App\Models\Payment;
 use App\Models\Commission;
+use App\Models\Collaborator;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
