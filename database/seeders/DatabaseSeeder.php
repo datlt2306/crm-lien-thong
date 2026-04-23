@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder {
         // Tạo admin user
         \App\Models\User::factory()->create([
             'name' => 'Super Admin',
-            'email' => 'crmlienthong',
+            'email' => 'datlt2306@gmail.com',
             'password' => bcrypt('GZN6#EPERXl#kJkd'),
             'role' => 'super_admin',
         ]);
@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder {
         $this->call(PermissionSeeder::class);
 
         // Gán role cho admin
-        $superAdmin = User::where('email', 'crmlienthong')->first();
+        $superAdmin = User::where('email', 'datlt2306@gmail.com')->first();
         if ($superAdmin) {
             $superAdmin->assignRole('super_admin');
         }
