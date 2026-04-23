@@ -52,9 +52,12 @@ class IntakeQuotaSeeder extends Seeder {
 
         $createdIntakes = [];
         foreach ($intakes as $intakeData) {
-            $intake = Intake::create($intakeData);
+            $intake = Intake::updateOrCreate(
+                ['name' => $intakeData['name']],
+                $intakeData
+            );
             $createdIntakes[] = $intake;
-            echo "✓ Đã tạo đợt tuyển sinh: {$intake->name}\n";
+            echo "✓ Đã xử lý đợt tuyển sinh: {$intake->name}\n";
         }
 
         // Tạo chỉ tiêu năm làm nguồn tổng, sau đó phân bổ cho từng đợt.
@@ -64,16 +67,19 @@ class IntakeQuotaSeeder extends Seeder {
 
         foreach ($majors as $major) {
             $annualTarget = rand(120, 300);
-            $annual = AnnualQuota::create([
-                
-                'name' => $major->name . ' - REGULAR',
-                'major_name' => $major->name,
-                'program_name' => 'REGULAR',
-                'year' => $year,
-                'target_quota' => $annualTarget,
-                'current_quota' => 0,
-                'status' => AnnualQuota::STATUS_ACTIVE,
-            ]);
+            $annual = AnnualQuota::updateOrCreate(
+                [
+                    'major_name' => $major->name,
+                    'program_name' => 'REGULAR',
+                    'year' => $year,
+                ],
+                [
+                    'name' => $major->name . ' - REGULAR',
+                    'target_quota' => $annualTarget,
+                    'current_quota' => 0,
+                    'status' => AnnualQuota::STATUS_ACTIVE,
+                ]
+            );
 
             $allocated = 0;
             foreach ($createdIntakes as $idx => $intake) {
@@ -83,19 +89,22 @@ class IntakeQuotaSeeder extends Seeder {
                     : (int) floor($annualTarget * $allocRatios[$idx]);
                 $allocated += $target;
 
-                $quota = Quota::create([
-                    'intake_id' => $intake->id,
-                    
-                    'name' => $major->name . ' - REGULAR',
-                    'major_name' => $major->name,
-                    'program_name' => 'REGULAR',
-                    'target_quota' => $target,
-                    'current_quota' => 0,
-                    'pending_quota' => rand(2, 8),
-                    'reserved_quota' => rand(0, 3),
-                    'tuition_fee' => rand(5000000, 15000000),
-                    'status' => Quota::STATUS_ACTIVE,
-                ]);
+                $quota = Quota::updateOrCreate(
+                    [
+                        'intake_id' => $intake->id,
+                        'major_name' => $major->name,
+                        'program_name' => 'REGULAR',
+                    ],
+                    [
+                        'name' => $major->name . ' - REGULAR',
+                        'target_quota' => $target,
+                        'current_quota' => 0,
+                        'pending_quota' => rand(2, 8),
+                        'reserved_quota' => rand(0, 3),
+                        'tuition_fee' => rand(5000000, 15000000),
+                        'status' => Quota::STATUS_ACTIVE,
+                    ]
+                );
 
                 echo "  ✓ Đợt {$intake->name} - {$major->name}: {$quota->target_quota}/{$annual->target_quota}\n";
             }

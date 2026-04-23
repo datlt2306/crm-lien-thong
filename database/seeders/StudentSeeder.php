@@ -179,7 +179,11 @@ class StudentSeeder extends Seeder {
             $quota = $quotas->random();
             $studentData['quota_id'] = $quota->id;
             $studentData['intake_id'] = $quota->intake_id;
-            Student::create($studentData);
+            
+            Student::updateOrCreate(
+                ['email' => $studentData['email']],
+                $studentData
+            );
         }
     }
 }

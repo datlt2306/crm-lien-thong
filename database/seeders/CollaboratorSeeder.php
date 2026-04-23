@@ -53,20 +53,24 @@ class CollaboratorSeeder extends Seeder {
         ];
 
         foreach ($collaborators as $collaboratorData) {
-            // Tạo User account cho collaborator
-            $user = User::create([
-                'name' => $collaboratorData['full_name'],
-                'email' => $collaboratorData['email'],
-                'password' => bcrypt('123456'), // Mật khẩu mặc định
-                'role' => 'ctv',
-            ]);
+            // Tạo hoặc cập nhật User account cho collaborator
+            $user = User::updateOrCreate(
+                ['email' => $collaboratorData['email']],
+                [
+                    'name' => $collaboratorData['full_name'],
+                    'password' => bcrypt('123456'), // Mật khẩu mặc định
+                    'role' => 'ctv',
+                ]
+            );
 
             // Gán role 'ctv' cho collaborator
             $user->assignRole('ctv');
 
-            // Tạo Collaborator record
-            $collaborator = Collaborator::create($collaboratorData);
-
+            // Tạo hoặc cập nhật Collaborator record
+            Collaborator::updateOrCreate(
+                ['email' => $collaboratorData['email']],
+                $collaboratorData
+            );
         }
     }
 }
