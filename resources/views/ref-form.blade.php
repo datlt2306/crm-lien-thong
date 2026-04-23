@@ -214,6 +214,117 @@
             .grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 24px; }
             .content { padding: 16px; }
+            .info-tab { padding: 10px 12px; font-size: 12px; }
+        }
+
+        /* Tab Styles */
+        .info-tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 16px;
+            gap: 4px;
+        }
+        .info-tab {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .info-tab:hover {
+            color: #2563eb;
+        }
+        .info-tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* QR Code Styles */
+        .payment-container {
+            display: flex;
+            gap: 30px;
+            align-items: center; /* Căn giữa theo chiều dọc */
+            margin-top: 15px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #eef2f6;
+        }
+        .payment-details {
+            flex: 1;
+        }
+        .payment-row {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .payment-row:last-child {
+            margin-bottom: 0;
+        }
+        .payment-label {
+            color: #64748b;
+            font-size: 13px;
+            display: inline-block;
+            width: 100px;
+            flex-shrink: 0;
+        }
+        .payment-value {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 15px;
+        }
+        .qr-code-wrapper {
+            width: 150px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05);
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .qr-code-wrapper img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .qr-code-label {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 600px) {
+            .payment-container {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            .payment-row {
+                justify-content: center;
+            }
+            .payment-label {
+                width: 90px;
+                text-align: right;
+                margin-right: 10px;
+            }
+            .payment-value {
+                text-align: left;
+            }
         }
     </style>
 </head>
@@ -403,6 +514,17 @@
             return programCode || 'Chưa xác định';
         }
 
+        function switchTab(tabName) {
+            document.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            const activeTab = document.querySelector(`.info-tab[data-tab="${tabName}"]`);
+            if (activeTab) activeTab.classList.add('active');
+            
+            const activeContent = document.getElementById(`tab-${tabName}`);
+            if (activeContent) activeContent.classList.add('active');
+        }
+
         function updateFeeInfo(quotaId) {
             if (!quotaId) {
                 feeContainer.classList.add('hidden');
@@ -430,9 +552,12 @@
             const programCode = getProgramLabel(selectedQuota.program_name);
             let feeHtml = `
                 <div class="fee-info-box">
-                    <div class="fee-title">
-                        <i class="fas fa-info-circle"></i> THÔNG TIN LỆ PHÍ & THANH TOÁN
+                    <div class="info-tabs">
+                        <div class="info-tab active" data-tab="fees" onclick="switchTab('fees')">💰 Lệ phí & Thanh toán</div>
+                        <div class="info-tab" data-tab="docs" onclick="switchTab('docs')">📄 Hồ sơ cần chuẩn bị</div>
                     </div>
+
+                    <div id="tab-fees" class="tab-content active">
             `;
 
             if (programCode === 'REGULAR') {
@@ -469,22 +594,81 @@
                         </ul>
                     </div>
                 `;
-            } else {
-                feeContainer.classList.add('hidden');
-                return;
             }
 
             feeHtml += `
-                    <div class="payment-info">
-                        <div class="fee-section-title">🏦 Thông tin thanh toán:</div>
-                        <div class="payment-row"><span class="payment-label">Ngân hàng:</span> <span class="payment-value">BIDV</span></div>
-                        <div class="payment-row"><span class="payment-label">Số tài khoản:</span> <span class="payment-value">8849994466</span></div>
-                        <div class="payment-row"><span class="payment-label">Người nhận:</span> <span class="payment-value">Cô Ly (Phụ trách tuyển sinh)</span></div>
-                        <div class="payment-row"><span class="payment-label">Nội dung CK:</span> <span class="payment-value">Họ tên + Ngày sinh + Nơi sinh</span></div>
+                        <div class="payment-info">
+                            <div class="fee-section-title">🏦 Thông tin thanh toán:</div>
+                            <div class="payment-container">
+                                <div class="payment-details">
+                                    <div class="payment-row"><span class="payment-label">Ngân hàng:</span> <span class="payment-value">BIDV</span></div>
+                                    <div class="payment-row"><span class="payment-label">Số tài khoản:</span> <span class="payment-value">8849994466</span></div>
+                                    <div class="payment-row"><span class="payment-label">Người nhận:</span> <span class="payment-value">Cô Ly (Phụ trách tuyển sinh)</span></div>
+                                    <div class="payment-row"><span class="payment-label">Nội dung CK:</span> <span class="payment-value">Họ tên + Ngày sinh + Nơi sinh</span></div>
+                                </div>
+                                <div class="qr-code-wrapper">
+                                    <img src="${window.location.origin}/assets/qr-ly.png" alt="QR Thanh toán" onerror="this.parentElement.style.display='none'">
+                                    <div class="qr-code-label">Quét mã để trả phí</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: #1e293b; margin-top: 12px; line-height: 1.5; background: #fffbeb; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">
+                            ⚠️ <strong>Lưu ý:</strong> Sau khi sinh viên đăng ký, vui lòng liên hệ với <strong>Cộng tác viên giới thiệu</strong> để gửi minh chứng thanh toán. Cộng tác viên sẽ giúp bạn hoàn tất thủ tục này trên hệ thống.
+                        </p>
                     </div>
-                    <p style="font-size: 13px; color: #1e293b; margin-top: 12px; line-height: 1.5; background: #fffbeb; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">
-                        ⚠️ <strong>Lưu ý:</strong> Sau khi sinh viên đăng ký, vui lòng liên hệ với <strong>Cộng tác viên giới thiệu</strong> để gửi minh chứng thanh toán. Cộng tác viên sẽ giúp bạn hoàn tất thủ tục này trên hệ thống.
-                    </p>
+
+                    <div id="tab-docs" class="tab-content">
+            `;
+
+            if (programCode === 'DISTANCE') {
+                feeHtml += `
+                    <div class="fee-section">
+                        <div class="fee-section-title">✅ Hồ sơ đăng ký gồm:</div>
+                        <ul class="fee-list" style="list-style: disc; padding-left: 20px;">
+                            <li style="margin-bottom: 8px;">
+                                📄 <strong>Phiếu đăng ký hệ Từ xa</strong> 
+                                <a href="https://docs.google.com/document/d/1qH_S7h3ehCjifGNjUAT8OOUPn6d82ZmX0zILlopwghE/edit?tab=t.0" target="_blank" style="color: #2563eb; text-decoration: underline;">Tải phiếu tại đây</a>
+                                <br><small>(Hệ từ xa không cần xin dấu xã phường vào phiếu)</small>
+                            </li>
+                            <li style="margin-bottom: 4px;">📄 01 bản sao công chứng CCCD</li>
+                            <li style="margin-bottom: 4px;">📄 01 bản sao công chứng Bằng TN CĐ, Bảng điểm</li>
+                            <li style="margin-bottom: 4px;">📷 02 ảnh 4x6 (ghi rõ họ tên, ngày sinh, nơi sinh mặt sau)</li>
+                        </ul>
+                    </div>
+                `;
+            } else {
+                feeHtml += `
+                    <div class="fee-section">
+                        <div class="fee-section-title">✅ Hồ sơ đăng ký gồm:</div>
+                        <ul class="fee-list" style="list-style: disc; padding-left: 20px;">
+                            <li style="margin-bottom: 8px;">
+                                📄 <strong>Phiếu tuyển sinh hệ CQ hoặc VHVL</strong> 
+                                <a href="https://docs.google.com/document/d/1bJi-xG6ogDXqMFDX8TGrFis5cXPm7EUVUpX4pjKEyJw/edit?tab=t.0" target="_blank" style="color: #2563eb; text-decoration: underline;">Tải phiếu tại đây</a>
+                                <br><small>(Xã phường hoặc cơ quan đang làm việc đóng dấu)</small>
+                            </li>
+                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng hợp lệ bằng tốt nghiệp Cao đẳng.</li>
+                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng bằng tốt nghiệp THPT</li>
+                            <li style="margin-bottom: 4px;">📄 01 Bản công chứng giấy chứng nhận kết quả học tập (Bảng điểm).</li>
+                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng hợp lệ giấy khai sinh.</li>
+                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng căn cước công dân.</li>
+                            <li style="margin-bottom: 4px;">📄 Giấy khám đủ sức khỏe (A3, bản gốc)</li>
+                            <li style="margin-bottom: 4px;">📷 04 ảnh chân dung 4x6 cm (Chụp trong vòng 6 tháng trở lại).</li>
+                        </ul>
+                        <p style="font-size: 13px; color: #dc2626; margin-top: 8px; font-weight: 600;">⚠️ Lưu ý: Tất cả giấy tờ cần có công chứng.</p>
+                    </div>
+                `;
+            }
+
+            feeHtml += `
+                        <div class="payment-info" style="background-color: #f0fdf4; border-left-color: #22c55e; margin-top: 15px;">
+                            <div class="fee-section-title" style="color: #166534;">📍 Địa chỉ nộp hồ sơ:</div>
+                            <div style="font-size: 13px; color: #166534; line-height: 1.6;">
+                                Số 73 Nguyễn Chí Thanh - Phường Láng - Hà Nội<br>
+                                Nhà A - Phòng 101<br>
+                                <strong>Liên hệ:</strong> <a href="tel:0966666585" style="color: #166534; font-weight: 700;">Hotline 0966666585 cô Hà</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
 
