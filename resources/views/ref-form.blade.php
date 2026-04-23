@@ -85,7 +85,6 @@
             .grid { grid-template-columns: 1fr; }
         }
 
-        .field { margin-bottom: 20px; }
         .field.full { grid-column: 1 / -1; }
 
         .label {
@@ -104,6 +103,7 @@
             font-size: 15px;
             background: #fff;
             outline: none;
+            box-sizing: border-box;
         }
         .field-textarea { min-height: 104px; resize: vertical; }
         .field-input:focus, .field-select:focus, .field-textarea:focus {
@@ -490,7 +490,7 @@
                     </div>
                 </div>
 
-                <div class="field">
+                <div class="field" style="margin-top: 10px;">
                     <label class="label">Địa chỉ <span class="req">*</span></label>
                     <input type="text" name="address" value="{{ old('address') }}" class="field-input @error('address') border-red-500 @enderror" placeholder="VD: Số 123, Đường ABC, Quận XYZ, TP. Thái Bình" required>
                     @error('address') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
@@ -520,7 +520,7 @@
                     </select>
                 </div>
 
-                <div class="field">
+                <div class="field" style="margin-top: 10px;">
                     <label class="label">Đợt tuyển sinh dự kiến <span class="req">*</span></label>
                     <select name="quota_id" id="quota_id" class="field-select @error('quota_id') border-red-500 @enderror" required disabled>
                         <option value="">-- Vui lòng chọn chương trình học trước --</option>
@@ -531,7 +531,7 @@
 
                 <div id="fee-info-container" class="hidden"></div>
 
-                <div class="field">
+                <div class="field"  style="margin-top: 10px;">
                     <label class="label">Ghi chú</label>
                     <textarea name="notes" class="field-textarea">{{ old('notes') }}</textarea>
                 </div>

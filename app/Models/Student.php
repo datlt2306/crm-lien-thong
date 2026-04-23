@@ -15,6 +15,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Student extends Model {
     use HasFactory, HasUuids;
     use \App\Traits\HasAuditLog;
+
+    public function uniqueIds(): array {
+        return ['uuid'];
+    }
     protected $fillable = [
         'profile_code',
         // I. Thông tin cơ bản

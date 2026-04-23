@@ -12,6 +12,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Payment extends Model {
     use HasFactory, HasAuditLog, HasUuids;
+
+    public function uniqueIds(): array {
+        return ['uuid'];
+    }
     protected $fillable = [
         'student_id',
         'primary_collaborator_id',
@@ -144,7 +148,7 @@ class Payment extends Model {
      * Tạo token bảo mật cho việc truy cập file công khai (Quick Win fix cho IDOR)
      */
     public function getPublicToken(): string {
-        return hash_hmac('sha256', (string) $this->id, config('app.key'));
+        return hash_hmac('sha256', (string) $this->uuid, config('app.key'));
     }
 
     public function getReceiptUrlAttribute(): ?string {

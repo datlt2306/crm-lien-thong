@@ -203,7 +203,6 @@ class PublicStudentController extends Controller {
         $this->refTrackingService->clearRefCookie();
 
         return redirect()->back()->with([
-            'success' => 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.',
             'registered_student' => [
                 'full_name' => $student->full_name,
                 'profile_code' => $student->profile_code,
