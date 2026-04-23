@@ -95,7 +95,12 @@ class CommissionResource extends Resource {
 
                 \Filament\Tables\Columns\TextColumn::make('commission.student.program_type')
                     ->label('Hệ tuyển sinh')
-                    ->formatStateUsing(fn($state) => match ($state) {
+                    ->state(function (CommissionItem $record) {
+                        return $record->meta['program_type'] ?? 
+                               ($record->commission?->rule['program_type'] ?? 
+                                $record->commission?->student?->program_type);
+                    })
+                    ->formatStateUsing(fn($state) => match (strtoupper((string)$state)) {
                         'REGULAR' => '🎓 Chính quy',
                         'PART_TIME' => '⏰ Vừa học vừa làm',
                         'DISTANCE' => '💻 Đào tạo từ xa',

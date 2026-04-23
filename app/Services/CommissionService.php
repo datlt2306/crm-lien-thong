@@ -207,10 +207,17 @@ class CommissionService {
         }
 
         // Fallback cứng cuối cùng theo hệ đào tạo (nếu không khớp bất kỳ chính sách nào)
-        return match (strtolower($programType)) {
+        return $this->getDirectCommissionAmountFallback($programType);
+    }
+
+    /**
+     * Fallback cứng cuối cùng theo hệ đào tạo (nếu không khớp bất kỳ chính sách nào)
+     */
+    private function getDirectCommissionAmountFallback(?string $programType): float {
+        return match (strtolower((string)$programType)) {
             'cq', 'regular' => 1750000,
             'vhvl', 'part_time' => 750000,
-            'distance' => 500000,
+            'distance' => 200000,
             default => 0,
         };
     }
@@ -267,51 +274,113 @@ class CommissionService {
                 ],
             ]);
 
-            // 3. Xử lý các CommissionItem chưa chi trả
+            // 3. Xử lý các CommissionItem (Trừ các dòng đã huỷ)
             $items = $commission->items()
-                ->whereIn('status', [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE])
+                ->where('status', '!=', CommissionItem::STATUS_CANCELLED)
                 ->get();
+            
+            // Chuẩn hoá role cũ (PRIMARY -> direct) cho dữ liệu seed cũ
+            foreach ($items as $item) {
+                if (strtoupper((string)$item->role) === 'PRIMARY') {
+                    $item->role = 'direct'; // Cập nhật attribute trong memory để groupBy chính xác
+                    $item->save();
+                }
+            }
 
-            // Lấy quy tắc mới
             $newRules = [];
             if ($policy && !empty($policy->payout_rules)) {
-                $programKey = strtoupper($payment->program_type);
+                $programKey = strtoupper((string)$payment->program_type);
                 $newRules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
             }
 
-            // Nếu không có rules cụ thể, dùng direct fallback
+            // Nếu không tìm thấy rule nào từ policy, dùng fallback mặc định
             if (empty($newRules)) {
-                $newAmount = $this->getDirectCommissionAmount($payment);
-                foreach ($items as $item) {
-                    if ($item->role === 'direct') {
+                $fallbackAmount = $this->getDirectCommissionAmountFallback($payment->program_type);
+                if ($fallbackAmount > 0) {
+                    $newRules = [
+                        [
+                            'recipient_type' => 'direct_ctv',
+                            'amount_vnd' => $fallbackAmount,
+                            'payout_trigger' => 'payment_verified',
+                            'description' => 'Hoa hồng mặc định theo hệ'
+                        ]
+                    ];
+                }
+            }
+
+            // Phân nhóm items và rules theo role để xử lý
+            $remainingItems = $items->groupBy('role');
+            $rulesByRole = collect($newRules)->groupBy(function($rule) {
+                return $rule['recipient_type'] === 'direct_ctv' ? 'direct' : 'override';
+            });
+
+            // 1. Xử lý các rules: Cố gắng cập nhật item hiện có, nếu không có thì tạo mới
+            foreach ($rulesByRole as $role => $roleRules) {
+                $roleItems = $remainingItems->get($role, collect());
+                
+                foreach ($roleRules as $index => $rule) {
+                    $item = $roleItems->get($index);
+                    
+                    $initialStatus = ($rule['payout_trigger'] === 'student_enrolled') 
+                        ? CommissionItem::STATUS_PENDING 
+                        : CommissionItem::STATUS_PAYABLE;
+
+                    if ($item) {
+                        // Cập nhật item hiện có
                         $item->update([
-                            'original_amount' => $item->amount,
-                            'amount' => $newAmount,
+                            'original_amount' => ($item->original_amount > 0) ? $item->original_amount : $item->amount,
+                            'amount' => (float)$rule['amount_vnd'],
+                            'trigger' => $rule['payout_trigger'],
+                            'status' => ($item->status === CommissionItem::STATUS_PAID || $item->status === CommissionItem::STATUS_PAYMENT_CONFIRMED || $item->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) 
+                                        ? $item->status // Giữ nguyên trạng thái nếu đã chi trả
+                                        : $initialStatus,
                             'is_adjusted' => true,
+                            'recipient_collaborator_id' => ($rule['recipient_type'] === 'specific_ctv') ? ($rule['recipient_id'] ?? $item->recipient_collaborator_id) : $item->recipient_collaborator_id,
                         ]);
+                        // Đánh dấu item này đã được xử lý
+                        $roleItems->forget($index);
                     } else {
-                        // Hủy các dòng override nếu không còn rule
-                        $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                        // Tạo mới nếu thiếu dòng
+                        CommissionItem::create([
+                            'commission_id' => $commission->id,
+                            'recipient_collaborator_id' => ($rule['recipient_type'] === 'direct_ctv') 
+                                ? ($payment->primary_collaborator_id ?? $payment->student->collaborator_id) 
+                                : ($rule['recipient_id'] ?? null),
+                            'role' => $role,
+                            'amount' => (float)$rule['amount_vnd'],
+                            'status' => $initialStatus,
+                            'trigger' => $rule['payout_trigger'],
+                            'payable_at' => ($initialStatus === CommissionItem::STATUS_PAYABLE) ? now() : null,
+                            'visibility' => 'visible',
+                            'is_adjusted' => true,
+                            'meta' => [
+                                'description' => $rule['description'] ?? 'Tạo mới do chuyển hệ',
+                                'program_type' => $payment->program_type,
+                            ],
+                        ]);
                     }
                 }
-            } else {
-                // Có rules mới -> Khớp và cập nhật
-                foreach ($items as $item) {
-                    $matchedRule = collect($newRules)->first(function($rule) use ($item) {
-                        return $rule['payout_trigger'] === $item->trigger && 
-                               (($rule['recipient_type'] === 'direct_ctv' && $item->role === 'direct') || 
-                                ($rule['recipient_type'] === 'specific_ctv' && $item->recipient_collaborator_id == ($rule['recipient_id'] ?? null)));
-                    });
+                
+                // 2. Hủy các item dư thừa của role này
+                foreach ($roleItems as $remainingItem) {
+                    if ($remainingItem->status !== CommissionItem::STATUS_PAID && 
+                        $remainingItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED && 
+                        $remainingItem->status !== CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                        $remainingItem->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                    }
+                }
+            }
 
-                    if ($matchedRule) {
-                        $item->update([
-                            'original_amount' => $item->amount,
-                            'amount' => (float)$matchedRule['amount_vnd'],
-                            'is_adjusted' => true,
-                        ]);
-                    } else {
-                        // Nếu không khớp rule nào mới -> Hủy
-                        $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+            // 3. Nếu không có rules nào cho một role hiện có, hủy tất cả items của role đó
+            $existingRoles = $items->pluck('role')->unique();
+            foreach ($existingRoles as $role) {
+                if (!$rulesByRole->has($role)) {
+                    foreach ($remainingItems->get($role, collect()) as $item) {
+                        if ($item->status !== CommissionItem::STATUS_PAID && 
+                            $item->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED && 
+                            $item->status !== CommissionItem::STATUS_RECEIVED_CONFIRMED) {
+                            $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                        }
                     }
                 }
             }

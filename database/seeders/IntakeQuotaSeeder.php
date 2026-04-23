@@ -65,48 +65,57 @@ class IntakeQuotaSeeder extends Seeder {
         $allocRatios = [0.40, 0.35, 0.25];
         $year = (int) ($createdIntakes[0]->start_date?->format('Y') ?? now()->format('Y'));
 
+        $programTypes = ['REGULAR', 'PART_TIME', 'DISTANCE'];
+
         foreach ($majors as $major) {
-            $annualTarget = rand(120, 300);
-            $annual = AnnualQuota::updateOrCreate(
-                [
-                    'major_name' => $major->name,
-                    'program_name' => 'REGULAR',
-                    'year' => $year,
-                ],
-                [
-                    'name' => $major->name . ' - REGULAR',
-                    'target_quota' => $annualTarget,
-                    'current_quota' => 0,
-                    'status' => AnnualQuota::STATUS_ACTIVE,
-                ]
-            );
-
-            $allocated = 0;
-            foreach ($createdIntakes as $idx => $intake) {
-                $isLast = $idx === count($createdIntakes) - 1;
-                $target = $isLast
-                    ? ($annualTarget - $allocated)
-                    : (int) floor($annualTarget * $allocRatios[$idx]);
-                $allocated += $target;
-
-                $quota = Quota::updateOrCreate(
+            foreach ($programTypes as $programType) {
+                $annualTarget = rand(50, 150);
+                $annual = AnnualQuota::updateOrCreate(
                     [
-                        'intake_id' => $intake->id,
                         'major_name' => $major->name,
-                        'program_name' => 'REGULAR',
+                        'program_name' => $programType,
+                        'year' => $year,
                     ],
                     [
-                        'name' => $major->name . ' - REGULAR',
-                        'target_quota' => $target,
+                        'name' => $major->name . ' - ' . $programType,
+                        'target_quota' => $annualTarget,
                         'current_quota' => 0,
-                        'pending_quota' => rand(2, 8),
-                        'reserved_quota' => rand(0, 3),
-                        'tuition_fee' => rand(5000000, 15000000),
-                        'status' => Quota::STATUS_ACTIVE,
+                        'status' => AnnualQuota::STATUS_ACTIVE,
                     ]
                 );
 
-                echo "  ✓ Đợt {$intake->name} - {$major->name}: {$quota->target_quota}/{$annual->target_quota}\n";
+                $allocated = 0;
+                foreach ($createdIntakes as $idx => $intake) {
+                    $isLast = $idx === count($createdIntakes) - 1;
+                    $target = $isLast
+                        ? ($annualTarget - $allocated)
+                        : (int) floor($annualTarget * $allocRatios[$idx]);
+                    $allocated += $target;
+
+                    $quota = Quota::updateOrCreate(
+                        [
+                            'intake_id' => $intake->id,
+                            'major_name' => $major->name,
+                            'program_name' => $programType,
+                        ],
+                        [
+                            'name' => $major->name . ' - ' . $programType,
+                            'target_quota' => $target,
+                            'current_quota' => 0,
+                            'pending_quota' => rand(1, 5),
+                            'reserved_quota' => rand(0, 2),
+                            'tuition_fee' => match($programType) {
+                                'REGULAR' => 15000000,
+                                'PART_TIME' => 12000000,
+                                'DISTANCE' => 9000000,
+                                default => 10000000,
+                            },
+                            'status' => Quota::STATUS_ACTIVE,
+                        ]
+                    );
+
+                    echo "  ✓ Đợt {$intake->name} - {$major->name} ({$programType}): {$quota->target_quota}/{$annual->target_quota}\n";
+                }
             }
         }
 

@@ -57,17 +57,27 @@ class ChartTestDataSeeder extends Seeder {
 
         // Tạo dữ liệu Payment & Commission
         $students = Student::all();
-        foreach ($students->take(20) as $student) {
+        foreach ($students as $student) {
             $date = $startDate->copy()->addDays(rand(0, 30));
             
+            // Lấy lệ phí theo hệ đào tạo chuẩn 2026
+            $admissionFee = match($student->program_type) {
+                'REGULAR' => 1750000,
+                'PART_TIME' => 750000,
+                'DISTANCE' => 200000,
+                default => 750000,
+            };
+
             $payment = Payment::updateOrCreate(
                 ['student_id' => $student->id],
                 [
                     'primary_collaborator_id' => $student->collaborator_id,
                     'sub_collaborator_id' => $student->collaborator_id,
                     'program_type' => $student->program_type ?? 'REGULAR',
-                    'amount' => rand(5000000, 15000000),
+                    'amount' => $admissionFee,
                     'status' => 'verified',
+                    'verified_at' => $date,
+                    'verified_by' => 1,
                     'created_at' => $date,
                 ]
             );
@@ -76,7 +86,11 @@ class ChartTestDataSeeder extends Seeder {
                 ['payment_id' => $payment->id],
                 [
                     'student_id' => $student->id,
-                    'rule' => ['type' => 'percentage', 'value' => 10],
+                    'rule' => [
+                        'type' => 'fixed', 
+                        'value' => $admissionFee,
+                        'program_type' => $student->program_type
+                    ],
                 ]
             );
 
@@ -86,10 +100,13 @@ class ChartTestDataSeeder extends Seeder {
                     'recipient_collaborator_id' => $student->collaborator_id,
                 ],
                 [
-                    'role' => 'PRIMARY',
-                    'amount' => rand(1000000, 2000000),
+                    'role' => 'direct',
+                    'amount' => $admissionFee, // Commission amount
                     'status' => $this->getRandomStatus(['pending', 'payable', 'paid']),
                     'trigger' => 'ON_VERIFICATION',
+                    'meta' => [
+                        'program_type' => $student->program_type,
+                    ],
                     'created_at' => $date,
                 ]
             );

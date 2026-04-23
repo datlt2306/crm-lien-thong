@@ -13,7 +13,11 @@ class DatabaseSeeder extends Seeder {
      * Seed the application's database.
      */
     public function run(): void {
-        // User::factory(10)->create();
+        // Clear old transactional data to avoid unique constraints during seeding
+        \App\Models\CommissionItem::truncate();
+        \App\Models\Commission::truncate();
+        \App\Models\Payment::truncate();
+        \App\Models\Student::truncate();
 
         // Tạo hoặc cập nhật admin user từ config (đảm bảo hoạt động khi cache config trên VPS)
         $adminEmail = config('app.super_admin.email', 'admin@gmail.com');

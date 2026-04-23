@@ -18,63 +18,68 @@ class CommissionPolicySeeder extends Seeder {
             return;
         }
 
-        // Global policies (áp dụng cho tất cả)
+        // Global policies (Chính sách mặc định cho toàn hệ thống)
         $globalPolicies = [
             [
                 'collaborator_id' => null,
-                'program_type' => null, // null cho tất cả
+                'program_type' => ['REGULAR', 'PART_TIME', 'DISTANCE'], // Áp dụng cho các hệ chuẩn
                 'role' => 'PRIMARY',
-                'type' => 'PASS_THROUGH',
-                'amount_vnd' => null,
-                'percent' => null,
+                'type' => 'FIXED',
+                'payout_rules' => [
+                    'REGULAR' => [
+                        [
+                            'recipient_type' => 'direct_ctv',
+                            'amount_vnd' => 1750000,
+                            'payout_trigger' => 'payment_verified',
+                            'description' => 'Hoa hồng hệ chính quy (Đợt 1)'
+                        ]
+                    ],
+                    'PART_TIME' => [
+                        [
+                            'recipient_type' => 'direct_ctv',
+                            'amount_vnd' => 750000,
+                            'payout_trigger' => 'payment_verified',
+                            'description' => 'Hoa hồng hệ vừa học vừa làm'
+                        ]
+                    ],
+                    'DISTANCE' => [
+                        [
+                            'recipient_type' => 'direct_ctv',
+                            'amount_vnd' => 200000,
+                            'payout_trigger' => 'payment_verified',
+                            'description' => 'Hoa hồng hệ đào tạo từ xa'
+                        ]
+                    ],
+                    'default' => [
+                        [
+                            'recipient_type' => 'direct_ctv',
+                            'amount_vnd' => 0,
+                            'payout_trigger' => 'payment_verified',
+                            'description' => 'Chưa cấu hình'
+                        ]
+                    ]
+                ],
                 'trigger' => 'ON_VERIFICATION',
                 'visibility' => 'INTERNAL',
                 'priority' => 0,
                 'active' => true,
-                'meta' => ['description' => 'CTV chính nhận 100% số tiền thanh toán'],
-            ],
-            [
-                'collaborator_id' => null,
-                'program_type' => ['REGULAR'], // Cột JSON yêu cầu array
-                'role' => 'SUB',
-                'type' => 'FIXED',
-                'amount_vnd' => 700000,
-                'percent' => null,
-                'trigger' => 'ON_VERIFICATION',
-                'visibility' => 'INTERNAL',
-                'priority' => 0,
-                'active' => true,
-                'meta' => ['description' => 'CTV phụ chương trình chính quy: 700k'],
-            ],
-            [
-                'collaborator_id' => null,
-                'program_type' => ['PART_TIME'],
-                'role' => 'SUB',
-                'type' => 'FIXED',
-                'amount_vnd' => 700000,
-                'percent' => null,
-                'trigger' => 'ON_ENROLLMENT',
-                'visibility' => 'INTERNAL',
-                'priority' => 0,
-                'active' => true,
-                'meta' => ['description' => 'CTV phụ chương trình bán thời gian: 700k khi nhập học'],
+                'meta' => ['description' => 'Chính sách hoa hồng mặc định 2026 cho tất cả CTV'],
             ],
         ];
 
-        // Collaborator-specific policies
+        // Collaborator-specific policies (Ví dụ chính sách riêng cho 1 CTV đặc biệt)
         $collabPolicies = [
             [
                 'collaborator_id' => $collaborators->first()->id,
-                'program_type' => null,
+                'program_type' => ['REGULAR'],
                 'role' => 'PRIMARY',
                 'type' => 'FIXED',
-                'amount_vnd' => 1000000,
-                'percent' => null,
+                'amount_vnd' => 2000000, // CTV này được ưu đãi 2tr cho hệ CQ
                 'trigger' => 'ON_VERIFICATION',
                 'visibility' => 'INTERNAL',
                 'priority' => 20,
                 'active' => true,
-                'meta' => ['description' => 'CTV ' . $collaborators->first()->full_name . ' nhận 1,000,000 VND'],
+                'meta' => ['description' => 'Chính sách ưu đãi cho CTV VIP: ' . $collaborators->first()->full_name],
             ],
         ];
 
@@ -84,6 +89,6 @@ class CommissionPolicySeeder extends Seeder {
             CommissionPolicy::create($policyData);
         }
 
-        $this->command->info('Đã tạo mới ' . count($allPolicies) . ' chính sách hoa hồng mẫu.');
+        $this->command->info('Đã tạo mới ' . count($allPolicies) . ' chính sách hoa hồng chuẩn 2026.');
     }
 }

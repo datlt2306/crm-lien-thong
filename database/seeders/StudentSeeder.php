@@ -180,9 +180,34 @@ class StudentSeeder extends Seeder {
             $studentData['quota_id'] = $quota->id;
             $studentData['intake_id'] = $quota->intake_id;
             
-            Student::updateOrCreate(
+            // Gán ngẫu nhiên hệ đào tạo theo logic chuẩn mới
+            $studentData['program_type'] = collect(['REGULAR', 'PART_TIME', 'DISTANCE'])->random();
+            
+            $student = Student::updateOrCreate(
                 ['email' => $studentData['email']],
                 $studentData
+            );
+
+            // Tạo dữ liệu lệ phí mẫu cho TẤT CẢ sinh viên để hiển thị trên UI
+            $admissionFee = match($student->program_type) {
+                'REGULAR' => 1750000,
+                'PART_TIME' => 750000,
+                'DISTANCE' => 200000,
+                default => 750000,
+            };
+
+            \App\Models\Payment::updateOrCreate(
+                ['student_id' => $student->id],
+                [
+                    'primary_collaborator_id' => $student->collaborator_id,
+                    'program_type' => $student->program_type,
+                    'amount' => $admissionFee,
+                    'status' => in_array($student->status, [Student::STATUS_NEW, Student::STATUS_CONTACTED]) 
+                        ? \App\Models\Payment::STATUS_SUBMITTED 
+                        : \App\Models\Payment::STATUS_VERIFIED,
+                    'verified_at' => in_array($student->status, [Student::STATUS_NEW, Student::STATUS_CONTACTED]) ? null : now(),
+                    'verified_by' => in_array($student->status, [Student::STATUS_NEW, Student::STATUS_CONTACTED]) ? null : 1,
+                ]
             );
         }
     }

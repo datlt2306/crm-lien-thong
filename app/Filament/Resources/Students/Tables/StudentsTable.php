@@ -940,7 +940,7 @@ class StudentsTable {
                                 \Filament\Notifications\Notification::make()
                                     ->danger()
                                     ->title('Không tìm thấy chỉ tiêu')
-                                    ->body("Không tìm thấy bất kỳ chỉ tiêu \"{$data['program_type']}\" nào cho ngành \"{$oldMajor}\" trên hệ thống.")
+                                    ->body("Không tìm thấy bất kỳ chỉ tiêu \"" . (\App\Models\Student::getProgramTypeOptions()[$data['program_type']] ?? $data['program_type']) . "\" nào cho ngành \"{$oldMajor}\" trên hệ thống.")
                                     ->send();
                                 return;
                             }
@@ -980,11 +980,11 @@ class StudentsTable {
                             }
 
                             // 4. Xử lý Hoa hồng (Commission)
-                            $payment = $record->payment;
+                            $payment = $record->payment?->fresh();
                             if ($payment && $payment->commission) {
                                 $commissionService = new \App\Services\CommissionService();
                                 
-                                // Gọi service tính toán lại số tiền cho các item chưa chi trả
+                                // Gọi service tính toán lại số tiền cho các item
                                 $commissionService->recalculateCommissionOnTransfer($payment);
 
                                 // Refresh để lấy dữ liệu mới sau khi recalculate
@@ -998,20 +998,14 @@ class StudentsTable {
                                     ]);
 
                                     $noteMessage = $isPaid 
-                                        ? "⚠️ SV chuyển hệ sau khi đã chi trả. Cần đối soát lại hệ mới ({$data['program_type']})."
+                                        ? "⚠️ SV chuyển hệ sau khi đã chi trả. Cần đối soát lại hệ mới (" . (\App\Models\Student::getProgramTypeOptions()[$data['program_type']] ?? $data['program_type']) . ")."
                                         : "ℹ️ Thông tin đã thay đổi do SV chuyển hệ. Kế toán kiểm tra lại trước khi chốt.";
                                     
-                                    // Làm sạch và gom nhóm ghi chú theo từng câu để tránh trùng lặp
+                                    // Làm sạch và gom nhóm ghi chú để tránh trùng lặp
                                     $currentNotes = $item->notes ?? '';
-                                    $allText = $currentNotes . " " . $noteMessage;
-                                    
-                                    // Tách thành các câu dựa trên dấu chấm
-                                    $sentences = preg_split('/(?<=\.)\s+/', $allText, -1, PREG_SPLIT_NO_EMPTY);
-                                    if (is_array($sentences)) {
-                                        // Chỉ giữ lại các câu duy nhất và ghép lại
-                                        $uniqueSentences = array_unique(array_map('trim', $sentences));
+                                    if (!str_contains($currentNotes, $noteMessage)) {
                                         $item->update([
-                                            'notes' => implode(' ', $uniqueSentences),
+                                            'notes' => trim($currentNotes . " " . $noteMessage),
                                         ]);
                                     }
                                 }
@@ -1035,7 +1029,7 @@ class StudentsTable {
                             \Filament\Notifications\Notification::make()
                                 ->success()
                                 ->title('Chuyển hệ thành công')
-                                ->body("Đã chuyển sang hệ {$data['program_type']} " . ($intakeName ? "({$intakeName})" : "") . ". " . ($feeDifference > 0 ? "Số tiền thừa: " . number_format($feeDifference, 0, ',', '.') . " VNĐ" : ""))
+                                ->body("Đã chuyển sang hệ " . (\App\Models\Student::getProgramTypeOptions()[$data['program_type']] ?? $data['program_type']) . " " . ($intakeName ? "({$intakeName})" : "") . ". " . ($feeDifference > 0 ? "Số tiền thừa: " . number_format($feeDifference, 0, ',', '.') . " VNĐ" : ""))
                                 ->send();
                         })
                         ->visible(fn() => Auth::user()->can('student_update')),

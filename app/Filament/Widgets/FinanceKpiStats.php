@@ -64,9 +64,9 @@ class FinanceKpiStats extends BaseWidget {
             ])
             ->sum('amount');
 
-        // 7. Tỉ lệ hồ sơ / lệ phí
+        // 7. Tỉ lệ Hồ sơ chưa nộp lệ phí
         $totalApplications = $this->applyFilters(Student::query(), $filters)->count();
-        $conversionRate = $totalApplications > 0 ? round(($paidFeesCount / $totalApplications) * 100, 1) : 0;
+        $unpaidRate = $totalApplications > 0 ? round(($unpaidFeesCount / $totalApplications) * 100, 1) : 0;
 
         return [
             Stat::make('Hồ sơ đã nộp', (string) $submittedStudents)
@@ -93,8 +93,8 @@ class FinanceKpiStats extends BaseWidget {
                 ->description('Chờ nhập học/đến hạn')
                 ->color('warning'),
 
-            Stat::make('Tỉ lệ Hồ sơ/Lệ phí', $conversionRate . '%')
-                ->description('Số SV nộp tiền / Tổng hồ sơ')
+            Stat::make('Tỉ lệ Hồ sơ/Lệ phí', $unpaidRate . '%')
+                ->description('Số SV chưa nộp tiền / Tổng hồ sơ')
                 ->color('primary'),
         ];
     }
