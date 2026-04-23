@@ -15,9 +15,9 @@ class DatabaseSeeder extends Seeder {
     public function run(): void {
         // User::factory(10)->create();
 
-        // Tạo hoặc cập nhật admin user từ env
-        $adminEmail = env('SUPER_ADMIN_EMAIL', 'admin@gmail.com');
-        $adminPassword = env('SUPER_ADMIN_PASSWORD', 'password');
+        // Tạo hoặc cập nhật admin user từ config (đảm bảo hoạt động khi cache config trên VPS)
+        $adminEmail = config('app.super_admin.email', 'admin@gmail.com');
+        $adminPassword = config('app.super_admin.password', 'password');
 
         $superAdminUser = \App\Models\User::updateOrCreate(
             ['role' => 'super_admin'], // Tìm theo role super_admin
