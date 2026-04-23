@@ -9,12 +9,6 @@ use Illuminate\Database\Seeder;
 
 class CommissionPolicySeeder extends Seeder {
     public function run(): void {
-        $organization = Organization::first();
-        if (!$organization) {
-            $this->command->error('Chưa có Organization nào. Chạy OrganizationSeeder trước.');
-            return;
-        }
-
         $collaborators = Collaborator::where('status', 'active')->get();
         if ($collaborators->isEmpty()) {
             $this->command->error('Chưa có Collaborator active nào. Chạy CollaboratorSeeder trước.');
@@ -24,7 +18,6 @@ class CommissionPolicySeeder extends Seeder {
         // Global policies (áp dụng cho tất cả)
         $globalPolicies = [
             [
-                
                 'collaborator_id' => null,
                 'program_type' => null,
                 'role' => 'PRIMARY',
@@ -35,10 +28,9 @@ class CommissionPolicySeeder extends Seeder {
                 'visibility' => 'INTERNAL',
                 'priority' => 0,
                 'active' => true,
-                'meta' => json_encode(['description' => 'CTV chính nhận 100% số tiền thanh toán']),
+                'meta' => ['description' => 'CTV chính nhận 100% số tiền thanh toán'],
             ],
             [
-                
                 'collaborator_id' => null,
                 'program_type' => 'REGULAR',
                 'role' => 'SUB',
@@ -49,10 +41,9 @@ class CommissionPolicySeeder extends Seeder {
                 'visibility' => 'INTERNAL',
                 'priority' => 0,
                 'active' => true,
-                'meta' => json_encode(['description' => 'CTV phụ chương trình chính quy: 700k']),
+                'meta' => ['description' => 'CTV phụ chương trình chính quy: 700k'],
             ],
             [
-                
                 'collaborator_id' => null,
                 'program_type' => 'PART_TIME',
                 'role' => 'SUB',
@@ -63,32 +54,13 @@ class CommissionPolicySeeder extends Seeder {
                 'visibility' => 'INTERNAL',
                 'priority' => 0,
                 'active' => true,
-                'meta' => json_encode(['description' => 'CTV phụ chương trình bán thời gian: 700k khi nhập học']),
-            ],
-        ];
-
-        // Organization-specific policies
-        $orgPolicies = [
-            [
-                
-                'collaborator_id' => null,
-                'program_type' => 'REGULAR',
-                'role' => 'SUB',
-                'type' => 'FIXED',
-                'amount_vnd' => 800000,
-                'percent' => null,
-                'trigger' => 'ON_VERIFICATION',
-                'visibility' => 'ORG_ONLY',
-                'priority' => 10,
-                'active' => true,
-                'meta' => json_encode(['description' => 'CTV phụ GTVT chương trình chính quy: 800k']),
+                'meta' => ['description' => 'CTV phụ chương trình bán thời gian: 700k khi nhập học'],
             ],
         ];
 
         // Collaborator-specific policies
         $collabPolicies = [
             [
-                
                 'collaborator_id' => $collaborators->first()->id,
                 'program_type' => null,
                 'role' => 'PRIMARY',
@@ -99,16 +71,23 @@ class CommissionPolicySeeder extends Seeder {
                 'visibility' => 'INTERNAL',
                 'priority' => 20,
                 'active' => true,
-                'meta' => json_encode(['description' => 'CTV ' . $collaborators->first()->full_name . ' nhận 1,000,000 VND']),
+                'meta' => ['description' => 'CTV ' . $collaborators->first()->full_name . ' nhận 1,000,000 VND'],
             ],
         ];
 
-        $allPolicies = array_merge($globalPolicies, $orgPolicies, $collabPolicies);
+        $allPolicies = array_merge($globalPolicies, $collabPolicies);
 
         foreach ($allPolicies as $policyData) {
-            CommissionPolicy::create($policyData);
+            CommissionPolicy::updateOrCreate(
+                [
+                    'collaborator_id' => $policyData['collaborator_id'],
+                    'program_type' => $policyData['program_type'],
+                    'role' => $policyData['role'],
+                ],
+                $policyData
+            );
         }
 
-        $this->command->info('Đã tạo ' . count($allPolicies) . ' chính sách hoa hồng mẫu.');
+        $this->command->info('Đã tạo/cập nhật ' . count($allPolicies) . ' chính sách hoa hồng mẫu.');
     }
 }

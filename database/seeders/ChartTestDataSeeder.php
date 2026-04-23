@@ -20,153 +20,88 @@ class ChartTestDataSeeder extends Seeder {
 
         // Lấy dữ liệu nền để tạo chart
         $collaborators = Collaborator::take(5)->get();
-        $organization = Organization::first();
-        $quotas = Quota::where('organization_id', $organization?->id)->with('intake')->get();
+        $quotas = Quota::with('intake')->get();
 
-        if (!$organization || $collaborators->isEmpty() || $quotas->isEmpty()) {
-            $this->command->info('Cần có dữ liệu Organization, Collaborator, Quota/Intake trước khi chạy seeder này.');
+        if ($collaborators->isEmpty() || $quotas->isEmpty()) {
+            $this->command->info('Cần có dữ liệu Collaborator, Quota/Intake trước khi chạy seeder này.');
             return;
         }
 
-        // Tạo thêm một số student để tránh unique constraint
-        $studentCounter = 2;
-        for ($i = 2; $i <= 50; $i++) {
-            Student::create([
-                'full_name' => 'Student Test ' . $studentCounter,
-                'phone' => '012345678' . (1000 + $studentCounter),
-                'email' => 'student' . $studentCounter . '@test.com',
-                
-                'collaborator_id' => $collaborators->random()->id,
-                'target_university' => 'Test University',
-                'major' => 'Computer Science',
-                'intake_month' => 9,
-                'program_type' => 'REGULAR',
-                'source' => 'other',
-                'status' => 'new',
-            ]);
+        // Tạo thêm một số student
+        $studentCounter = 100;
+        for ($i = 1; $i <= 30; $i++) {
+            $email = "student_test_{$studentCounter}@test.com";
+            $phone = "0999" . str_pad((string) $studentCounter, 6, '0', STR_PAD_LEFT);
+            
             $quota = $quotas->random();
-            Student::where('email', 'student' . $studentCounter . '@test.com')->update([
-                'quota_id' => $quota->id,
-                'intake_id' => $quota->intake_id,
-            ]);
+            $collaborator = $collaborators->random();
+            
+            Student::updateOrCreate(
+                ['email' => $email],
+                [
+                    'full_name' => 'Student Test ' . $studentCounter,
+                    'phone' => $phone,
+                    'collaborator_id' => $collaborator->id,
+                    'quota_id' => $quota->id,
+                    'intake_id' => $quota->intake_id,
+                    'target_university' => 'Test University',
+                    'major' => $quota->major_name,
+                    'program_type' => $quota->program_name,
+                    'source' => 'other',
+                    'status' => $this->getRandomStatus(['new', 'contacted', 'submitted', 'approved', 'enrolled']),
+                    'created_at' => $startDate->copy()->addDays(rand(0, 30))->addHours(rand(0, 23)),
+                ]
+            );
             $studentCounter++;
         }
 
-        // Mỗi học sinh chỉ một payment (unique student_id); mỗi CommissionItem cần commission + payment riêng
-        $studentIds = Student::pluck('id')->all();
-        $studentIdIndex = 0;
-        $extraStudentCounter = 10000;
-        $nextStudentId = function () use (
-            &$studentIdIndex,
-            &$extraStudentCounter,
-            $studentIds,
-            $organization,
-            $collaborators,
-            $quotas
-        ): int {
-            if ($studentIdIndex < count($studentIds)) {
-                return $studentIds[$studentIdIndex++];
-            }
-            $extraStudentCounter++;
-            $quota = $quotas->random();
-            $ctv = $collaborators->first();
-            $s = Student::create([
-                'full_name' => 'Chart seed HS ' . $extraStudentCounter,
-                'phone' => '0999' . str_pad((string) $extraStudentCounter, 7, '0', STR_PAD_LEFT),
-                'email' => 'chart-seed-' . $extraStudentCounter . '@test.local',
-                
-                'collaborator_id' => $ctv->id,
-                'quota_id' => $quota->id,
-                'intake_id' => $quota->intake_id,
-                'target_university' => 'Test University',
-                'major' => 'Computer Science',
-                'intake_month' => 9,
-                'program_type' => 'REGULAR',
-                'source' => 'other',
-                'status' => 'new',
-            ]);
-            return $s->id;
-        };
-
-        // Mỗi CommissionItem cần một commission riêng (unique commission_id + recipient_collaborator_id)
-        for ($i = 0; $i < 30; $i++) {
-            $date = $startDate->copy()->addDays($i);
-            $count = rand(1, min(5, $collaborators->count()));
-            $recipients = $collaborators->shuffle()->take($count);
-
-            foreach ($recipients as $recipient) {
-                $sid = $nextStudentId();
-                $samplePayment = \App\Models\Payment::create([
-                    
-                    'student_id' => $sid,
-                    'primary_collaborator_id' => $recipient->id,
-                    'sub_collaborator_id' => $recipient->id,
-                    'program_type' => 'REGULAR',
-                    'amount' => 10000000,
+        // Tạo dữ liệu Payment & Commission
+        $students = Student::all();
+        foreach ($students->take(20) as $student) {
+            $date = $startDate->copy()->addDays(rand(0, 30));
+            
+            $payment = Payment::updateOrCreate(
+                ['student_id' => $student->id],
+                [
+                    'primary_collaborator_id' => $student->collaborator_id,
+                    'sub_collaborator_id' => $student->collaborator_id,
+                    'program_type' => $student->program_type ?? 'REGULAR',
+                    'amount' => rand(5000000, 15000000),
                     'status' => 'verified',
-                    'created_at' => $date->copy()->addHours(rand(0, 23)),
-                ]);
+                    'created_at' => $date,
+                ]
+            );
 
-                $commission = \App\Models\Commission::create([
-                    'student_id' => $sid,
-                    
-                    'payment_id' => $samplePayment->id,
-                    'rule' => json_encode(['type' => 'percentage', 'value' => 10]),
-                ]);
+            $commission = \App\Models\Commission::updateOrCreate(
+                ['payment_id' => $payment->id],
+                [
+                    'student_id' => $student->id,
+                    'rule' => ['type' => 'percentage', 'value' => 10],
+                ]
+            );
 
-                CommissionItem::create([
+            CommissionItem::updateOrCreate(
+                [
                     'commission_id' => $commission->id,
-                    'recipient_collaborator_id' => $recipient->id,
-                    'role' => rand(0, 1) ? 'PRIMARY' : 'SUB',
-                    'amount' => rand(100000, 5000000),
+                    'recipient_collaborator_id' => $student->collaborator_id,
+                ],
+                [
+                    'role' => 'PRIMARY',
+                    'amount' => rand(1000000, 2000000),
                     'status' => $this->getRandomStatus(['pending', 'payable', 'paid']),
-                    'trigger' => 'ON_ENROLLMENT',
-                    'created_at' => $date->copy()->addHours(rand(0, 23)),
-                ]);
-            }
-        }
-
-
-
-        // Tạo dữ liệu Student
-        for ($i = 0; $i < 30; $i++) {
-            $date = $startDate->copy()->addDays($i);
-            $count = rand(1, 4);
-
-            for ($j = 0; $j < $count; $j++) {
-                Student::create([
-                    'full_name' => 'Student Test ' . $studentCounter,
-                    'phone' => '012345678' . (1000 + $studentCounter),
-                    'email' => 'student' . $studentCounter . '@test.com',
-                    
-                    'collaborator_id' => $collaborators->random()->id,
-                    'target_university' => 'Test University',
-                    'major' => 'Computer Science',
-                    'intake_month' => 9,
-                    'program_type' => 'REGULAR',
-                    'source' => 'other',
-                    'status' => $this->getRandomStatus(['new', 'contacted', 'submitted', 'approved', 'enrolled', 'rejected']),
-                    'created_at' => $date->copy()->addHours(rand(0, 23)),
-                ]);
-                $quota = $quotas->random();
-                Student::where('email', 'student' . $studentCounter . '@test.com')->update([
-                    'quota_id' => $quota->id,
-                    'intake_id' => $quota->intake_id,
-                ]);
-                $studentCounter++;
-            }
+                    'trigger' => 'ON_VERIFICATION',
+                    'created_at' => $date,
+                ]
+            );
         }
 
         // Tạo dữ liệu WalletTransaction
         $wallets = Wallet::all();
         if ($wallets->isNotEmpty()) {
-            for ($i = 0; $i < 30; $i++) {
-                $date = $startDate->copy()->addDays($i);
-                $count = rand(1, 3);
-
-                for ($j = 0; $j < $count; $j++) {
-                    $wallet = $wallets->random();
-                    $amount = rand(100000, 2000000);
+            foreach ($wallets as $wallet) {
+                for ($j = 0; $j < 3; $j++) {
+                    $date = $startDate->copy()->addDays(rand(0, 30));
+                    $amount = rand(500000, 2000000);
                     $type = rand(0, 1) ? 'deposit' : 'withdrawal';
 
                     WalletTransaction::create([
@@ -175,8 +110,8 @@ class ChartTestDataSeeder extends Seeder {
                         'amount' => $amount,
                         'balance_before' => $wallet->balance,
                         'balance_after' => $type === 'deposit' ? $wallet->balance + $amount : $wallet->balance - $amount,
-                        'description' => $type === 'deposit' ? 'Thu hoa hồng' : 'Chi hoa hồng',
-                        'created_at' => $date->copy()->addHours(rand(0, 23)),
+                        'description' => $type === 'deposit' ? 'Thu hoa hồng test' : 'Chi hoa hồng test',
+                        'created_at' => $date,
                     ]);
                 }
             }
