@@ -143,7 +143,22 @@ class CommissionResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
                     ->money('VND')
-                    ->sortable(),
+                    ->sortable()
+                    ->description(function (CommissionItem $record) {
+                        if ($record->is_adjusted && $record->original_amount > 0) {
+                            return 'Gốc: ' . number_format($record->original_amount, 0, ',', '.') . ' VND';
+                        }
+                        return null;
+                    }),
+
+                \Filament\Tables\Columns\IconColumn::make('is_adjusted')
+                    ->label('Điều chỉnh')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-exclamation-triangle')
+                    ->falseIcon('')
+                    ->trueColor('warning')
+                    ->tooltip('Hoa hồng này đã được điều chỉnh do SV chuyển hệ')
+                    ->toggleable(),
 
                 // Cột mã số phiếu thu
                 \Filament\Tables\Columns\TextColumn::make('commission.payment.receipt_number')
@@ -192,11 +207,9 @@ class CommissionResource extends Resource {
                             return "Lý do hoàn trả: " . ($payment->edit_reason ?? 'Không có ghi chú');
                         }
 
-                        // 2. Hiển thị lý do nếu bị Hoàn tác chốt sổ (Kế toán ấn nhầm, cần sửa)
-                        $history = $record->meta['rollback_history'] ?? [];
-                        if (!empty($history)) {
-                            $lastRollback = end($history);
-                            return "Lý do hoàn tác: " . ($lastRollback['reason'] ?? 'N/A');
+                        // 3. Hiển thị ghi chú điều chỉnh (Chuyển hệ)
+                        if ($record->is_adjusted || $record->notes) {
+                            return "Ghi chú: " . ($record->notes ?? 'Đã điều chỉnh');
                         }
 
                         return null;

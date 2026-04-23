@@ -445,6 +445,12 @@ class StudentForm {
                                     ->label('Người ký bằng TN CĐ')
                                     ->maxLength(255)
                                     ->columnSpanFull(),
+                                TextInput::make('college_gpa')
+                                    ->label('Điểm trung bình tích lũy toàn khóa')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->minValue(0)
+                                    ->maxValue(10),
                             ])
                             ->columns(3),
 
@@ -495,6 +501,12 @@ class StudentForm {
                                     ->label('Người ký bằng TN TC')
                                     ->maxLength(255)
                                     ->columnSpanFull(),
+                                TextInput::make('intermediate_gpa')
+                                    ->label('Điểm trung bình tích lũy toàn khóa')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->minValue(0)
+                                    ->maxValue(10),
                             ])
                             ->columns(3),
 

@@ -32,10 +32,15 @@ class Payment extends Model {
         'edited_by',
         'receipt_uploaded_by',
         'receipt_uploaded_at',
+        'excess_amount',
+        'refund_status',
+        'refund_proof_path',
+        'refund_notes',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'excess_amount' => 'decimal:2',
         'verified_at' => 'datetime',
         'edited_at' => 'datetime',
         'receipt_uploaded_at' => 'datetime',
@@ -144,6 +149,27 @@ class Payment extends Model {
         return "Phiếu thu/{$year}/{$fileName}";
     }
 
+    public function generateStandardRefundProofPath(string $extension): string {
+        $student = $this->student;
+        $year = now()->format('Y');
+        
+        $profileCode = $student->profile_code;
+        $fullName = $student->full_name;
+        $major = $student->major;
+        
+        $systemCode = match (strtoupper((string)$this->program_type)) {
+            'REGULAR' => 'CQ',
+            'PART_TIME' => 'VHVL',
+            'DISTANCE' => 'TX',
+            default => $this->program_type
+        };
+
+        // Format: Hoàn tiền/2026/HS2026000194_Dat Le Trong_CNTT_CQ.png
+        $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$extension}";
+        
+        return "Hoàn tiền/{$year}/{$fileName}";
+    }
+
     /**
      * Tạo token bảo mật cho việc truy cập file công khai (Quick Win fix cho IDOR)
      */
@@ -159,6 +185,13 @@ class Payment extends Model {
     public function getBillUrlAttribute(): ?string {
         if (!$this->bill_path) return null;
         return route('files.bill.view', $this->id);
+    }
+
+    public function getRefundProofUrlAttribute(): ?string {
+        if (!$this->refund_proof_path) return null;
+        // Tạm thời dùng chung route view bill/receipt hoặc tạo mới nếu cần
+        // Giả sử có route files.refund.view
+        return route('files.refund.view', $this->id);
     }
 
     public function student(): BelongsTo {

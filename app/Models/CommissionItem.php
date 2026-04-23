@@ -24,6 +24,9 @@ class CommissionItem extends Model {
         'payment_confirmed_by',
         'received_confirmed_at',
         'received_confirmed_by',
+        'original_amount',
+        'notes',
+        'is_adjusted',
     ];
 
     // Các trạng thái commission - Quản lý việc trả hoa hồng cho CTV
@@ -47,11 +50,13 @@ class CommissionItem extends Model {
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'original_amount' => 'decimal:2',
         'payable_at' => 'datetime',
         'paid_at' => 'datetime',
         'payment_confirmed_at' => 'datetime',
         'received_confirmed_at' => 'datetime',
         'meta' => 'array',
+        'is_adjusted' => 'boolean',
     ];
 
     public function getBillUrlAttribute(): ?string {

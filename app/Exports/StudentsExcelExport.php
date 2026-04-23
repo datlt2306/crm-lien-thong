@@ -51,6 +51,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 '',
                 'Trung cấp',
                 '',
+                'Điểm TB TC',
                 'Giấy khai sinh',
                 '',
                 'CCCD (mặt trước)',
@@ -67,6 +68,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 'Số vào sổ cấp bằng TN CĐ',
                 'Ngày ký bằng TN CĐ',
                 'Người ký bằng TN CĐ',
+                'Điểm TB CĐ',
                 'Ngành ĐKLT',
                 'Trường ĐKLT',
                 'Hệ ĐKLT',
@@ -86,65 +88,20 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 'Phiếu tuyển sinh',
                 'Hình thức tuyển sinh',
                 'Lệ phí',
+                'Chuyển hệ',
+                'Hoàn tiền',
                 'Ghi chú',
             ],
             [
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                'BS',
-                'BG',
-                'BS',
-                'BG',
-                'BS',
-                'BG',
-                'Bằng',
-                'Bảng điểm',
-                'BS',
-                'BG',
-                '',
-                '',
-                '',
-                'BS',
-                'BG',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
+                '', '', '', '', '', '', '', '', '', '', '', '', '',
+                'BS', 'BG',
+                'BS', 'BG',
+                'BS', 'BG',
+                'Bằng', 'Bảng điểm', '',
+                'BS', 'BG',
+                '', '', '',
+                'BS', 'BG',
+                '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
             ],
         ];
     }
@@ -193,6 +150,16 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
             $applicationStatus = 'Đã nộp';
         } elseif ($student->status === Student::STATUS_ENROLLED && $hasAllDocs) {
             $applicationStatus = 'Đủ điều kiện';
+        }
+
+        $refundStatus = '';
+        if ($student->payment && $student->payment->excess_amount > 0) {
+            $refundStatus = match ($student->payment->refund_status) {
+                'none' => 'Không có',
+                'pending' => '⏳ Chờ hoàn trả (' . number_format($student->payment->excess_amount, 0, ',', '.') . 'đ)',
+                'completed' => '✅ Đã hoàn trả',
+                default => (string) $student->payment->refund_status,
+            };
         }
 
         $createdAtFormatted = $student->created_at
@@ -253,6 +220,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
             $highSchoolDiplomaBG,
             $student->document_intermediate_diploma ?? '',
             $student->document_intermediate_transcript ?? '',
+            $student->intermediate_gpa ?? '',
             $birthCertBS,
             $birthCertBG,
             $student->document_identity_card_front ?? '',
@@ -269,6 +237,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
             $student->college_diploma_book_number ?? '',
             $collegeIssueDateFormatted,
             $student->college_diploma_signer ?? '',
+            $student->college_gpa ?? '',
             $student->major ?? '',
             $student->target_university ?? '',
             $programType,
@@ -288,6 +257,8 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
             $admissionForm,
             $student->source ?? '',
             $paymentAmount,
+            $student->has_transferred ? 'Đã chuyển' : 'Không',
+            $refundStatus,
             $student->notes ?? '',
         ];
     }
@@ -302,7 +273,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
                     'X', 'Y', 'Z',
                     'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ',
-                    'BA', 'BB', 'BC', 'BD', 'BE'
+                    'BA', 'BB', 'BC', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI'
                 ];
                 foreach ($columnsToMergeVertical as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
@@ -315,8 +286,8 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 $sheet->mergeCells('V1:W1');  // Giấy khai sinh
                 $sheet->mergeCells('AA1:AB1'); // Giấy khám sức khỏe
 
-                // Style header rows - BE là cột 57
-                $headerRange = 'A1:BE2';
+                // Style header rows - BI là cột 61
+                $headerRange = 'A1:BI2';
                 $sheet->getStyle($headerRange)->getFont()->setBold(true);
                 $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle($headerRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);

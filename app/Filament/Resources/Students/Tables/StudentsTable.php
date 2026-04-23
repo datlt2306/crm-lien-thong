@@ -61,6 +61,14 @@ class StudentsTable {
                     ->trueColor('success')
                     ->falseColor('gray')
                     ->toggleable(),
+                Tables\Columns\IconColumn::make('has_transferred')
+                    ->label('Chuyển hệ')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-arrows-right-left')
+                    ->falseIcon('')
+                    ->trueColor('warning')
+                    ->tooltip(fn($record) => $record->has_transferred ? 'Học viên này đã từng thực hiện chuyển hệ đào tạo' : null)
+                    ->toggleable(),
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
                     ->searchable()
@@ -127,17 +135,20 @@ class StudentsTable {
                     ->formatStateUsing(fn($state) => match ($state) {
                         'REGULAR' => '🎓 Chính quy',
                         'PART_TIME' => '⏰ Vừa học vừa làm',
+                        'DISTANCE' => '💻 Đào tạo từ xa',
                         default => '—'
                     })
                     ->badge()
                     ->color(fn($state) => match ($state) {
                         'REGULAR' => 'success',      // Xanh lá rõ ràng
                         'PART_TIME' => 'info',       // Xanh dương rõ ràng
+                        'DISTANCE' => 'warning',     // Cam/Vàng rõ ràng
                         default => 'gray'
                     })
                     ->tooltip(fn($state) => match ($state) {
                         'REGULAR' => '🎓 Hệ đào tạo chính quy, học tập toàn thời gian',
                         'PART_TIME' => '⏰ Hệ vừa học vừa làm, linh hoạt thời gian',
+                        'DISTANCE' => '💻 Hệ đào tạo từ xa, học trực tuyến linh hoạt',
                         default => ''
                     })
                     ->sortable()
@@ -282,6 +293,14 @@ class StudentsTable {
                                 <span>{$label}</span>
                             </a>";
                         }
+
+                        // Minh chứng hoàn tiền
+                        if ($payment->refund_proof_path) {
+                            $url = $payment->refund_proof_url;
+                            $links[] = "<a href='{$url}' target='_blank' class='inline-flex items-center gap-1 text-danger-600 hover:underline' title='Xem minh chứng đã hoàn trả tiền thừa'>
+                                <span>Xem minh chứng hoàn tiền</span>
+                            </a>";
+                        }
                         
                         return implode('<br>', $links) ?: '—';
                     })
@@ -412,6 +431,21 @@ class StudentsTable {
                             return $query;
                         }
                         return $query->where('status', $data['value']);
+                    }),
+
+                \Filament\Tables\Filters\TernaryFilter::make('awaiting_refund')
+                    ->label('Chờ hoàn tiền thừa')
+                    ->placeholder('Tất cả')
+                    ->trueLabel('Có tiền thừa chưa trả')
+                    ->falseLabel('Đã trả hoặc không có')
+                    ->query(function (Builder $query, $state) {
+                        if ($state === '1' || $state === true) {
+                            return $query->whereHas('payment', function (Builder $q) {
+                                $q->where('excess_amount', '>', 0)
+                                  ->where('refund_status', 'pending');
+                            });
+                        }
+                        return $query;
                     }),
 
 
@@ -798,13 +832,7 @@ class StudentsTable {
                                 return false;
                             }
 
-                            // Nếu đã có phiếu thu, yêu cầu quyền Hoàn trả (Refund)
-                            if ($record->payment->receipt_path) {
-                                return $user->can('payment_refund');
-                            }
-
-                            // Nếu chưa có phiếu thu, chỉ yêu cầu quyền Hủy xác nhận (Reverse)
-                            return $user->can('payment_reverse');
+                            return $user->can('payment_revert');
                         })
                         ->action(function (array $data, Student $record) {
                             $payment = $record->payment;
@@ -840,6 +868,193 @@ class StudentsTable {
                                 ->title('Đã hoàn trả trạng thái thành công')
                                 ->body('Hồ sơ học viên đã được đưa về trạng thái Mới.')
                                 ->send();
+                        }),
+
+                    Action::make('transfer_program')
+                        ->label('Chuyển hệ đào tạo')
+                        ->icon('heroicon-o-arrows-right-left')
+                        ->color('info')
+                        ->modalHeading('Chuyển hệ đào tạo')
+                        ->modalDescription('Hành động này sẽ tự động tìm chỉ tiêu phù hợp và tính toán lại lệ phí/hoa hồng.')
+                        ->form([
+                            \Filament\Forms\Components\Select::make('program_type')
+                                ->label('Hệ đào tạo mới')
+                                ->options(function (Student $record) {
+                                    $major = $record->major;
+                                    
+                                    // Tìm tất cả các Quota đang hoạt động của ngành này
+                                    $quotas = \App\Models\Quota::active()
+                                        ->where('major_name', $major)
+                                        ->with('intake')
+                                        ->get();
+
+                                    $options = [];
+                                    foreach ($quotas as $q) {
+                                        $label = match($q->program_name) {
+                                            'REGULAR' => 'Chính quy',
+                                            'PART_TIME' => 'Vừa học vừa làm',
+                                            'DISTANCE' => 'Đào tạo từ xa',
+                                            default => $q->program_name
+                                        };
+
+                                        // Thêm thông tin Chỉ tiêu và Đợt vào label
+                                        $intakeLabel = $q->intake?->name ?: 'Không rõ đợt';
+                                        $options[$q->program_name] = "{$label} - {$intakeLabel}";
+                                    }
+
+                                    return $options;
+                                })
+                                ->required()
+                                ->placeholder('Chọn hệ đào tạo mới...')
+                                ->default(fn($record) => $record->program_type),
+                            \Filament\Forms\Components\Textarea::make('reason')
+                                ->label('Lý do chuyển hệ')
+                                ->required()
+                                ->placeholder('Vd: Sinh viên xin đổi sang học từ xa để vừa học vừa làm...'),
+                        ])
+                        ->action(function (array $data, Student $record) {
+                            $oldQuota = $record->quota;
+                            $oldProgramType = $record->program_type;
+                            $oldMajor = $record->major;
+
+                            // Tự động tìm Quota mới khớp với Ngành hiện tại + Hệ đào tạo mới
+                            // Ưu tiên đợt (Intake) hiện tại
+                            $newQuota = \App\Models\Quota::query()
+                                ->where('major_name', $oldMajor)
+                                ->where('program_name', $data['program_type'])
+                                ->where('intake_id', $record->intake_id)
+                                ->where('status', \App\Models\Quota::STATUS_ACTIVE)
+                                ->first();
+
+                            // Nếu không có trong đợt hiện tại, tìm đợt khác có chỉ tiêu này
+                            if (!$newQuota) {
+                                $newQuota = \App\Models\Quota::query()
+                                    ->where('major_name', $oldMajor)
+                                    ->where('program_name', $data['program_type'])
+                                    ->where('status', \App\Models\Quota::STATUS_ACTIVE)
+                                    ->orderByDesc('intake_id') // Ưu tiên đợt mới nhất
+                                    ->first();
+                            }
+
+                            if (!$newQuota) {
+                                \Filament\Notifications\Notification::make()
+                                    ->danger()
+                                    ->title('Không tìm thấy chỉ tiêu')
+                                    ->body("Không tìm thấy bất kỳ chỉ tiêu \"{$data['program_type']}\" nào cho ngành \"{$oldMajor}\" trên hệ thống.")
+                                    ->send();
+                                return;
+                            }
+
+                            // 1. Tính toán chênh lệch lệ phí
+                            $feeService = app(\App\Services\StudentFeeService::class);
+                            $oldExpectedFee = $feeService->getExpectedFeeForStudent($record);
+                            
+                            // Giả lập student mới để tính phí dự kiến
+                            $tempStudent = clone $record;
+                            $tempStudent->quota_id = $newQuota->id;
+                            $tempStudent->program_type = $data['program_type'];
+                            $newExpectedFee = $feeService->getExpectedFeeForStudent($tempStudent);
+
+                            $feeDifference = (float)($oldExpectedFee ?? 0) - (float)($newExpectedFee ?? 0);
+
+                            // 2. Cập nhật sinh viên
+                            $record->update([
+                                'quota_id' => $newQuota->id,
+                                'program_type' => $data['program_type'],
+                                'intake_id' => $newQuota->intake_id, // Cập nhật đợt mới nếu cần
+                                'has_transferred' => true,
+                            ]);
+
+                            // 3. Xử lý Payment & Tiền thừa
+                            if ($record->payment && $record->payment->status === Payment::STATUS_VERIFIED) {
+                                if ($feeDifference > 0) {
+                                    $record->payment->update([
+                                        'excess_amount' => (float)$record->payment->excess_amount + $feeDifference,
+                                        'refund_status' => 'pending',
+                                        'refund_notes' => ($record->payment->refund_notes ? $record->payment->refund_notes . "\n" : "") . "Chênh lệch phí khi chuyển hệ: " . number_format($feeDifference, 0, ',', '.') . " VNĐ",
+                                    ]);
+                                }
+                            }
+
+                            // 4. Xử lý Hoa hồng (Commission)
+                            $commission = $record->payment?->commission;
+                            if ($commission) {
+                                foreach ($commission->items as $item) {
+                                    $isPaid = in_array($item->status, [
+                                        \App\Models\CommissionItem::STATUS_PAID,
+                                        \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                        \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED
+                                    ]);
+
+                                    if ($isPaid) {
+                                        $item->update([
+                                            'is_adjusted' => true,
+                                            'notes' => ($item->notes ? $item->notes . "\n" : "") . "⚠️ SV chuyển hệ sau khi đã chi trả. Cần đối soát lại theo hệ mới ({$data['program_type']}).",
+                                        ]);
+                                    } else {
+                                        $item->update([
+                                            'notes' => ($item->notes ? $item->notes . "\n" : "") . "ℹ️ Thông tin đã thay đổi do SV chuyển hệ. Kế toán kiểm tra lại trước khi chốt.",
+                                        ]);
+                                    }
+                                }
+                            }
+
+                            // 5. Lưu lịch sử
+                            \App\Models\StudentTransfer::create([
+                                'student_id' => $record->id,
+                                'old_quota_id' => $oldQuota?->id,
+                                'new_quota_id' => $newQuota->id,
+                                'old_program_type' => $oldProgramType,
+                                'new_program_type' => $data['program_type'],
+                                'old_major' => $oldMajor,
+                                'new_major' => $record->major,
+                                'fee_difference' => $feeDifference,
+                                'reason' => $data['reason'],
+                                'created_by' => Auth::id(),
+                            ]);
+
+                            $intakeName = $newQuota->intake?->name;
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title('Chuyển hệ thành công')
+                                ->body("Đã chuyển sang hệ {$data['program_type']} " . ($intakeName ? "({$intakeName})" : "") . ". " . ($feeDifference > 0 ? "Số tiền thừa: " . number_format($feeDifference, 0, ',', '.') . " VNĐ" : ""))
+                                ->send();
+                        })
+                        ->visible(fn() => Auth::user()->can('student_update')),
+
+                    Action::make('confirm_refund')
+                        ->label('Xác nhận hoàn tiền thừa')
+                        ->icon('heroicon-o-currency-dollar')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận đã trả tiền thừa cho SV')
+                        ->modalDescription(fn($record) => "Học viên này đang có số tiền thừa: " . number_format($record->payment->excess_amount, 0, ',', '.') . " VNĐ. Xác nhận bạn đã chuyển khoản trả lại sinh viên?")
+                        ->form([
+                            \Filament\Forms\Components\FileUpload::make('refund_proof')
+                                ->label('Bằng chứng chuyển khoản')
+                                ->disk('google')
+                                ->directory('Minh chứng hoàn tiền')
+                                ->required(),
+                            \Filament\Forms\Components\Textarea::make('refund_notes')
+                                ->label('Ghi chú hoàn tiền'),
+                        ])
+                        ->action(function (array $data, Student $record) {
+                            $record->payment->update([
+                                'refund_status' => 'completed',
+                                'refund_proof_path' => $data['refund_proof'],
+                                'refund_notes' => ($record->payment->refund_notes ? $record->payment->refund_notes . "\n" : "") . "Đã hoàn trả: " . $data['refund_notes'],
+                            ]);
+
+                            Notification::make()
+                                ->title('Đã xác nhận hoàn tiền')
+                                ->success()
+                                ->send();
+                        })
+                        ->visible(function (Student $record) {
+                            return Auth::user()->can('payment_verify') && 
+                                   $record->payment && 
+                                   $record->payment->excess_amount > 0 && 
+                                   $record->payment->refund_status === 'pending';
                         }),
                     Action::make('toggle_active')
                         ->label(fn($record) => $record->is_active ? 'Ngưng hoạt động' : 'Kích hoạt lại')

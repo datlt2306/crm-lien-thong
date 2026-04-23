@@ -95,6 +95,29 @@ class FileController extends Controller {
         abort(403, 'Bạn không có quyền xem phiếu thu này');
     }
 
+    public function viewRefundProof($paymentId) {
+        $payment = Payment::findOrFail($paymentId);
+        $user = Auth::user();
+
+        if (!$user) abort(403);
+
+        // Kiểm tra quyền
+        if ($user->can('payment_view') || 
+            in_array($user->role, ['super_admin', 'admin', 'accountant', 'document'])) {
+            return $this->serveFile($payment->refund_proof_path);
+        }
+
+        // CTV xem minh chứng hoàn tiền của học viên mình
+        if ($user->hasRole('ctv')) {
+            $collaborator = Collaborator::where('email', $user->email)->first();
+            if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
+                return $this->serveFile($payment->refund_proof_path);
+            }
+        }
+
+        abort(403, 'Bạn không có quyền xem minh chứng hoàn tiền này');
+    }
+
     private function serveFile($filePath) {
         if (!$filePath) {
             abort(404, 'File không tồn tại');

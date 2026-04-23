@@ -34,34 +34,31 @@ class PermissionManagementForm {
                             ->default('web')
                             ->helperText('Guard xác định cách xác thực vai trò'),
                     ])
-                    ->columns(2)
+                    ->columns(1)
                     ->collapsible(),
 
                 Section::make('🔐 Phân quyền chi tiết')
                     ->description('Chọn các quyền cho vai trò này (Đã phân theo nhóm)')
                     ->icon('heroicon-o-key')
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                self::getGroupSection('🎓 Sinh viên', 'student_'),
-                                self::getGroupSection('💰 Tài chính', 'payment_'),
-                                self::getGroupSection('📈 Hoa hồng', 'commission_'),
-                                self::getGroupSection('📅 Tuyển sinh & Chỉ tiêu', ['intake_', 'quota_', 'annual_quota_']),
-                                self::getGroupSection('👥 Nhân viên', 'user_'),
-                                self::getGroupSection('🤝 Cộng tác viên', 'collaborator_'),
-                                self::getGroupSection('⚙️ Hệ thống & Báo cáo', ['audit_log_', 'role_', 'setting_', 'report_', 'database_']),
-                            ]),
+                        self::getGroupSection('🎓 Sinh viên', 'student_'),
+                        self::getGroupSection('💰 Tài chính', 'payment_'),
+                        self::getGroupSection('📈 Hoa hồng', 'commission_'),
+                        self::getGroupSection('📅 Tuyển sinh & Chỉ tiêu', ['intake_', 'quota_', 'annual_quota_']),
+                        self::getGroupSection('👥 Nhân viên', 'user_'),
+                        self::getGroupSection('🤝 Cộng tác viên', 'collaborator_'),
+                        self::getGroupSection('⚙️ Hệ thống & Báo cáo', ['audit_log_', 'role_', 'setting_', 'report_', 'database_']),
                     ])
+                    ->columns(1)
                     ->collapsible(),
-            ]);
+            ])
+            ->columns(1);
     }
 
     protected static function getGroupSection(string $label, string|array $prefixes): Section {
         $prefixes = (array) $prefixes;
         
         return Section::make($label)
-            ->compact()
-            ->collapsible()
             ->schema([
                 CheckboxList::make('perms_' . (is_array($prefixes) ? $prefixes[0] : $prefixes))
                     ->label('')
@@ -95,6 +92,7 @@ class PermissionManagementForm {
                     ->columns(1) // Một cột cho mỗi nhóm để nhìn rõ hơn
                     ->bulkToggleable(),
             ])
-            ->columnSpan(1);
+            ->compact()
+            ->collapsible();
     }
 }

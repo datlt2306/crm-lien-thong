@@ -26,6 +26,11 @@ Route::get('/', function () {
     return redirect('/admin/login');
 });
 
+// Alias for auth middleware redirect
+Route::get('/login', function () {
+    return redirect()->route('filament.admin.auth.login');
+})->name('login');
+
 // Notification demo page (removed)
 
 
@@ -59,6 +64,7 @@ Route::get('/public/files/bill/{paymentUuid}', [FileController::class, 'publicVi
 Route::middleware(['auth'])->group(function () {
     Route::get('/files/bill/{paymentId}', [FileController::class, 'viewBill'])->name('files.bill.view');
     Route::get('/files/receipt/{paymentId}', [FileController::class, 'viewReceipt'])->name('files.receipt.view');
+    Route::get('/files/refund/{paymentId}', [FileController::class, 'viewRefundProof'])->name('files.refund.view');
     Route::get('/files/commission-bill/{commissionItemId}', [FileController::class, 'viewCommissionBill'])->name('files.commission-bill.view');
 
     // Notification routes

@@ -117,6 +117,8 @@ class StudentInfolist {
                 TextEntry::make('college_diploma_signer')
                     ->label('Người ký bằng TN CĐ')
                     ->columnSpanFull(),
+                TextEntry::make('college_gpa')
+                    ->label('Điểm trung bình tích lũy toàn khóa'),
 
                 // Thông tin văn bằng Trung cấp
                 TextEntry::make('intermediate_graduation_school')
@@ -141,6 +143,8 @@ class StudentInfolist {
                 TextEntry::make('intermediate_diploma_signer')
                     ->label('Người ký bằng TN TC')
                     ->columnSpanFull(),
+                TextEntry::make('intermediate_gpa')
+                    ->label('Điểm trung bình tích lũy toàn khóa'),
 
                 // File uploads - chỉ hiển thị tên file hoặc link
                 TextEntry::make('document_college_diploma')

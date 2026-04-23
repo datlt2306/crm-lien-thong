@@ -48,6 +48,7 @@ class Student extends Model {
         'college_diploma_book_number',  // 23. Số vào sổ cấp bằng CĐ
         'college_diploma_issue_date',   // 24. Ngày ký bằng CĐ
         'college_diploma_signer',       // 25. Người ký bằng CĐ
+        'college_gpa',                  // Điểm trung bình CĐ
 
         // IV. Hồ sơ học tập – Trung cấp & THPT
         'high_school_name',         // 28. Tên trường THPT
@@ -100,7 +101,9 @@ class Student extends Model {
         'identity_card_back',  // 14. File CCCD - mặt sau
         'document_intermediate_diploma',    // 27. Bằng Trung cấp
         'document_intermediate_transcript', // Bảng điểm Trung cấp
+        'intermediate_gpa',                 // Điểm trung bình Trung cấp
         'is_active',
+        'has_transferred',
     ];
 
     protected $casts = [
@@ -199,6 +202,10 @@ class Student extends Model {
         return $this->hasOne(Commission::class);
     }
 
+    public function transfers() {
+        return $this->hasMany(StudentTransfer::class);
+    }
+
     public function auditLogs() {
         return $this->hasMany(AuditLog::class)->latest();
     }
@@ -284,6 +291,8 @@ class Student extends Model {
             'notes' => 'nullable|string',
             'dob' => 'nullable|date|before:today',
             'address' => 'nullable|string|max:500',
+            'college_gpa' => 'nullable|numeric|between:0,10',
+            'intermediate_gpa' => 'nullable|numeric|between:0,10',
         ];
     }
 }
