@@ -81,7 +81,7 @@ class StudentSeeder extends Seeder {
                 'status' => 'enrolled',
                 'dob' => '2000-12-25',
                 'address' => 'Hà Nội',
-                'notes' => 'Đã nhập học tháng 9/2024',
+                'notes' => 'Đã nhập học tháng 9/2026',
             ],
             [
                 'full_name' => 'Hoàng Thị Em',
@@ -171,7 +171,7 @@ class StudentSeeder extends Seeder {
                 'status' => 'enrolled',
                 'dob' => '2000-06-05',
                 'address' => 'Hà Nội',
-                'notes' => 'Đã nhập học tháng 7/2024',
+                'notes' => 'Đã nhập học tháng 7/2026',
             ],
         ];
 
