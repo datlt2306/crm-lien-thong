@@ -245,4 +245,76 @@ class CommissionService {
             'payable_at' => now(),
         ]);
     }
+
+    /**
+     * Tính toán lại hoa hồng khi sinh viên chuyển hệ
+     */
+    public function recalculateCommissionOnTransfer(Payment $payment): void {
+        DB::transaction(function () use ($payment) {
+            $commission = Commission::where('payment_id', $payment->id)->first();
+            if (!$commission) return;
+
+            // 1. Tìm chính sách mới
+            $policy = $this->getMatchingPolicy($payment);
+            
+            // 2. Cập nhật luật trong commission chính
+            $commission->update([
+                'rule' => [
+                    'policy_id' => $policy?->id,
+                    'program_type' => $payment->program_type,
+                    'amount' => $payment->amount,
+                    'payout_rules' => $policy?->payout_rules,
+                ],
+            ]);
+
+            // 3. Xử lý các CommissionItem chưa chi trả
+            $items = $commission->items()
+                ->whereIn('status', [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_PAYABLE])
+                ->get();
+
+            // Lấy quy tắc mới
+            $newRules = [];
+            if ($policy && !empty($policy->payout_rules)) {
+                $programKey = strtoupper($payment->program_type);
+                $newRules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
+            }
+
+            // Nếu không có rules cụ thể, dùng direct fallback
+            if (empty($newRules)) {
+                $newAmount = $this->getDirectCommissionAmount($payment);
+                foreach ($items as $item) {
+                    if ($item->role === 'direct') {
+                        $item->update([
+                            'original_amount' => $item->amount,
+                            'amount' => $newAmount,
+                            'is_adjusted' => true,
+                        ]);
+                    } else {
+                        // Hủy các dòng override nếu không còn rule
+                        $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                    }
+                }
+            } else {
+                // Có rules mới -> Khớp và cập nhật
+                foreach ($items as $item) {
+                    $matchedRule = collect($newRules)->first(function($rule) use ($item) {
+                        return $rule['payout_trigger'] === $item->trigger && 
+                               (($rule['recipient_type'] === 'direct_ctv' && $item->role === 'direct') || 
+                                ($rule['recipient_type'] === 'specific_ctv' && $item->recipient_collaborator_id == ($rule['recipient_id'] ?? null)));
+                    });
+
+                    if ($matchedRule) {
+                        $item->update([
+                            'original_amount' => $item->amount,
+                            'amount' => (float)$matchedRule['amount_vnd'],
+                            'is_adjusted' => true,
+                        ]);
+                    } else {
+                        // Nếu không khớp rule nào mới -> Hủy
+                        $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                    }
+                }
+            }
+        });
+    }
 }

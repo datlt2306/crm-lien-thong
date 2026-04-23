@@ -98,12 +98,14 @@ class CommissionResource extends Resource {
                     ->formatStateUsing(fn($state) => match ($state) {
                         'REGULAR' => '🎓 Chính quy',
                         'PART_TIME' => '⏰ Vừa học vừa làm',
+                        'DISTANCE' => '💻 Đào tạo từ xa',
                         default => '—'
                     })
                     ->badge()
                     ->color(fn($state) => match ($state) {
                         'REGULAR' => 'success',
                         'PART_TIME' => 'info',
+                        'DISTANCE' => 'warning',
                         default => 'gray'
                     }),
 
@@ -127,18 +129,18 @@ class CommissionResource extends Resource {
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv),
 
-                \Filament\Tables\Columns\TextColumn::make('meta.description')
-                    ->label('Nội dung')
-                    ->wrap()
-                    ->formatStateUsing(function ($state, $record) {
-                        if ($state) return $state;
-                        return match ($record->role) {
-                            'direct' => 'Hoa hồng trực tiếp',
-                            'override' => 'Hoa hồng quản lý/thưởng',
-                            default => 'Phân bổ hoa hồng'
-                        };
-                    })
-                    ->searchable(),
+                // \Filament\Tables\Columns\TextColumn::make('meta.description')
+                //     ->label('Nội dung')
+                //     ->wrap()
+                //     ->formatStateUsing(function ($state, $record) {
+                //         if ($state) return $state;
+                //         return match ($record->role) {
+                //             'direct' => 'Hoa hồng trực tiếp',
+                //             'override' => 'Hoa hồng quản lý/thưởng',
+                //             default => 'Phân bổ hoa hồng'
+                //         };
+                //     })
+                //     ->searchable(),
 
                 \Filament\Tables\Columns\TextColumn::make('amount')
                     ->label('Số tiền hoa hồng')
@@ -161,18 +163,18 @@ class CommissionResource extends Resource {
                     ->toggleable(),
 
                 // Cột mã số phiếu thu
-                \Filament\Tables\Columns\TextColumn::make('commission.payment.receipt_number')
-                    ->label('Số phiếu thu')
-                    ->sortable()
-                    ->formatStateUsing(function (?CommissionItem $record) {
-                        if (!$record) return '—';
-                        $payment = $record->commission->payment;
-                        if (!$payment || !$payment->receipt_number) {
-                            return '—';
-                        }
-                        return $payment->receipt_number;
-                    })
-                    ->visible(fn(): bool => Auth::user()->can('payment_view')),
+                // \Filament\Tables\Columns\TextColumn::make('commission.payment.receipt_number')
+                //     ->label('Số phiếu thu')
+                //     ->sortable()
+                //     ->formatStateUsing(function (?CommissionItem $record) {
+                //         if (!$record) return '—';
+                //         $payment = $record->commission->payment;
+                //         if (!$payment || !$payment->receipt_number) {
+                //             return '—';
+                //         }
+                //         return $payment->receipt_number;
+                //     })
+                //     ->visible(fn(): bool => Auth::user()->can('payment_view')),
 
                 \Filament\Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
@@ -207,9 +209,16 @@ class CommissionResource extends Resource {
                             return "Lý do hoàn trả: " . ($payment->edit_reason ?? 'Không có ghi chú');
                         }
 
-                        // 3. Hiển thị ghi chú điều chỉnh (Chuyển hệ)
                         if ($record->is_adjusted || $record->notes) {
-                            return "Ghi chú: " . ($record->notes ?? 'Đã điều chỉnh');
+                            $notes = $record->notes ?? 'Đã điều chỉnh';
+                            
+                            $sentences = preg_split('/(?<=\.)\s+/', $notes, -1, PREG_SPLIT_NO_EMPTY);
+                            if (is_array($sentences)) {
+                                $uniqueSentences = array_unique(array_map('trim', $sentences));
+                                $notes = implode(' ', $uniqueSentences);
+                            }
+                            
+                            return $notes;
                         }
 
                         return null;

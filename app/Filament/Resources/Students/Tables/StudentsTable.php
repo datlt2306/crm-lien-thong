@@ -967,6 +967,9 @@ class StudentsTable {
 
                             // 3. Xử lý Payment & Tiền thừa
                             if ($record->payment && $record->payment->status === Payment::STATUS_VERIFIED) {
+                                // Cập nhật hệ đào tạo trong payment để CommissionService lấy đúng dữ liệu mới
+                                $record->payment->update(['program_type' => $data['program_type']]);
+
                                 if ($feeDifference > 0) {
                                     $record->payment->update([
                                         'excess_amount' => (float)$record->payment->excess_amount + $feeDifference,
@@ -977,23 +980,38 @@ class StudentsTable {
                             }
 
                             // 4. Xử lý Hoa hồng (Commission)
-                            $commission = $record->payment?->commission;
-                            if ($commission) {
-                                foreach ($commission->items as $item) {
+                            $payment = $record->payment;
+                            if ($payment && $payment->commission) {
+                                $commissionService = new \App\Services\CommissionService();
+                                
+                                // Gọi service tính toán lại số tiền cho các item chưa chi trả
+                                $commissionService->recalculateCommissionOnTransfer($payment);
+
+                                // Refresh để lấy dữ liệu mới sau khi recalculate
+                                $payment->load('commission.items');
+                                
+                                foreach ($payment->commission->items as $item) {
                                     $isPaid = in_array($item->status, [
                                         \App\Models\CommissionItem::STATUS_PAID,
                                         \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
                                         \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED
                                     ]);
 
-                                    if ($isPaid) {
+                                    $noteMessage = $isPaid 
+                                        ? "⚠️ SV chuyển hệ sau khi đã chi trả. Cần đối soát lại hệ mới ({$data['program_type']})."
+                                        : "ℹ️ Thông tin đã thay đổi do SV chuyển hệ. Kế toán kiểm tra lại trước khi chốt.";
+                                    
+                                    // Làm sạch và gom nhóm ghi chú theo từng câu để tránh trùng lặp
+                                    $currentNotes = $item->notes ?? '';
+                                    $allText = $currentNotes . " " . $noteMessage;
+                                    
+                                    // Tách thành các câu dựa trên dấu chấm
+                                    $sentences = preg_split('/(?<=\.)\s+/', $allText, -1, PREG_SPLIT_NO_EMPTY);
+                                    if (is_array($sentences)) {
+                                        // Chỉ giữ lại các câu duy nhất và ghép lại
+                                        $uniqueSentences = array_unique(array_map('trim', $sentences));
                                         $item->update([
-                                            'is_adjusted' => true,
-                                            'notes' => ($item->notes ? $item->notes . "\n" : "") . "⚠️ SV chuyển hệ sau khi đã chi trả. Cần đối soát lại theo hệ mới ({$data['program_type']}).",
-                                        ]);
-                                    } else {
-                                        $item->update([
-                                            'notes' => ($item->notes ? $item->notes . "\n" : "") . "ℹ️ Thông tin đã thay đổi do SV chuyển hệ. Kế toán kiểm tra lại trước khi chốt.",
+                                            'notes' => implode(' ', $uniqueSentences),
                                         ]);
                                     }
                                 }
