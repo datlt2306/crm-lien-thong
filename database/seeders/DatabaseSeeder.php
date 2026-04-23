@@ -15,21 +15,26 @@ class DatabaseSeeder extends Seeder {
     public function run(): void {
         // User::factory(10)->create();
 
-        // Tạo admin user
-        \App\Models\User::factory()->create([
-            'name' => 'Super Admin',
-            'email' => 'datlt2306@gmail.com',
-            'password' => bcrypt('GZN6#EPERXl#kJkd'),
-            'role' => 'super_admin',
-        ]);
+        // Tạo hoặc cập nhật admin user từ env
+        $adminEmail = env('SUPER_ADMIN_EMAIL', 'admin@gmail.com');
+        $adminPassword = env('SUPER_ADMIN_PASSWORD', 'password');
+
+        $superAdminUser = \App\Models\User::updateOrCreate(
+            ['role' => 'super_admin'], // Tìm theo role super_admin
+            [
+                'name' => 'Super Admin',
+                'email' => $adminEmail,
+                'password' => bcrypt($adminPassword),
+                'email_verified_at' => now(),
+            ]
+        );
 
         // Seed permissions và roles trước
         $this->call(PermissionSeeder::class);
 
         // Gán role cho admin
-        $superAdmin = User::where('email', 'datlt2306@gmail.com')->first();
-        if ($superAdmin) {
-            $superAdmin->assignRole('super_admin');
+        if ($superAdminUser) {
+            $superAdminUser->assignRole('super_admin');
         }
 
 
