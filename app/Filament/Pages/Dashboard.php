@@ -30,7 +30,9 @@ class Dashboard extends BaseDashboard {
     }
 
     protected function getHeaderWidgets(): array {
-        return [];
+        return [
+            \App\Filament\Widgets\DashboardFiltersWidget::class,
+        ];
     }
 
     public function getWidgets(): array {
@@ -39,10 +41,10 @@ class Dashboard extends BaseDashboard {
 
         if ($user->can('report_view_all')) {
             return [
-                AdminKpiStats::class,
-                CollaboratorStatsWidget::class,
-                SimpleRevenueChart::class,
-                SimpleCollaboratorChart::class,
+                \App\Filament\Widgets\FinanceKpiStats::class,
+                \App\Filament\Widgets\MajorDistributionChart::class,
+                RevenueOverTime::class,
+                CollaboratorRevenueChart::class,
                 RecentPayments::class,
             ];
         }
@@ -50,19 +52,23 @@ class Dashboard extends BaseDashboard {
         if ($role === 'ctv') {
             return [
                 CtvUnifiedStats::class,
+                RevenueOverTime::class,
                 RecentPayments::class,
             ];
         }
 
         if ($user->can('report_view_finance')) {
             return [
-                SimpleAccountantStats::class,
+                \App\Filament\Widgets\FinanceKpiStats::class,
+                \App\Filament\Widgets\MajorDistributionChart::class,
+                RevenueOverTime::class,
                 SimplePaymentsTable::class,
             ];
         }
 
         return [
-            AdminKpiStats::class,
+            \App\Filament\Widgets\FinanceKpiStats::class,
+            RevenueOverTime::class,
             RecentPayments::class,
         ];
     }

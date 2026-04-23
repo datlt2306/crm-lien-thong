@@ -28,38 +28,13 @@ class RevenueOverTime extends ChartWidget {
 
     // filters lấy từ trait
 
-    protected function getRangeBounds(array $filters): array {
-        $tz = DashboardCacheService::getTimezone();
-        $now = CarbonImmutable::now($tz);
-        switch ($filters['range'] ?? 'last_30_days') {
-            case 'today':
-                return [$now->startOfDay(), $now->endOfDay()];
-            case 'last_7_days':
-                return [$now->subDays(6)->startOfDay(), $now->endOfDay()];
-            case 'this_month':
-                return [$now->startOfMonth(), $now->endOfMonth()];
-            case 'custom':
-                $from = $filters['from'] ? CarbonImmutable::parse($filters['from'], $tz)->startOfDay() : $now->subDays(29)->startOfDay();
-                $to = $filters['to'] ? CarbonImmutable::parse($filters['to'], $tz)->endOfDay() : $now->endOfDay();
-                return [$from, $to];
-            case 'last_30_days':
-            default:
-                return [$now->subDays(29)->startOfDay(), $now->endOfDay()];
-        }
-    }
-
     protected function buildSeries(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
         $tz = DashboardCacheService::getTimezone();
 
-        $query = Payment::query()
+        $query = $this->applyFilters(Payment::query(), $filters, 'verified_at')
             ->whereNotNull('verified_at')
-            ->where('status', Payment::STATUS_VERIFIED)
-            ->whereBetween('verified_at', [$from, $to]);
-
-        if (!empty($filters['program_type'])) {
-            $query->where('program_type', $filters['program_type']);
-        }
+            ->where('status', Payment::STATUS_VERIFIED);
 
         $payments = $query->get(['verified_at', 'amount']);
 

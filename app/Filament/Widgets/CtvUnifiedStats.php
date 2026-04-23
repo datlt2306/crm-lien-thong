@@ -95,28 +95,4 @@ class CtvUnifiedStats extends BaseWidget {
             'conversion_rate' => $conversionRate . '%',
         ];
     }
-
-    protected function getRangeBounds(array $filters): array {
-        $tz = DashboardCacheService::getTimezone();
-        $now = CarbonImmutable::now($tz);
-        
-        // Default to last 30 days if not set
-        $range = $filters['range'] ?? 'last_30_days';
-        
-        switch ($range) {
-            case 'today':
-                return [$now->startOfDay(), $now->endOfDay()];
-            case 'last_7_days':
-                return [$now->subDays(6)->startOfDay(), $now->endOfDay()];
-            case 'this_month':
-                return [$now->startOfMonth(), $now->endOfMonth()];
-            case 'custom':
-                $from = !empty($filters['from']) ? CarbonImmutable::parse($filters['from'], $tz)->startOfDay() : $now->subDays(29)->startOfDay();
-                $to = !empty($filters['to']) ? CarbonImmutable::parse($filters['to'], $tz)->endOfDay() : $now->endOfDay();
-                return [$from, $to];
-            case 'last_30_days':
-            default:
-                return [$now->subDays(29)->startOfDay(), $now->endOfDay()];
-        }
-    }
 }

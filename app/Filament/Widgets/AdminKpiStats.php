@@ -38,41 +38,6 @@ class AdminKpiStats extends BaseWidget {
         return $query;
     }
 
-    protected function getRangeBounds(array $filters): array {
-        $tz = DashboardCacheService::getTimezone();
-        $now = CarbonImmutable::now($tz);
-        $label = '';
-        switch ($filters['range'] ?? 'last_30_days') {
-            case 'today':
-                $from = $now->startOfDay();
-                $to = $now->endOfDay();
-                $label = 'Hôm nay';
-                break;
-            case 'last_7_days':
-                $from = $now->subDays(6)->startOfDay();
-                $to = $now->endOfDay();
-                $label = '7 ngày gần đây';
-                break;
-            case 'this_month':
-                $from = $now->startOfMonth();
-                $to = $now->endOfMonth();
-                $label = 'Tháng này';
-                break;
-            case 'custom':
-                $from = $filters['from'] ? CarbonImmutable::parse($filters['from'], $tz)->startOfDay() : $now->subDays(29)->startOfDay();
-                $to = $filters['to'] ? CarbonImmutable::parse($filters['to'], $tz)->endOfDay() : $now->endOfDay();
-                $label = sprintf('%s - %s', $from->toDateString(), $to->toDateString());
-                break;
-            case 'last_30_days':
-            default:
-                $from = $now->subDays(29)->startOfDay();
-                $to = $now->endOfDay();
-                $label = '30 ngày gần đây';
-                break;
-        }
-        return [$from, $to, $label];
-    }
-
     protected function calculateAdminStats(array $filters): array {
         [$from, $to, $label] = $this->getRangeBounds($filters);
 

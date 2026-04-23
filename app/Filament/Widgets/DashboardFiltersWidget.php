@@ -26,11 +26,11 @@ class DashboardFiltersWidget extends Widget {
             ->distinct()
             ->orderBy('major_name')
             ->get();
+
         return compact('majors');
     }
 
-    public function updatedFilters(): void {
-        $this->dispatch('dashboardFiltersChanged', $this->filters);
-        $this->dispatch('$refresh');
+    public function updated($name, $value): void {
+        $this->dispatch('dashboardFiltersChanged', filters: $this->filters);
     }
 }
