@@ -8,8 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Traits\HasAuditLog;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 class Payment extends Model {
-    use HasFactory, HasAuditLog;
+    use HasFactory, HasAuditLog, HasUuids;
     protected $fillable = [
         'student_id',
         'primary_collaborator_id',
@@ -136,6 +138,13 @@ class Payment extends Model {
         $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$extension}";
         
         return "Phiếu thu/{$year}/{$fileName}";
+    }
+
+    /**
+     * Tạo token bảo mật cho việc truy cập file công khai (Quick Win fix cho IDOR)
+     */
+    public function getPublicToken(): string {
+        return hash_hmac('sha256', (string) $this->id, config('app.key'));
     }
 
     public function getReceiptUrlAttribute(): ?string {

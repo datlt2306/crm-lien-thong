@@ -283,7 +283,7 @@ class PublicStudentController extends Controller {
 
         $request->file('bill')->storeAs($directory, $fileName, [
             'disk' => 'google',
-            'visibility' => 'public'
+            'visibility' => 'private'
         ]);
 
         // Cập nhật lại đường dẫn chuẩn vào database
@@ -318,8 +318,8 @@ class PublicStudentController extends Controller {
             'programTypeLabel' => $student?->program_type_label,
             'paymentAmountLabel' => $student?->payment ? number_format((float) $student->payment->amount, 0, ',', '.') . ' VNĐ' : 'Chưa cập nhật',
             'isPaymentVerified' => $student?->payment?->status === Payment::STATUS_VERIFIED,
-            'billUrl' => $student?->payment?->bill_path ? route('public.files.bill.view', ['paymentId' => $student->payment->id]) : null,
-            'receiptUrl' => $student?->payment?->receipt_path ? route('public.files.bill.view', ['paymentId' => $student->payment->id]) . '?type=receipt' : null,
+            'billUrl' => $student?->payment?->bill_path ? route('public.files.bill.view', ['paymentUuid' => $student->payment->uuid, 'token' => $student->payment->getPublicToken()]) : null,
+            'receiptUrl' => $student?->payment?->receipt_path ? route('public.files.bill.view', ['paymentUuid' => $student->payment->uuid, 'token' => $student->payment->getPublicToken(), 'type' => 'receipt']) : null,
         ]);
     }
 

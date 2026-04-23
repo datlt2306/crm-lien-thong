@@ -21,8 +21,9 @@ Ghi log khi **Tạo/Sửa/Xóa** các mục sau:
 - **Old Value**: Giá trị cũ.
 - **New Value**: Giá trị mới.
 - **Difference**: Chênh lệch (Old - New).
-- **Reason**: Lý do chỉnh sửa (bắt buộc).
+- **Reason**: Lý do chỉnh sửa (bắt buộc cho các hành động thay đổi trạng thái, hoàn trả hoặc sửa số tiền).
 - **Context**: IP, Device, User-Agent.
+- **Implementation**: Sử dụng trait `HasAuditLog` gắn vào các model `Student`, `Payment`, `CommissionItem`, `Collaborator` để tự động hóa việc ghi log.
 
 ### Group 2: Account Deletion (Xóa tài khoản)
 Ghi log khi xóa các đối tượng:
@@ -45,8 +46,9 @@ Ghi log khi xóa các đối tượng:
     - Filament Resource cho Audit Logs.
     - Timeline view (thanh thời gian dễ đọc).
     - Bộ lọc (Filter) theo: Ngày, User thao tác, Loại Log, Hồ sơ (Student).
-- **Export**: Hỗ trợ xuất Excel/PDF.
-- **Data Integrity**: **KHÔNG** cho phép sửa hoặc xóa Log. Log chỉ được thêm mới (Append-only).
+- **Export**: Hỗ trợ xuất Excel/PDF cho các báo cáo đối soát tài chính.
+- **Data Integrity**: **KHÔNG** cho phép sửa hoặc xóa Log qua UI. Log chỉ được thêm mới (Append-only) thông qua Eloquent hooks.
+- **Privacy**: Chỉ hiển thị các thông tin cần thiết, ẩn các thông tin nhạy cảm của hệ thống nếu không phải Admin.
 
 ## 3. Technical Stack
 - Laravel 11 / Laravel 12

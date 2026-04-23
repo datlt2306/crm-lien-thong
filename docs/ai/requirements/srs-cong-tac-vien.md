@@ -14,6 +14,7 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   Tạo hoặc hỗ trợ tạo **lead/hồ sơ sinh viên** trong hệ thống.
     -   Theo dõi tiến độ xử lý hồ sơ sinh viên thuộc nhánh của mình.
     -   Liên quan trực tiếp tới **hoa hồng**, **thanh toán** và **chăm sóc sinh viên**.
+-   CTV có tài khoản hệ thống được đồng bộ mật khẩu và email chặt chẽ với bản ghi Collaborator.
 -   CTV có thể làm việc độc lập hoặc thuộc một tổ chức (Organization).
 
 ### 1.2. Phạm vi SRS cho Cộng tác viên
@@ -68,8 +69,9 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
         -   Bị giới hạn theo nhánh CTV (không xem được sinh viên của nhánh khác).
         -   Có thể filter theo trạng thái hồ sơ, trạng thái thanh toán, đợt tuyển sinh, ngành, v.v.
     -   API chi tiết:
-        -   CTV có thể xem chi tiết hồ sơ mức độ đủ dùng cho chăm sóc (thông tin liên hệ, trạng thái, ghi chú cơ bản).
-        -   Không được xem các ghi chú nội bộ riêng của Cán bộ hồ sơ/Kế toán nếu được phân loại là nội bộ.
+        -   CTV có thể xem và chỉnh sửa **Thông tin cơ bản** (Họ tên, SĐT, Email, Ngành đăng ký) của sinh viên mình phụ trách nếu hồ sơ chưa được xác minh.
+        -   CTV **không được phép** xem các tab thông tin nhạy cảm khác như: Thông tin THPT, Thông tin CĐ/TC, và Checklist giấy tờ minh chứng (quyền này thuộc về Cán bộ hồ sơ).
+        -   Không được xem các ghi chú nội bộ của Cán bộ hồ sơ/Kế toán.
 
 ### 3.3. Theo dõi trạng thái hồ sơ sinh viên
 
@@ -95,8 +97,13 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   API cho phép CTV:
         -   Xem danh sách và chi tiết `Payment` liên quan tới sinh viên của mình.
         -   Cập nhật một số thông tin xác nhận ban đầu (ví dụ: đã thu hộ, đã nhờ sinh viên chuyển khoản), nếu thiết kế nghiệp vụ cho phép.
-    -   Xác nhận chính thức, upload phiếu thu, đối soát chi tiết:
+    -   Xác nhận chính thức, upload phiếu thu chính thức, đối soát chi tiết:
         -   Thuộc quyền của **Kế toán / Cán bộ hồ sơ** theo `PaymentPolicy`.
+    -   **Chỉnh sửa thông tin thanh toán**:
+        -   CTV có thể chỉnh sửa lại bill hoặc số tiền đã upload nếu phát hiện sai sót (trước khi Kế toán xác nhận).
+        -   **Bắt buộc** phải nhập lý do chỉnh sửa khi thực hiện thao tác này.
+    -   Quy tắc đặt tên file:
+        -   File bill được hệ thống tự động đặt tên theo chuẩn: `{Mã_HS}_{Tên}_{Ngành}_{Hệ}.ext` để dễ quản lý trên Drive.
 
 ### 3.5. Theo dõi hoa hồng, ví hoa hồng và giao dịch
 
@@ -112,6 +119,9 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
         -   Xem lịch sử giao dịch (`WalletTransaction`): ngày, loại giao dịch (cộng/trừ), số tiền, lý do.
         -   Xem bảng hoa hồng chi tiết theo hồ sơ sinh viên (`Commission` / `CommissionItem`):
             -   Sinh viên nào, trạng thái hồ sơ/thu tiền, số tiền hoa hồng tương ứng.
+    -   CTV **xác nhận đã nhận hoa hồng**:
+        -   Khi trạng thái hoa hồng chuyển sang `payment_confirmed` (Admin/Kế toán đã chi), CTV có trách nhiệm kiểm tra tài khoản và nhấn xác nhận `received_confirmed` (Đã nhận tiền).
+        -   Thao tác này giúp hệ thống chốt giao dịch và ghi nhận vào lịch sử ví.
     -   CTV **không được**:
         -   Tự chỉnh sửa số liệu hoa hồng.
         -   Tạo giao dịch ví thủ công; các giao dịch phải được tạo bởi hệ thống hoặc bởi Kế toán/Quản lý theo rule.
@@ -135,12 +145,14 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
 -   CTV **chỉ được truy cập**:
     -   Sinh viên do mình phụ trách (`collaborator_id` = CTV hiện tại) hoặc thuộc nhánh downline.
     -   Payment, Commission, Wallet liên quan tới mình hoặc nhánh của mình.
+    -   Truy cập file (bill/phiếu thu) thông qua URL bảo mật có token để tránh IDOR.
 -   CTV **không được**:
     -   Xem danh sách tổ chức (Organization) đầy đủ hoặc chỉnh sửa thông tin tổ chức.
     -   Sửa trực tiếp dữ liệu thanh toán đã được xác nhận bởi Kế toán.
     -   Thay đổi cấu hình chính sách hoa hồng, quota, ngành/đợt.
 -   Mọi API cần:
     -   Kiểm tra mapping giữa tài khoản đăng nhập (User) và `Collaborator`.
+    -   **Đồng bộ tài khoản**: Mọi thay đổi về Email hoặc Mật khẩu trên bản ghi CTV phải được đồng bộ ngay lập tức sang tài khoản User tương ứng để đảm bảo tính nhất quán trong đăng nhập.
     -   Đảm bảo query luôn filter theo nhánh cộng tác viên tương ứng (áp dụng logic tương tự `StudentResource::getEloquentQuery`).
 
 ## 5. Dữ liệu & tích hợp liên quan đến Cộng tác viên
@@ -167,12 +179,11 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   Không lộ dữ liệu hồ sơ/thu nhập của nhánh khác cho CTV.
     -   Giảm thiểu tranh chấp về hoa hồng nhờ log đầy đủ và rule rõ ràng.
 
-## 7. Open Items riêng cho vai trò Cộng tác viên
-
--   Chi tiết chính sách hoa hồng nhiều tầng (nếu có):
-    -   Tỷ lệ cho CTV trực tiếp, upline 1, upline 2, v.v.
-    -   Điều kiện nhận hoa hồng (trạng thái hồ sơ, trạng thái thanh toán).
--   Phạm vi báo cáo mà CTV được phép xem:
-    -   Chỉ tổng hợp cho bản thân hay bao gồm cả downline.
--   Quy tắc giới hạn/chặn thao tác khi:
-    -   CTV cố gắng chỉnh sửa thông tin nhạy cảm sau khi hồ sơ đã ở trạng thái khoá.
+## 7. Trạng thái các vấn đề mở (Open Items)
+-   **Đã giải quyết**:
+    -   Quyền xem sinh viên giới hạn trong nhánh và downline (theo logic `getDownlineIds`).
+    -   Đồng bộ tài khoản User và Collaborator (Email, Password).
+    -   Quyền chỉnh sửa thông tin bill trước khi Kế toán xác nhận (kèm lý do).
+-   **Cần làm rõ thêm**:
+    -   Tỷ lệ chia sẻ hoa hồng cụ thể cho từng cấp bậc CTV trong mô hình đa tầng.
+    -   Phạm vi báo cáo thống kê chi tiết cho từng CTV.

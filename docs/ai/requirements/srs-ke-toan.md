@@ -64,9 +64,10 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
         -   Cho phép Kế toán:
             -   Đặt trạng thái `verified` (hoặc tương đương).
             -   Ghi chú (ví dụ: mã giao dịch, kênh nhận tiền, ghi chú nội bộ).
-    -   Nếu từ chối:
-        -   Ghi rõ lý do từ chối (thiếu chứng từ, sai số tiền, chuyển nhầm, v.v.).
-        -   Có thể trả về trạng thái `rejected`, đẩy thông báo cho sinh viên/CTV/Cán bộ hồ sơ.
+    -   Nếu từ chối hoặc hoàn trả tiền (`revert`):
+        -   **Bắt buộc** ghi rõ lý do (thiếu chứng từ, sai số tiền, yêu cầu hoàn phí, v.v.).
+        -   Có thể trả về trạng thái `rejected` hoặc `reverted`, đẩy thông báo cho sinh viên/CTV/Cán bộ hồ sơ.
+        -   Hệ thống tự động xóa thông tin số phiếu thu và đường dẫn phiếu thu khi thực hiện hoàn trả để đảm bảo tính nhất quán.
 
 ### 3.3. Upload và quản lý phiếu thu
 
@@ -81,31 +82,25 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
         -   Lưu metadata: số phiếu thu, ngày lập, người lập, link Google Drive (nếu lưu trên Drive).
     -   Kế toán có thể:
         -   Thay thế phiếu thu (với log rõ ràng).
+        -   **Chỉnh sửa bill thanh toán**: Cho phép CTV/Kế toán chỉnh sửa thông tin bill (số tiền, hệ đào tạo) trước khi xác nhận, nhưng **bắt buộc** nhập lý do chỉnh sửa.
         -   Không được xóa hoàn toàn chứng từ đã gắn với giao dịch nếu hệ thống yêu cầu lưu trữ lâu dài (trừ khi có luồng hủy bỏ có kiểm soát).
+    -   Quy trình tải lên phiếu thu:
+        -   Chỉ khả dụng sau khi thanh toán đã được xác nhận (`verified`).
+        -   File phiếu thu được đặt tên theo chuẩn: `{Mã_HS}_{Tên}_{Ngành}_{Hệ}.ext`.
 
-### 3.4. Quản lý hoa hồng Cộng tác viên
-
--   **Mô tả**:
-    -   Dựa trên các `Payment` đã được xác nhận và chính sách hoa hồng:
-        -   Hệ thống tính ra hoa hồng tương ứng cho CTV.
-    -   Kế toán chịu trách nhiệm:
-        -   Đối soát số liệu.
-        -   Thực hiện chi trả hoa hồng (chuyển khoản/tiền mặt).
--   **Liên quan đến model**:
-    -   `Commission`, `CommissionItem`, `Wallet`, `WalletTransaction`, `Collaborator`.
--   **Yêu cầu hệ thống**:
-    -   API cho Kế toán:
-        -   Xem danh sách hoa hồng theo:
-            -   Đợt tuyển sinh, thời gian, tổ chức, CTV.
-        -   Xem chi tiết từng khoản hoa hồng gắn với hồ sơ/thanh toán.
-    -   Khi thực hiện chi trả:
-        -   Ghi nhận giao dịch vào `WalletTransaction`:
-            -   Loại giao dịch: chi hoa hồng.
-            -   Số tiền.
-            -   CTV nhận.
-            -   Hình thức chi (nếu cần).
-        -   Cập nhật số dư `Wallet` tương ứng.
-    -   Có thể lock các khoản hoa hồng đã chi trả, tránh chỉnh sửa ngược chiều không có log.
+### 3.4. Quản lý và Chi trả Hoa hồng (Commission)
+-   **Mô tả**: Quản lý việc chi trả hoa hồng cho Cộng tác viên sau khi các khoản lệ phí đã được xác minh.
+-   **Quy trình chi trả**:
+    -   Hệ thống tự động sinh các dòng hoa hồng ở trạng thái:
+        -   `pending`: Chờ nhập học (nếu quy tắc yêu cầu SV nhập học mới được trả).
+        -   `payable`: Có thể thanh toán (nếu trả ngay sau khi nộp tiền - thường vào ngày mùng 5 hàng tháng).
+    -   Kế toán thực hiện chi trả và cập nhật trạng thái:
+        -   `paid`: Đã thanh toán.
+        -   `payment_confirmed`: Đã chốt & Đã chi (yêu cầu upload file minh chứng chi trả/bill chuyển khoản).
+-   **Xác nhận từ CTV**:
+    -   CTV sẽ nhận được thông báo và thực hiện xác nhận `received_confirmed` (Đã nhận tiền) trên portal của họ.
+-   **Hủy hoa hồng**:
+    -   Nếu Payment bị hoàn trả (`reverted`), các hoa hồng tương ứng sẽ chuyển sang trạng thái `cancelled` (Đã hủy).
 
 ### 3.5. Báo cáo tài chính & xuất số liệu
 
@@ -139,9 +134,10 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
 
 -   Kế toán **được quyền**:
     -   Xem tất cả `Payment` (theo `PaymentPolicy`).
-    -   Xác nhận hoặc từ chối thanh toán.
+    -   Xác nhận hoặc từ chối thanh toán (kèm lý do bắt buộc cho các thao tác thay đổi trạng thái nhạy cảm).
     -   Upload và quản lý phiếu thu.
     -   Xem và cập nhật trạng thái chi trả hoa hồng (thông qua các thao tác được thiết kế).
+-   Sử dụng **UUID** cho các bản ghi thanh toán để bảo mật URL và ngăn chặn tấn công IDOR khi truy cập chứng từ.
 -   Kế toán **không được**:
     -   Thay đổi dữ liệu học thuật của hồ sơ sinh viên.
     -   Thay đổi chính sách hoa hồng ở tầng cấu hình (trừ khi kiêm nhiệm vai trò quản lý).
@@ -160,6 +156,7 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
 -   **Tích hợp**:
     -   Google Drive:
         -   Lưu phiếu thu và các chứng từ liên quan (link từ `Payment`).
+        -   Visibility trên Google Drive được cấu hình là **Private**. Truy cập thông qua hệ thống CRM có kiểm tra token bảo mật.
     -   Excel/Báo cáo:
         -   Export các báo cáo thu – chi, hoa hồng.
 
@@ -172,14 +169,11 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   Số liệu thanh toán và hoa hồng **nhất quán** với dữ liệu hồ sơ.
     -   Hạn chế tối đa rủi ro nhầm lẫn, chồng chéo hoặc chi trả trùng.
 
-## 7. Open Items riêng cho vai trò Kế toán
-
--   Cần làm rõ:
-    -   Chi tiết chính sách hoa hồng:
-        -   Cách tính theo đợt/ngành/loại chương trình.
-        -   Điều kiện “chốt” để được tính hoa hồng (chỉ khi sinh viên nhập học, hay chỉ cần nộp lệ phí).
-    -   Quy trình phê duyệt nhiều bước:
-        -   Có cần thêm bước duyệt của quản lý trước khi chi khoản lớn hay không.
-    -   Tích hợp với:
-        -   Hệ thống kế toán nội bộ (nếu có).
-        -   Ngân hàng hoặc cổng thanh toán (nếu cần tự động đối soát).
+## 7. Trạng thái các vấn đề mở (Open Items)
+-   **Đã giải quyết**:
+    -   Bắt buộc nhập lý do khi hoàn trả tiền (`revert`) hoặc chỉnh sửa thông tin bill.
+    -   Tự động dọn dẹp số phiếu thu khi hoàn trả để tránh trùng lặp/nhầm lẫn.
+    -   Cơ chế hoa hồng tự động sinh khi xác nhận thanh toán thành công.
+-   **Cần làm rõ thêm**:
+    -   Quy trình phê duyệt nhiều cấp cho các khoản chi hoa hồng lớn.
+    -   Tích hợp đối soát tự động với các cổng thanh toán/ngân hàng trong tương lai.

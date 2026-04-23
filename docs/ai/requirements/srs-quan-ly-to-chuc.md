@@ -154,6 +154,9 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   Phải được log lại để:
         -   Truy vết khi cần.
         -   Giải trình với các bên liên quan (kế toán, ban giám hiệu, v.v.).
+-   Bảo mật hệ thống:
+    -   Hệ thống tích hợp **Google Login** cho nhân viên và CTV để tăng cường bảo mật và tiện dụng.
+    -   Sử dụng **UUID** cho toàn bộ các bản ghi chính để ngăn chặn việc dò đoán ID qua URL.
 
 ## 5. Dữ liệu & tích hợp liên quan đến Quản lý tổ chức
 

@@ -33,8 +33,14 @@ class FileController extends Controller {
         abort(403, 'Bạn không có quyền xem minh chứng này');
     }
 
-    public function publicViewBill(Request $request, $paymentId) {
-        $payment = Payment::findOrFail($paymentId);
+    public function publicViewBill(Request $request, $paymentUuid) {
+        $payment = Payment::where('uuid', $paymentUuid)->firstOrFail();
+        $token = $request->query('token');
+
+        // Xác thực token bảo mật
+        if (!$token || $token !== $payment->getPublicToken()) {
+            abort(403, 'Liên kết đã hết hạn hoặc không hợp lệ.');
+        }
 
         if ($request->query('type') === 'receipt') {
             return $this->serveFile($payment->receipt_path);

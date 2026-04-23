@@ -8,8 +8,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 
+use Illuminate\Support\Str;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 class Student extends Model {
-    use HasFactory;
+    use HasFactory, HasUuids;
     use \App\Traits\HasAuditLog;
     protected $fillable = [
         'profile_code',
@@ -202,7 +206,10 @@ class Student extends Model {
             }
 
             $year = $student->created_at?->format('Y') ?? now()->format('Y');
-            $student->profile_code = sprintf('HS%s%06d', $year, $student->id);
+            // Định dạng mới: HS + Năm + 4 ký tự ngẫu nhiên + 3 số cuối của ID (giảm khả năng dự đoán)
+            $randomPart = strtoupper(Str::random(4));
+            $idPart = sprintf('%03d', $student->id % 1000);
+            $student->profile_code = "HS{$year}{$randomPart}{$idPart}";
             $student->saveQuietly();
             
             // Refresh cache version

@@ -58,14 +58,12 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
         -   Danh sách giấy tờ đã upload và tình trạng duyệt từng loại.
 -   **Yêu cầu hệ thống**:
     -   API chi tiết hồ sơ:
-        -   Kết hợp dữ liệu từ:
-            -   `Student`.
-            -   `StudentDocument` (hoặc tương đương).
-            -   `Payment` (ở mức xem được).
-            -   Thông tin CTV, Organization nếu cần.
-    -   Checklist giấy tờ:
-        -   Thể hiện đầy đủ các loại giấy tờ yêu cầu (theo mục 3.4 trong SRS tổng).
+        -   Kết hợp dữ liệu từ: `Student`, `StudentDocument`, `Payment`, `Collaborator`.
+    -   Quản lý giấy tờ (Checklist):
+        -   Cán bộ hồ sơ có quyền **tải lên (upload)**, thay thế hoặc xóa các bản scan giấy tờ thay cho sinh viên.
         -   Trạng thái từng giấy tờ: chưa nộp / đã nộp / không yêu cầu / bị từ chối (kèm lý do).
+        -   Quy tắc đặt tên file tự động: `{Mã_HS}_{Tên}_{Ngành}_{Hệ}.ext`.
+        -   Lưu trữ an toàn trên Google Drive (Private), truy cập qua URL bảo mật có token.
 
 ### 3.3. Đánh giá điều kiện ngành & quyết định hồ sơ
 
@@ -148,6 +146,9 @@ description: Đặc tả yêu cầu nghiệp vụ và hành vi hệ thống cho 
     -   Truy cập danh sách hồ sơ ngoài phạm vi được phân công (nếu về sau có phân tách theo tổ chức).
 -   Mọi thao tác cập nhật:
     -   Phải được log đầy đủ (audit log) phục vụ truy xuất trách nhiệm.
+-   Bảo mật & Truy cập:
+    -   Cán bộ hồ sơ truy cập file qua link an toàn (token-based) để đảm bảo không bị lộ link gốc Drive.
+    -   Hệ thống sử dụng **UUID** để định danh hồ sơ sinh viên, tăng tính bảo mật cho các trang tra cứu công khai.
 
 ## 5. Dữ liệu & tích hợp liên quan đến Cán bộ hồ sơ
 
