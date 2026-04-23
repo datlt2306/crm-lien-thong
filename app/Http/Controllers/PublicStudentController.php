@@ -98,7 +98,7 @@ class PublicStudentController extends Controller {
             'dob' => 'required|date',
             'address' => 'required|string|max:255',
             'phone' => ['required', 'string', 'max:20', Rule::unique('students', 'phone')->whereNull('deleted_at')],
-            'email' => ['nullable', 'email', 'max:255', Rule::unique('students', 'email')->whereNull('deleted_at')],
+            'email' => ['required', 'email', 'max:255', Rule::unique('students', 'email')->whereNull('deleted_at')],
             'intake_id' => 'required|exists:intakes,id',
             'quota_id' => 'required|exists:quotas,id',
             'g-recaptcha-response' => 'required',
@@ -109,6 +109,7 @@ class PublicStudentController extends Controller {
             'quota_id.required' => 'Vui lòng chọn chương trình đào tạo',
             'quota_id.exists' => 'Chương trình đào tạo không hợp lệ hoặc đã đóng',
             'phone.unique' => 'Số điện thoại đã tồn tại',
+            'email.required' => 'Vui lòng nhập Email',
             'email.unique' => 'Email đã tồn tại',
             'g-recaptcha-response.required' => 'Vui lòng xác minh Captcha',
         ]);

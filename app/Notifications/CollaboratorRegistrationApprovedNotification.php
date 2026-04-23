@@ -41,7 +41,7 @@ class CollaboratorRegistrationApprovedNotification extends Notification implemen
             ->line('- Họ tên: ' . $this->registration->full_name)
             ->line('- Số điện thoại: ' . $this->registration->phone)
             ->line('- Mã REF: ' . $this->registration->ref_id)
-            ->line('- Tổ chức: ' . $this->registration->organization->name)
+
             ->line('Bạn đã trở thành cộng tác viên chính thức và có thể bắt đầu hoạt động.')
             ->action('Đăng nhập hệ thống', url('/admin'))
             ->line('Cảm ơn bạn đã tham gia!');

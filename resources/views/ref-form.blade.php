@@ -7,55 +7,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng ký xét tuyển - Liên thông Đại học</title>
+    <title>Đăng ký xét tuyển liên thông GTVT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        * { box-sizing: border-box; }
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
         body {
-            margin: 0;
-            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
             background: linear-gradient(to bottom, #f8fafc, #eef2ff);
-            color: #0f172a;
-            min-height: 100vh;
+            margin: 0;
             padding: 24px 14px;
+            color: var(--text-main);
+            line-height: 1.5;
+            min-height: 100vh;
         }
-        .wrap { max-width: 760px; margin: 0 auto; }
+
+        .wrap {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
         .card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
             overflow: hidden;
-            box-shadow: 0 16px 30px rgba(15, 23, 42, .08);
+            border: 1px solid var(--border);
         }
+
         .hero {
-            padding: 22px 24px;
             background: #0f172a;
-            color: #fff;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px 30px;
+            color: white;
+            text-align: center;
         }
-        .hero h1 { margin: 0 0 6px; font-size: 28px; }
-        .hero p { margin: 0; font-size: 14px; color: #cbd5e1; }
-        .content { padding: 20px; }
-        .alert {
-            border-radius: 12px;
-            padding: 12px 14px;
-            margin-bottom: 14px;
-            font-size: 14px;
+
+        .hero h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            margin: 0 0 10px 0;
+            font-weight: 800;
+            letter-spacing: -0.02em;
         }
-        .alert-success { background: #ecfdf5; border: 1px solid #86efac; color: #166534; }
-        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-        .alert-error ul { margin: 0; padding-left: 18px; }
+
+        .hero p {
+            margin: 0;
+            font-size: 15px;
+            color: #94a3b8;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px;
+            gap: 20px;
         }
-        .field { margin-bottom: 2px; }
+
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .field { margin-bottom: 20px; }
         .field.full { grid-column: 1 / -1; }
+
         .label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-size: 14px;
-            font-weight: 700;
-            color: #334155;
+            font-weight: 600;
+            color: var(--text-main);
         }
         .req { color: #dc2626; }
         .field-input, .field-select, .field-textarea {
@@ -143,11 +181,11 @@
             outline: none;
             transition: border-color 0.2s;
             background-color: white;
-            color: #0f172a;
+            color: var(--text-main);
         }
         optgroup {
             font-weight: bold;
-            color: #1e293b;
+            color: var(--text-main);
             font-style: normal;
             background-color: #f1f5f9;
         }
@@ -157,7 +195,7 @@
         }
         .fee-title {
             font-weight: 700;
-            color: #2563eb;
+            color: var(--primary);
             margin-bottom: 12px;
             display: flex;
             align-items: center;
@@ -179,8 +217,8 @@
         .fee-item {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px dashed #e2e8f0;
+            padding: 5px 0;
+            font-size: 12px;
         }
         .fee-item:last-child {
             border-bottom: none;
@@ -190,9 +228,9 @@
             padding-top: 8px;
         }
         .payment-info {
-            background-color: #eff6ff;
+            background-color: #fff;
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 10px;
             border-left: 4px solid #3b82f6;
             margin-top: 12px;
         }
@@ -249,82 +287,128 @@
             display: block;
         }
 
-        /* QR Code Styles */
-        .payment-container {
+        /* Enhanced Tab Styles */
+        .info-tabs {
             display: flex;
-            gap: 30px;
-            align-items: center; /* Căn giữa theo chiều dọc */
-            margin-top: 15px;
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #eef2f6;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 16px;
+            gap: 4px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
-        .payment-details {
-            flex: 1;
-        }
-        .payment-row {
-            margin-bottom: 10px;
+        .info-tabs::-webkit-scrollbar { display: none; }
+
+        .info-tab {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            white-space: nowrap;
             display: flex;
             align-items: center;
+            gap: 6px;
         }
-        .payment-row:last-child {
-            margin-bottom: 0;
+        .info-tab:hover { color: #2563eb; }
+        .info-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+
+        /* Info Card Styles */
+        .info-card {
+            background: #ffffff;
+            border: 1px solid #f1f5f9;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
-        .payment-label {
-            color: #64748b;
+        .info-card-title {
             font-size: 13px;
-            display: inline-block;
-            width: 100px;
-            flex-shrink: 0;
-        }
-        .payment-value {
             font-weight: 700;
-            color: #1e293b;
-            font-size: 15px;
+            color: #334155;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .info-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #eff6ff;
+            color: #2563eb;
+            margin-left: auto;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .info-item-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+        .info-item-value { font-size: 14px; color: var(--text-main); font-weight: 600; line-height: 1.4; }
+
+        /* QR & Payment Styles */
+        .payment-container {
+            display: flex;
+            gap: 20px;
+            align-items: center;
         }
         .qr-code-wrapper {
-            width: 150px;
             background: white;
-            padding: 8px;
+            padding: 5px;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05);
             text-align: center;
             flex-shrink: 0;
         }
         .qr-code-wrapper img {
             width: 100%;
-            height: auto;
-            border-radius: 4px;
             display: block;
-            margin-bottom: 6px;
         }
         .qr-code-label {
-            font-size: 10px;
+            font-size: 9px;
             color: #94a3b8;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        @media (max-width: 600px) {
-            .payment-container {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
-            .payment-row {
-                justify-content: center;
-            }
-            .payment-label {
-                width: 90px;
-                text-align: right;
-                margin-right: 10px;
-            }
-            .payment-value {
-                text-align: left;
-            }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 720px) {
+            .grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 24px; }
+            .content { padding: 16px; }
+            .info-tab { padding: 10px 12px; font-size: 12px; }
+        }
+
+        .payment-row {
+            margin-bottom: 4px;
+        }
+        .payment-label {
+            color: #64748b;
+            font-size: 12px;
+            display: inline-block;
+            width: 100px;
+        }
+        .payment-value {
+            font-weight: 600;
+            color: #1e293b;
         }
     </style>
 </head>
@@ -394,8 +478,8 @@
                     </div>
 
                     <div class="field">
-                        <label class="label">Email</label>
-                        <input type="email" name="email" value="{{ old('email') }}" class="field-input @error('email') border-red-500 @enderror" placeholder="VD: kien.tran@gmail.com">
+                        <label class="label">Email <span class="req">*</span></label>
+                        <input type="email" name="email" value="{{ old('email') }}" class="field-input @error('email') border-red-500 @enderror" placeholder="VD: kien.tran@gmail.com" required>
                         @error('email') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
                     </div>
 
@@ -470,6 +554,7 @@
     </div>
 
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         const programSelector = document.getElementById('program_selector');
         const quotaSelect = document.getElementById('quota_id');
@@ -553,119 +638,195 @@
             let feeHtml = `
                 <div class="fee-info-box">
                     <div class="info-tabs">
-                        <div class="info-tab active" data-tab="fees" onclick="switchTab('fees')">💰 Lệ phí & Thanh toán</div>
-                        <div class="info-tab" data-tab="docs" onclick="switchTab('docs')">📄 Hồ sơ cần chuẩn bị</div>
+                        <div class="info-tab active" data-tab="fees" onclick="switchTab('fees')">
+                            <i data-lucide="credit-card"></i> Chi phí & Học phí
+                        </div>
+                        <div class="info-tab" data-tab="training" onclick="switchTab('training')">
+                            <i data-lucide="graduation-cap"></i> Tuyển sinh & Đào tạo
+                        </div>
+                        <div class="info-tab" data-tab="docs" onclick="switchTab('docs')">
+                            <i data-lucide="file-text"></i> Hồ sơ chuẩn bị
+                        </div>
                     </div>
 
+                    <!-- TAB 1: CHI PHÍ -->
                     <div id="tab-fees" class="tab-content active">
+                        <div class="info-card">
+                            <div class="info-card-title">
+                                <i data-lucide="banknote"></i> Lệ phí tuyển sinh 
+                                <span class="info-badge">Đóng 1 lần</span>
+                            </div>
+                            <ul class="fee-list">
             `;
 
             if (programCode === 'REGULAR') {
                 feeHtml += `
-                    <div class="fee-section">
-                        <div class="fee-section-title">✅ Chi phí tuyển sinh (Hệ Chính quy):</div>
-                        <ul class="fee-list">
-                            <li class="fee-item"><span>Lệ phí hồ sơ đăng ký thi tuyển</span> <span>60.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Lệ phí thi tuyển</span> <span>640.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Học phí ôn tập 3 môn</span> <span>1.500.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Tổng chi phí đăng ký & ôn tập</span> <span>1.750.000 VNĐ</span></li>
-                        </ul>
-                    </div>
+                    <li class="fee-item"><span>Lệ phí hồ sơ thi tuyển</span> <span>60.000đ</span></li>
+                    <li class="fee-item"><span>Lệ phí thi tuyển</span> <span>640.000đ</span></li>
+                    <li class="fee-item"><span>Học phí ôn tập (3 môn)</span> <span>1.500.000đ</span></li>
+                    <li class="fee-item" style="border-top: 1px solid var(--border); font-weight: 800; color: var(--primary); padding-top: 12px; margin-top: 8px;"><span>Tổng chi phí đăng ký</span> <span>1.750.000đ</span></li>
                 `;
             } else if (programCode === 'PART_TIME') {
                 feeHtml += `
-                    <div class="fee-section">
-                        <div class="fee-section-title">✅ Chi phí tuyển sinh (Hệ VHVL):</div>
-                        <ul class="fee-list">
-                            <li class="fee-item"><span>Lệ phí hồ sơ đăng ký xét tuyển</span> <span>60.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Lệ phí xét tuyển, thi tuyển</span> <span>640.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Hồ sơ</span> <span>50.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Tổng chi phí đăng ký & ôn tập</span> <span>750.000 VNĐ</span></li>
-                        </ul>
-                    </div>
+                    <li class="fee-item"><span>Lệ phí hồ sơ xét tuyển</span> <span>60.000đ</span></li>
+                    <li class="fee-item"><span>Lệ phí xét tuyển/thi tuyển</span> <span>640.000đ</span></li>
+                    <li class="fee-item"><span>Lệ phí hồ sơ</span> <span>50.000đ</span></li>
+                    <li class="fee-item" style="border-top: 1px solid var(--border); font-weight: 800; color: var(--primary); padding-top: 12px; margin-top: 8px;"><span>Tổng chi phí đăng ký</span> <span>750.000đ</span></li>
                 `;
-            } else if (programCode === 'DISTANCE') {
+            } else {
                 feeHtml += `
-                    <div class="fee-section">
-                        <div class="fee-section-title">✅ Chi phí tuyển sinh (Hệ DTTX):</div>
-                        <ul class="fee-list">
-                            <li class="fee-item"><span>Lệ phí xét tuyển</span> <span>200.000 VNĐ</span></li>
-                            <li class="fee-item"><span>Tổng chi phí hồ sơ</span> <span>200.000 VNĐ</span></li>
-                        </ul>
-                    </div>
+                    <li class="fee-item"><span>Lệ phí xét tuyển</span> <span>200.000đ</span></li>
                 `;
             }
 
             feeHtml += `
+                            </ul>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-title"><i data-lucide="book-open"></i> Học phí đào tạo (2025 - 2026)</div>
+                            <div class="info-grid">
+                                <div><div class="info-item-label">Tổng học phí (4 kỳ)</div><div class="info-item-value">~ 57 - 60 triệu VNĐ</div></div>
+                                <div><div class="info-item-label">Đóng theo kỳ</div><div class="info-item-value">~ 14.5 triệu VNĐ/kỳ</div></div>
+                            </div>
+                        </div>
+
                         <div class="payment-info">
-                            <div class="fee-section-title">🏦 Thông tin thanh toán:</div>
+                            <div class="fee-section-title">
+                                <i data-lucide="landmark"></i> Thông tin thanh toán:
+                            </div>
                             <div class="payment-container">
                                 <div class="payment-details">
-                                    <div class="payment-row"><span class="payment-label">Ngân hàng:</span> <span class="payment-value">BIDV</span></div>
-                                    <div class="payment-row"><span class="payment-label">Số tài khoản:</span> <span class="payment-value">8849994466</span></div>
-                                    <div class="payment-row"><span class="payment-label">Người nhận:</span> <span class="payment-value">Cô Ly (Phụ trách tuyển sinh)</span></div>
-                                    <div class="payment-row"><span class="payment-label">Nội dung CK:</span> <span class="payment-value">Họ tên + Ngày sinh + Nơi sinh</span></div>
+                                    <div class="payment-row" style="margin-bottom: 8px;"><span class="payment-label" style="width: 85px;">Ngân hàng:</span> <span class="payment-value">BIDV</span></div>
+                                    <div class="payment-row" style="margin-bottom: 8px;"><span class="payment-label" style="width: 85px;">Số tài khoản:</span> <span class="payment-value">8849994466</span></div>
+                                    <div class="payment-row" style="margin-bottom: 8px;"><span class="payment-label" style="width: 85px;">Người nhận:</span> <span class="payment-value">Cô Ly</span></div>
+                                    <div class="payment-row" style="margin-bottom: 0;"><span class="payment-label" style="width: 85px;">Nội dung:</span> <span class="payment-value" style="font-size: 13px; color: #4338ca;">Họ tên + Ngày sinh</span></div>
                                 </div>
-                                <div class="qr-code-wrapper">
-                                    <img src="${window.location.origin}/assets/qr-ly.png" alt="QR Thanh toán" onerror="this.parentElement.style.display='none'">
-                                    <div class="qr-code-label">Quét mã để trả phí</div>
+                                <div class="qr-code-wrapper" style="width: 180px; border-color: #dee2ff;">
+                                    <img src="${window.location.origin}/assets/qr-ly.png" alt="QR" onerror="this.parentElement.style.display='none'">
                                 </div>
                             </div>
                         </div>
-                        <p style="font-size: 13px; color: #1e293b; margin-top: 12px; line-height: 1.5; background: #fffbeb; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">
-                            ⚠️ <strong>Lưu ý:</strong> Sau khi sinh viên đăng ký, vui lòng liên hệ với <strong>Cộng tác viên giới thiệu</strong> để gửi minh chứng thanh toán. Cộng tác viên sẽ giúp bạn hoàn tất thủ tục này trên hệ thống.
-                        </p>
+                        
+                        <div style="font-size: 12px; color: #4338ca; margin-top: 16px; line-height: 1.6; background: #eef2ff; padding: 12px; border-radius: 12px; border: 1px solid #c7d2fe; display: flex; gap: 10px; align-items: flex-start;">
+                            <i data-lucide="info" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+                            <div>
+                                <strong>Chính sách hoàn phí:</strong> Không hoàn trả lệ phí (trừ khi trường không mở lớp). Có thể bảo lưu hồ sơ trong vòng 2 đợt tuyển sinh liên tiếp.
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- TAB 2: TUYỂN SINH & ĐÀO TẠO -->
+                    <div id="tab-training" class="tab-content">
+                        <div class="info-card">
+                            <div class="info-card-title"><i data-lucide="clipboard-list"></i> Hình thức & Môn thi</div>
+                            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">
+                                ${programCode === 'REGULAR' ? 'Kỳ thi tuyển sinh gồm 3 môn chuyên ngành:' : 'Xét tuyển hồ sơ học tập, không yêu cầu thi tuyển.'}
+                            </div>
+                            ${programCode === 'REGULAR' ? `
+                            <div class="info-grid">
+                                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; font-weight: 700; font-size: 13px; color: var(--primary);">Toán</div>
+                                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; font-weight: 700; font-size: 13px; color: var(--primary);">Toán rời rạc</div>
+                                <div style="grid-column: span 2; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; font-weight: 700; font-size: 13px; color: var(--primary);">Cấu trúc dữ liệu & Giải thuật</div>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-title"><i data-lucide="calendar"></i> Thời gian & Lịch học</div>
+                            <div class="info-grid" style="margin-bottom: 12px;">
+                                <div><div class="info-item-label">Thời gian đào tạo</div><div class="info-item-value">2 năm (4 học kỳ)</div></div>
+                                <div><div class="info-item-label">Lịch học dự kiến</div><div class="info-item-value">Tối (18h30 - 20h30)</div></div>
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-muted); padding: 10px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--primary);">
+                                📍 <strong>Địa điểm:</strong> ${
+                                    programCode === 'REGULAR' ? 'Học trực tiếp tại CS1: Số 3 Cầu Giấy, Hà Nội.' : 
+                                    (programCode === 'PART_TIME' ? 'Học kết hợp (Hybrid): Offline và Online.' : 'Học Online 100%, thi tập trung cuối kỳ.')
+                                }
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-title"><i data-lucide="award"></i> Bằng cấp & Chứng chỉ</div>
+                            <div class="info-item-value" style="color: #059669; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> Nhận bằng Cử nhân Liên thông Chính quy
+                            </div>
+                            
+                            <div class="info-item-label">Chứng chỉ ngoại ngữ miễn học (nếu có):</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+                                <span class="info-badge">IELTS ≥ 4.5</span>
+                                <span class="info-badge">TOEIC ≥ 450</span>
+                                <span class="info-badge">VSTEP ≥ 5</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height: 1.5;">
+                                * Chấp nhận: ĐHQG Hà Nội, ĐH Sư phạm HN, ĐH Hà Nội.
+                                <br> * Yêu cầu chứng chỉ Giáo dục Quốc phòng của Bộ GD.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: HỒ SƠ -->
                     <div id="tab-docs" class="tab-content">
+                        <div class="info-card">
+                            <ul class="fee-list" style="gap: 12px; display: flex; flex-direction: column;">
             `;
 
             if (programCode === 'DISTANCE') {
                 feeHtml += `
-                    <div class="fee-section">
-                        <div class="fee-section-title">✅ Hồ sơ đăng ký gồm:</div>
-                        <ul class="fee-list" style="list-style: disc; padding-left: 20px;">
-                            <li style="margin-bottom: 8px;">
-                                📄 <strong>Phiếu đăng ký hệ Từ xa</strong> 
-                                <a href="https://docs.google.com/document/d/1qH_S7h3ehCjifGNjUAT8OOUPn6d82ZmX0zILlopwghE/edit?tab=t.0" target="_blank" style="color: #2563eb; text-decoration: underline;">Tải phiếu tại đây</a>
-                                <br><small>(Hệ từ xa không cần xin dấu xã phường vào phiếu)</small>
-                            </li>
-                            <li style="margin-bottom: 4px;">📄 01 bản sao công chứng CCCD</li>
-                            <li style="margin-bottom: 4px;">📄 01 bản sao công chứng Bằng TN CĐ, Bảng điểm</li>
-                            <li style="margin-bottom: 4px;">📷 02 ảnh 4x6 (ghi rõ họ tên, ngày sinh, nơi sinh mặt sau)</li>
-                        </ul>
-                    </div>
+                    <li class="fee-item" style="flex-direction: column; align-items: flex-start; border: none; gap: 4px;">
+                        <div style="font-size: 13px; display: flex; gap: 8px; font-weight: 600; color: var(--text-main);">
+                            <i data-lucide="file-check" style="width: 16px; color: var(--primary);"></i> Phiếu đăng ký hệ Từ xa
+                        </div>
+                        <div style="margin-left: 24px;">
+                            <a href="https://docs.google.com/document/d/1qH_S7h3ehCjifGNjUAT8OOUPn6d82ZmX0zILlopwghE/edit?tab=t.0" target="_blank" style="color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 500;">
+                                <i data-lucide="download" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i> Tải phiếu mẫu tại đây
+                            </a>
+                        </div>
+                    </li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 01 bản sao công chứng CCCD</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 01 bản sao công chứng Bằng TN CĐ, Bảng điểm</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 02 ảnh 4x6 (ghi rõ thông tin mặt sau)</span></li>
                 `;
             } else {
                 feeHtml += `
-                    <div class="fee-section">
-                        <div class="fee-section-title">✅ Hồ sơ đăng ký gồm:</div>
-                        <ul class="fee-list" style="list-style: disc; padding-left: 20px;">
-                            <li style="margin-bottom: 8px;">
-                                📄 <strong>Phiếu tuyển sinh hệ CQ hoặc VHVL</strong> 
-                                <a href="https://docs.google.com/document/d/1bJi-xG6ogDXqMFDX8TGrFis5cXPm7EUVUpX4pjKEyJw/edit?tab=t.0" target="_blank" style="color: #2563eb; text-decoration: underline;">Tải phiếu tại đây</a>
-                                <br><small>(Xã phường hoặc cơ quan đang làm việc đóng dấu)</small>
-                            </li>
-                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng hợp lệ bằng tốt nghiệp Cao đẳng.</li>
-                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng bằng tốt nghiệp THPT</li>
-                            <li style="margin-bottom: 4px;">📄 01 Bản công chứng giấy chứng nhận kết quả học tập (Bảng điểm).</li>
-                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng hợp lệ giấy khai sinh.</li>
-                            <li style="margin-bottom: 4px;">📄 01 Bản sao công chứng căn cước công dân.</li>
-                            <li style="margin-bottom: 4px;">📄 Giấy khám đủ sức khỏe (A3, bản gốc)</li>
-                            <li style="margin-bottom: 4px;">📷 04 ảnh chân dung 4x6 cm (Chụp trong vòng 6 tháng trở lại).</li>
-                        </ul>
-                        <p style="font-size: 13px; color: #dc2626; margin-top: 8px; font-weight: 600;">⚠️ Lưu ý: Tất cả giấy tờ cần có công chứng.</p>
-                    </div>
+                    <li class="fee-item" style="flex-direction: column; align-items: flex-start; border: none; gap: 4px;">
+                        <div style="font-size: 13px; display: flex; gap: 8px; font-weight: 600; color: var(--text-main);">
+                            <i data-lucide="file-check" style="font-size: 13px;width: 16px; color: var(--primary);"></i> Phiếu tuyển sinh CQ hoặc VHVL
+                        </div>
+                        <div style="margin-left: 24px;">
+                            <a href="https://docs.google.com/document/d/1bJi-xG6ogDXqMFDX8TGrFis5cXPm7EUVUpX4pjKEyJw/edit?tab=t.0" target="_blank" style="color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 500;">
+                                <i data-lucide="download" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i> Tải phiếu mẫu tại đây
+                            </a>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">(Cần xin dấu xác nhận của Xã/Phường hoặc Cơ quan)</div>
+                        </div>
+                    </li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 01 Bản sao công chứng Bằng TN Cao đẳng</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 01 Bản sao công chứng Bằng tốt nghiệp THPT</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 01 Bản công chứng Bảng điểm Cao đẳng</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 01 Bản sao công chứng Giấy khai sinh & CCCD</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• Giấy khám sức khỏe (A3, bản gốc)</span></li>
+                    <li class="fee-item" style="border: none; padding: 0 0 0 24px;"><span style="color: var(--text-muted); font-size: 13px;">• 04 ảnh chân dung 4x6 cm (mới chụp)</span></li>
                 `;
             }
 
             feeHtml += `
-                        <div class="payment-info" style="background-color: #f0fdf4; border-left-color: #22c55e; margin-top: 15px;">
-                            <div class="fee-section-title" style="color: #166534;">📍 Địa chỉ nộp hồ sơ:</div>
+                            </ul>
+                            <div style="margin-top: 15px; padding: 10px; background: #fff1f2; border-radius: 8px; color: #be123c; font-size: 12px; font-weight: 600; display: flex; gap: 8px; align-items: center;">
+                                <i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i> Tất cả giấy tờ bản sao đều phải được công chứng.
+                            </div>
+                        </div>
+
+                        <div class="info-card" style="background: #f0fdf4; border-color: #dcfce7;">
+                            <div class="info-card-title" style="color: #166534;"><i data-lucide="map-pin"></i> Địa chỉ nộp hồ sơ</div>
                             <div style="font-size: 13px; color: #166534; line-height: 1.6;">
-                                Số 73 Nguyễn Chí Thanh - Phường Láng - Hà Nội<br>
-                                Nhà A - Phòng 101<br>
-                                <strong>Liên hệ:</strong> <a href="tel:0966666585" style="color: #166534; font-weight: 700;">Hotline 0966666585 cô Hà</a>
+                                <div style="font-weight: 700; font-size: 14px;">Số 73 Nguyễn Chí Thanh, Láng Thượng, Đống Đa, Hà Nội</div>
+                                <div style="margin-top: 4px;">Nhà A - Phòng 101 (Văn phòng tuyển sinh)</div>
+                                <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                                    <div style="background: #22c55e; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700;">
+                                        <i data-lucide="phone" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i>
+                                        0966.666.585 (Cô Hà)
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -674,6 +835,11 @@
 
             feeContainer.innerHTML = feeHtml;
             feeContainer.classList.remove('hidden');
+            
+            // Re-initialize Lucide icons for dynamic content
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
         }
 
         programSelector.addEventListener('change', function(e, isInitialSelection = false) {

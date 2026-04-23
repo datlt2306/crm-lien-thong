@@ -925,7 +925,7 @@ class StudentsTable {
                     ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
                         // Lấy query đã áp dụng filter và search từ bảng hiện tại thay vì lấy full
                         $query = $livewire->getFilteredTableQuery();
-                        $query->with(['payment', 'organization']);
+                        $query->with(['payment']);
 
                         $filename = 'danh_sach_hoc_vien_' . date('Y-m-d_His') . '.xlsx';
                         return Excel::download(new StudentsExcelExport($query), $filename);
