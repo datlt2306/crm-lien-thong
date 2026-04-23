@@ -53,19 +53,6 @@ class EditUser extends EditRecord {
     }
 
     protected function mutateFormDataBeforeSave(array $data): array {
-        // Nếu password trống, không cập nhật password
-        if (empty($data['password'])) {
-            unset($data['password']);
-        } else {
-            // Hash password nếu có nhập
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
-        }
-
-
-        // Loại bỏ password_confirmation khỏi data
-        unset($data['password_confirmation']);
-
-
         // Xử lý role - cập nhật role trong database
         if (isset($data['role'])) {
             $user = $this->record;

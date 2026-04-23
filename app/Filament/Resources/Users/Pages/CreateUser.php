@@ -28,11 +28,6 @@ class CreateUser extends CreateRecord {
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array {
-        // Hash password trước khi tạo user
-        if (!empty($data['password'])) {
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
-        }
-
         // Tự động verify email cho user mới tạo
         $data['email_verified_at'] = now();
 
@@ -40,11 +35,6 @@ class CreateUser extends CreateRecord {
         if (empty($data['role'])) {
             $data['role'] = 'ctv';
         }
-
-
-        // Loại bỏ password_confirmation khỏi data
-        unset($data['password_confirmation']);
-
 
         return $data;
     }

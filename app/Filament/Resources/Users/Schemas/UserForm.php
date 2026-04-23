@@ -64,14 +64,17 @@ class UserForm {
                 \Filament\Forms\Components\TextInput::make('password')
                     ->password()
                     ->label('Mật khẩu')
-                    ->required(fn($context) => $context === 'create')
+                    ->required(false)
+                    ->dehydrateStateUsing(fn ($context, $state) => !empty($state) ? \Illuminate\Support\Facades\Hash::make($state) : ($context === 'create' ? \Illuminate\Support\Facades\Hash::make('12345678') : null))
                     ->dehydrated(fn($context, $state) => $context === 'create' || !empty($state))
-                    ->helperText(fn($context) => $context === 'edit' ? 'Để trống nếu không muốn thay đổi mật khẩu' : 'Nhập mật khẩu cho tài khoản mới')
+                    ->helperText(fn($context) => $context === 'edit' 
+                        ? 'Để trống nếu không muốn thay đổi mật khẩu' 
+                        : 'Để trống để tự động dùng mật khẩu mặc định: 12345678')
                     ->confirmed(),
                 \Filament\Forms\Components\TextInput::make('password_confirmation')
                     ->password()
                     ->label('Xác nhận mật khẩu')
-                    ->required(fn($context) => $context === 'create')
+                    ->required(false)
                     ->dehydrated(false)
                     ->helperText('Nhập lại mật khẩu để xác nhận'),
                 FileUpload::make('avatar')

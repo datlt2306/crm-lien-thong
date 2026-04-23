@@ -4,7 +4,7 @@
     $role = $user->role ?? 'user';
 
     $roleLabels = [
-        'super_admin' => 'Quản trị tối cao',
+        'super_admin' => 'Quản trị viên',
         'admin' => 'Quản trị viên',
         'organization_owner' => 'Chủ đơn vị',
         'accountant' => 'Kế toán',
