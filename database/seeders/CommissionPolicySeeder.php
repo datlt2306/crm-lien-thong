@@ -9,6 +9,9 @@ use Illuminate\Database\Seeder;
 
 class CommissionPolicySeeder extends Seeder {
     public function run(): void {
+        // Truncate để tránh lỗi truy vấn JSON trên PostgreSQL khi dùng updateOrCreate
+        CommissionPolicy::truncate();
+
         $collaborators = Collaborator::where('status', 'active')->get();
         if ($collaborators->isEmpty()) {
             $this->command->error('Chưa có Collaborator active nào. Chạy CollaboratorSeeder trước.');
@@ -19,7 +22,7 @@ class CommissionPolicySeeder extends Seeder {
         $globalPolicies = [
             [
                 'collaborator_id' => null,
-                'program_type' => null,
+                'program_type' => null, // null cho tất cả
                 'role' => 'PRIMARY',
                 'type' => 'PASS_THROUGH',
                 'amount_vnd' => null,
@@ -32,7 +35,7 @@ class CommissionPolicySeeder extends Seeder {
             ],
             [
                 'collaborator_id' => null,
-                'program_type' => 'REGULAR',
+                'program_type' => ['REGULAR'], // Cột JSON yêu cầu array
                 'role' => 'SUB',
                 'type' => 'FIXED',
                 'amount_vnd' => 700000,
@@ -45,7 +48,7 @@ class CommissionPolicySeeder extends Seeder {
             ],
             [
                 'collaborator_id' => null,
-                'program_type' => 'PART_TIME',
+                'program_type' => ['PART_TIME'],
                 'role' => 'SUB',
                 'type' => 'FIXED',
                 'amount_vnd' => 700000,
@@ -78,16 +81,9 @@ class CommissionPolicySeeder extends Seeder {
         $allPolicies = array_merge($globalPolicies, $collabPolicies);
 
         foreach ($allPolicies as $policyData) {
-            CommissionPolicy::updateOrCreate(
-                [
-                    'collaborator_id' => $policyData['collaborator_id'],
-                    'program_type' => $policyData['program_type'],
-                    'role' => $policyData['role'],
-                ],
-                $policyData
-            );
+            CommissionPolicy::create($policyData);
         }
 
-        $this->command->info('Đã tạo/cập nhật ' . count($allPolicies) . ' chính sách hoa hồng mẫu.');
+        $this->command->info('Đã tạo mới ' . count($allPolicies) . ' chính sách hoa hồng mẫu.');
     }
 }
