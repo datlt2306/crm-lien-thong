@@ -34,12 +34,14 @@ class GoogleController extends Controller
             $user = User::where('email', $googleUser->email)->first();
 
             if ($user) {
-                // Update Google-specific fields
+                // Update Google-specific fields and sync name/avatar
                 $user->update([
+                    'name' => $googleUser->name, // Cập nhật tên từ Google
                     'google_id' => $googleUser->id,
                     'google_token' => $googleUser->token,
                     'google_refresh_token' => $googleUser->refreshToken,
                     'google_avatar' => $googleUser->avatar,
+                    'avatar' => $googleUser->avatar, // Cập nhật luôn ảnh đại diện hiển thị
                 ]);
 
                 // Log the user in with explicit guard
