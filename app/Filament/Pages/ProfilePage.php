@@ -53,6 +53,7 @@ class ProfilePage extends Page {
             'password' => '',
             'password_confirmation' => '',
             'telegram_chat_id' => $user->telegram_chat_id,
+            'notifications' => $user->getNotificationPreferences()->toArray(),
         ];
     }
 
@@ -157,6 +158,8 @@ class ProfilePage extends Page {
                 ->columns(1)
                 ->columnSpanFull(),
 
+
+
             Section::make('📢 Thông báo Telegram')
                 ->description('Nhận thông báo tức thì qua Telegram Bot')
                 ->icon('heroicon-o-chat-bubble-left-right')
@@ -166,6 +169,45 @@ class ProfilePage extends Page {
                         ->placeholder('Ví dụ: 123456789')
                         ->helperText('Chat với @userinfobot hoặc @GetIDsBot để lấy Chat ID của bạn. Bạn phải chat với Bot của hệ thống trước khi nhận tin.'),
                 ])
+                ->columnSpanFull(),
+            
+            Section::make('🔔 Cấu hình thông báo')
+                ->description('Thiết lập các loại thông báo bạn sẽ nhận được')
+                ->icon('heroicon-o-bell')
+                ->components([
+                    Section::make('Telegram Notifications')
+                        ->compact()
+                        ->schema([
+                            Toggle::make('notifications.telegram_student_registered')
+                                ->label('Sinh viên đăng ký mới'),
+                            Toggle::make('notifications.telegram_payment_bill_uploaded')
+                                ->label('Sinh viên nộp hóa đơn mới'),
+                            Toggle::make('notifications.telegram_payment_verified')
+                                ->label('Thanh toán được xác nhận'),
+                            Toggle::make('notifications.telegram_payment_rejected')
+                                ->label('Thanh toán bị từ chối'),
+                            Toggle::make('notifications.telegram_commission_earned')
+                                ->label('Nhận được hoa hồng mới'),
+                        ])
+                        ->columns(2),
+
+                    Section::make('Email Notifications')
+                        ->compact()
+                        ->schema([
+                            Toggle::make('notifications.email_student_registered')
+                                ->label('Sinh viên đăng ký mới'),
+                            Toggle::make('notifications.email_payment_bill_uploaded')
+                                ->label('Sinh viên nộp hóa đơn mới'),
+                            Toggle::make('notifications.email_payment_verified')
+                                ->label('Thanh toán được xác nhận'),
+                            Toggle::make('notifications.email_payment_rejected')
+                                ->label('Thanh toán bị từ chối'),
+                            Toggle::make('notifications.email_commission_earned')
+                                ->label('Nhận được hoa hồng mới'),
+                        ])
+                        ->columns(2),
+                ])
+                ->collapsible()
                 ->columnSpanFull(),
         ];
     }
@@ -221,6 +263,11 @@ class ProfilePage extends Page {
         // Cập nhật telegram_chat_id
         $user->update(['telegram_chat_id' => $data['telegram_chat_id'] ?? null]);
 
+        // Cập nhật notification preferences
+        if (isset($data['notifications'])) {
+            $user->getNotificationPreferences()->update($data['notifications']);
+        }
+
         // Refresh user để lấy dữ liệu mới từ database
         $user->refresh();
 
@@ -236,6 +283,7 @@ class ProfilePage extends Page {
             'password' => '',
             'password_confirmation' => '',
             'telegram_chat_id' => $user->telegram_chat_id,
+            'notifications' => $user->getNotificationPreferences()->toArray(),
         ];
 
         Notification::make()

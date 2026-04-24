@@ -7,9 +7,9 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 use Filament\Tables\Table;
-use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\DeleteBulkAction;
 use App\Models\Payment;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Models\Collaborator;
@@ -43,7 +43,7 @@ class PaymentResource extends Resource {
                     ->searchable()
                     ->sortable()
                     ->action(
-                        \Filament\Actions\Action::make('view_student')
+                        \Filament\Tables\Actions\Action::make('view_student')
                             ->label('Xem thông tin sinh viên')
                             ->icon('heroicon-o-eye')
                             ->modalContent(function (Payment $record) {
