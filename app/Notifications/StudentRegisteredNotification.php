@@ -65,16 +65,22 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
         $url = url('/admin/students/' . $this->student->id);
         
         $collaboratorName = $this->student->collaborator?->full_name ?? 'Trực tiếp';
+        $birthday = $this->student->dob ? \Illuminate\Support\Carbon::parse($this->student->dob)->format('d/m/Y') : 'Chưa cập nhật';
+        $intake = $this->student->intake?->name ?? ($this->student->intake_month ? "Tháng {$this->student->intake_month}" : 'Chưa xác định');
+        $address = $this->student->address ?? 'Chưa cập nhật';
 
         return TelegramMessage::create()
             ->to($notifiable->routeNotificationForTelegram())
             ->content("*🎓 CÓ SINH VIÊN ĐĂNG KÝ MỚI*\n\n" .
-                "👤 *Họ tên:* {$this->student->full_name}\n" .
                 "🆔 *Mã hồ sơ:* `{$this->student->profile_code}`\n" .
+                "👤 *Họ tên:* {$this->student->full_name}\n" .
+                "🎂 *Ngày sinh:* {$birthday}\n" .
+                "🏠 *Địa chỉ:* {$address}\n" .
                 "📚 *Ngành:* {$this->student->major}\n" .
                 "🏫 *Hệ:* {$this->student->program_type_label}\n" .
+                "📅 *Đợt:* {$intake}\n" .
                 "🤝 *Người giới thiệu:* {$collaboratorName}\n" .
-                "📅 *Thời gian:* " . now()->format('H:i d/m/Y'))
+                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
             ->button('Xem hồ sơ chi tiết', $url);
     }
 

@@ -66,16 +66,25 @@ class PaymentBillUploadedNotification extends Notification implements ShouldQueu
         $student = $this->payment->student;
         
         $amountLabel = number_format($this->payment->amount, 0, ',', '.') . ' VNĐ';
+        $collaboratorName = $this->payment->collaborator?->full_name ?? 'Trực tiếp';
+        $birthday = $student->dob ? \Illuminate\Support\Carbon::parse($student->dob)->format('d/m/Y') : 'Chưa cập nhật';
+        $intake = $student->intake?->name ?? ($student->intake_month ? "Tháng {$student->intake_month}" : 'Chưa xác định');
+        $address = $student->address ?? 'Chưa cập nhật';
 
         return TelegramMessage::create()
             ->to($notifiable->routeNotificationForTelegram())
             ->content("*💰 HÓA ĐƠN MỚI CHỜ XÁC NHẬN*\n\n" .
-                "👤 *Sinh viên:* {$student->full_name}\n" .
+                "🆔 *Mã hồ sơ:* `{$student->profile_code}`\n" .
+                "👤 *Họ tên:* {$student->full_name}\n" .
+                "🎂 *Ngày sinh:* {$birthday}\n" .
+                "🏠 *Địa chỉ:* {$address}\n" .
+                "📚 *Ngành:* {$student->major}\n" .
+                "🏫 *Hệ:* {$student->program_type_label}\n" .
+                "📅 *Đợt:* {$intake}\n" .
+                "🤝 *Người giới thiệu:* {$collaboratorName}\n" .
                 "💵 *Số tiền:* `{$amountLabel}`\n" .
-                "🤝 *Người giới thiệu:* " . ($this->payment->collaborator?->full_name ?? 'N/A') . "\n" .
-                "📅 *Thời gian:* " . now()->format('H:i d/m/Y') . "\n\n" .
-                "Vui lòng kiểm tra hóa đơn và cập nhật phiếu thu.")
-            ->button('Xác nhận ngay', $url);
+                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
+            ->button('Kiểm tra & Xác nhận', $url);
     }
 
     /**

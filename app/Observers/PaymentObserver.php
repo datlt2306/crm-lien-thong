@@ -37,7 +37,35 @@ class PaymentObserver {
                 $this->quotaService->decreaseQuotaOnPaymentSubmission($payment);
                 
                 // Tự động tạo hoa hồng dựa trên chính sách
-                $this->commissionService->createCommissionFromPayment($payment);
+                $commission = $this->commissionService->createCommissionFromPayment($payment);
+
+                // 1. Thông báo duyệt hóa đơn cho CTV chính
+                if ($payment->student && $payment->student->collaborator) {
+                    $ctvUser = \App\Models\User::where('email', $payment->student->collaborator->email)->first();
+                    if ($ctvUser) {
+                        try {
+                            $ctvUser->notify(new \App\Notifications\PaymentStatusUpdatedNotification($payment, 'VERIFIED'));
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Payment Verified): ' . $e->getMessage());
+                        }
+                    }
+                }
+
+                // 2. Thông báo nhận hoa hồng cho các CTV liên quan (Chính + Phụ)
+                if ($commission) {
+                    foreach ($commission->items as $item) {
+                        if ($item->collaborator) {
+                            $itemUser = \App\Models\User::where('email', $item->collaborator->email)->first();
+                            if ($itemUser) {
+                                try {
+                                    $itemUser->notify(new \App\Notifications\CommissionEarnedNotification($item));
+                                } catch (\Exception $e) {
+                                    \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Commission Earned): ' . $e->getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
             } 
             // Nếu CTV vừa upload bill (status chuyển sang SUBMITTED)
             elseif ($newStatus === Payment::STATUS_SUBMITTED && $oldStatus !== Payment::STATUS_SUBMITTED) {
@@ -48,6 +76,19 @@ class PaymentObserver {
                         $user->notify(new \App\Notifications\PaymentBillUploadedNotification($payment));
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Bill Uploaded): ' . $e->getMessage());
+                    }
+                }
+            }
+            // Nếu hóa đơn bị từ chối (Chuyển từ SUBMITTED về NOT_PAID)
+            elseif ($newStatus === Payment::STATUS_NOT_PAID && $oldStatus === Payment::STATUS_SUBMITTED) {
+                if ($payment->student && $payment->student->collaborator) {
+                    $ctvUser = \App\Models\User::where('email', $payment->student->collaborator->email)->first();
+                    if ($ctvUser) {
+                        try {
+                            $ctvUser->notify(new \App\Notifications\PaymentStatusUpdatedNotification($payment, 'REJECTED'));
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Payment Rejected): ' . $e->getMessage());
+                        }
                     }
                 }
             }

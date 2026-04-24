@@ -8,6 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Filament\Notifications\Notification as FilamentNotification;
+use NotificationChannels\Telegram\TelegramChannel;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class CommissionEarnedNotification extends Notification implements ShouldQueue {
     use Queueable;
@@ -30,9 +32,35 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
             $channels[] = 'mail';
         }
 
-        // real-time and push channels removed
+        // Add telegram if user wants it
+        if ($notifiable->wantsNotification('commission_earned', 'telegram') && $notifiable->routeNotificationForTelegram()) {
+            $channels[] = TelegramChannel::class;
+        }
 
         return $channels;
+    }
+
+    /**
+     * Get the telegram representation of the notification.
+     */
+    public function toTelegram(object $notifiable) {
+        $commission = $this->commissionItem->commission;
+        $student = $commission?->student;
+        $amountLabel = number_format($this->commissionItem->amount, 0, ',', '.') . ' VNĐ';
+        $url = url('/admin/commissions');
+        $statusLabel = $this->getStatusLabel($this->commissionItem->status);
+
+        return TelegramMessage::create()
+            ->to($notifiable->routeNotificationForTelegram())
+            ->content("💰 *GHI NHẬN HOA HỒNG MỚI (DỰ KIẾN)*\n\n" .
+                "Hệ thống vừa ghi nhận một khoản hoa hồng mới dành cho bạn. Khoản này sẽ được chi trả sau khi đối soát trạng thái nhập học của sinh viên.\n\n" .
+                "🆔 *Mã hồ sơ:* `{$student?->profile_code}`\n" .
+                "👤 *Sinh viên:* {$student?->full_name}\n" .
+                "💰 *Số tiền:* `{$amountLabel}`\n" .
+                "📝 *Trạng thái:* `{$statusLabel}`\n" .
+                "🤝 *Vai trò:* " . $this->getRoleLabel($this->commissionItem->role) . "\n" .
+                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
+            ->button('Xem ví hoa hồng', $url);
     }
 
     /**
