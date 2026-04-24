@@ -54,6 +54,7 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
             ->line('- Mã hồ sơ: ' . $this->student->profile_code)
             ->line('- Ngành học: ' . $this->student->major)
             ->line('- Hệ đào tạo: ' . $this->student->program_type_label)
+            ->line('- Đợt tuyển sinh: ' . ($this->student->intake?->name ?? 'Chưa xác định'))
             ->action('Xem chi tiết hồ sơ', url('/admin/students/' . $this->student->id))
             ->line('Chúc bạn một ngày làm việc hiệu quả!');
     }

@@ -45,6 +45,8 @@ class PaymentVerifiedNotification extends Notification implements ShouldQueue {
             ->line('Thanh toán của bạn đã được xác minh thành công.')
             ->line('Số tiền: ' . number_format($this->payment->amount, 0, ',', '.') . ' VNĐ')
             ->line('Loại chương trình: ' . $this->payment->program_type)
+            ->line('Ngành học: ' . $this->payment->student?->major)
+            ->line('Đợt tuyển sinh: ' . ($this->payment->student?->intake?->name ?? 'Chưa xác định'))
             ->line('Trạng thái: Đã xác minh')
             ->action('Xem chi tiết', url('/admin/payments/' . $this->payment->id))
             ->line('Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!');

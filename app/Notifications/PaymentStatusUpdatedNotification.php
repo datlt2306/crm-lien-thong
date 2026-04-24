@@ -48,6 +48,8 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
                 "{$message}\n\n" .
                 "🆔 *Mã hồ sơ:* `{$student?->profile_code}`\n" .
                 "👤 *Họ tên:* {$student?->full_name}\n" .
+                "📚 *Ngành:* {$student?->major}\n" .
+                "🏫 *Hệ:* {$this->payment->program_type}\n" .
                 "💰 *Số tiền:* `{$amountLabel}`\n" .
                 "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
             ->button('Xem chi tiết', $url);

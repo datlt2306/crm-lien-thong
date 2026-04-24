@@ -20,7 +20,12 @@
         </div>
         <div class="content">
             <p>Chúc mừng bạn đã đăng ký form liên thông GTVT thành công!</p>
-            <p>Chúng tôi đã tiếp nhận thông tin hồ sơ của bạn cho chương trình: <strong>{{ $student->program_type_label }}</strong> liên thông dự kiến tại <strong>{{ $student->target_university ?? 'Trường' }}</strong>.</p>
+            <p>Chúng tôi đã tiếp nhận thông tin hồ sơ của bạn với các thông tin sau:</p>
+            <ul style="list-style-type: none; padding-left: 0;">
+                <li>- <strong>Ngành học:</strong> {{ $student->major }}</li>
+                <li>- <strong>Hệ đào tạo:</strong> {{ $student->program_type_label }}</li>
+                <li>- <strong>Đợt tuyển sinh:</strong> {{ $student->target_university ?? ($student->intake?->name ?? 'Chưa xác định') }}</li>
+            </ul>
             <p>Dưới đây là <strong>MÃ HỒ SƠ</strong> của bạn dùng để tra cứu trạng thái và làm các thủ tục tiếp theo:</p>
             <div class="highlight">
                 {{ $student->profile_code }}
