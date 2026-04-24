@@ -53,13 +53,6 @@ class EditUser extends EditRecord {
     }
 
     protected function mutateFormDataBeforeSave(array $data): array {
-        // Xử lý role - cập nhật role trong database
-        if (isset($data['role'])) {
-            $user = $this->record;
-            $user->role = $data['role'];
-            $user->save();
-        }
-
         return $data;
     }
 
