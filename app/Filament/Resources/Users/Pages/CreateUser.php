@@ -65,6 +65,13 @@ class CreateUser extends CreateRecord {
         return $user;
     }
 
+    protected function getCreatedNotification(): ?\Filament\Notifications\Notification {
+        return \Filament\Notifications\Notification::make()
+            ->success()
+            ->title('Đã tạo người dùng')
+            ->body('Người dùng mới đã được tạo thành công.');
+    }
+
     protected function getFormActions(): array {
         return [
             $this->getCreateFormAction()

@@ -63,6 +63,13 @@ class EditUser extends EditRecord {
         return $data;
     }
 
+    protected function getSavedNotification(): ?\Filament\Notifications\Notification {
+        return \Filament\Notifications\Notification::make()
+            ->success()
+            ->title('Đã cập nhật')
+            ->body('Thông tin người dùng đã được lưu thành công.');
+    }
+
     protected function afterSave(): void {
         $user = $this->record;
 
