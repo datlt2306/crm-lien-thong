@@ -23,12 +23,12 @@ class DatabaseSeeder extends Seeder {
         $adminEmail = config('app.super_admin.email', 'admin@gmail.com');
         $adminPassword = config('app.super_admin.password', 'password');
 
-        $superAdminUser = \App\Models\User::updateOrCreate(
-            ['role' => 'super_admin'], // Tìm theo role super_admin
+        $superAdminUser = \App\Models\User::firstOrCreate(
+            ['email' => $adminEmail], 
             [
                 'name' => 'Super Admin',
-                'email' => $adminEmail,
                 'password' => bcrypt($adminPassword),
+                'role' => 'super_admin',
                 'email_verified_at' => now(),
             ]
         );
@@ -58,7 +58,7 @@ class DatabaseSeeder extends Seeder {
         $this->call(WalletSeeder::class);
 
         // Tạo dữ liệu test cho charts
-        $this->call(ChartTestDataSeeder::class);
+        // $this->call(ChartTestDataSeeder::class);
 
         // Tạo user kế toán
         $this->call(AccountantSeeder::class);

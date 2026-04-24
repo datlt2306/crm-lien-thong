@@ -13,58 +13,41 @@ class CollaboratorSeeder extends Seeder {
             [
                 'full_name' => 'Lê Trọng Đạt',
                 'phone' => '0987654321',
-                'email' => 'dat.le@example.com',
-                
-                'note' => 'CTV cấp cao, kinh nghiệm 3 năm',
+                'email' => 'datletrong2306@gmail.com',
+                'note' => 'Admin - CTV chính',
                 'status' => 'active',
             ],
             [
-                'full_name' => 'Nguyễn Văn Kiên',
+                'full_name' => 'Tạ Hải Long',
                 'phone' => '0987654322',
-                'email' => 'kien.nguyen@example.com',
-                
-                'note' => 'CTV chuyên về du học Úc',
+                'email' => 'tahailongseo@gmail.com',
+                'note' => 'CTV Marketing',
                 'status' => 'active',
             ],
             [
-                'full_name' => 'Trần Thị Long',
+                'full_name' => 'Đặng Tiến Sơn',
                 'phone' => '0987654323',
-                'email' => 'long.tran@example.com',
-                
-                'note' => 'CTV mới, đang training',
-                'status' => 'active',
-            ],
-            [
-                'full_name' => 'Phạm Văn Minh',
-                'phone' => '0987654324',
-                'email' => 'minh.pham@example.com',
-                
-                'note' => 'CTV chuyên về du học Mỹ',
-                'status' => 'inactive',
-            ],
-            [
-                'full_name' => 'Hoàng Thị Lan',
-                'phone' => '0987654325',
-                'email' => 'lan.hoang@example.com',
-                
-                'note' => 'CTV chuyên về du học Canada',
+                'email' => 'sondt32@fpt.edu.vn',
+                'note' => 'CTV Admissions',
                 'status' => 'active',
             ],
         ];
 
         foreach ($collaborators as $collaboratorData) {
             // Tạo hoặc cập nhật User account cho collaborator
-            $user = User::updateOrCreate(
+            $user = User::firstOrCreate(
                 ['email' => $collaboratorData['email']],
                 [
                     'name' => $collaboratorData['full_name'],
-                    'password' => bcrypt('123456'), // Mật khẩu mặc định
+                    'password' => bcrypt('123456'), // Mật khẩu mặc định chỉ dùng nếu tạo mới
                     'role' => 'ctv',
                 ]
             );
 
-            // Gán role 'ctv' cho collaborator
-            $user->assignRole('ctv');
+            // Đảm bảo role 'ctv' được gán
+            if (!$user->hasRole('ctv')) {
+                $user->assignRole('ctv');
+            }
 
             // Tạo hoặc cập nhật Collaborator record
             Collaborator::updateOrCreate(

@@ -25,27 +25,19 @@ class IntakeQuotaSeeder extends Seeder {
         // Tạo các đợt tuyển sinh
         $intakes = [
             [
-                'name' => 'Đợt 1 - Học kỳ I 2026',
-                'description' => 'Đợt tuyển sinh đầu tiên cho học kỳ I năm 2026',
+                'name' => 'Đợt 1/2026',
+                'description' => 'Đợt tuyển sinh đầu tiên năm 2026',
                 'start_date' => '2026-01-01',
                 'end_date' => '2026-03-31',
                 'enrollment_deadline' => '2026-04-15',
                 'status' => Intake::STATUS_ACTIVE,
             ],
             [
-                'name' => 'Đợt 2 - Học kỳ I 2026',
-                'description' => 'Đợt tuyển sinh thứ hai cho học kỳ I năm 2026',
+                'name' => 'Đợt 2/2026',
+                'description' => 'Đợt tuyển sinh thứ hai năm 2026',
                 'start_date' => '2026-04-01',
                 'end_date' => '2026-06-30',
                 'enrollment_deadline' => '2026-07-15',
-                'status' => Intake::STATUS_UPCOMING,
-            ],
-            [
-                'name' => 'Đợt 1 - Học kỳ II 2026',
-                'description' => 'Đợt tuyển sinh cho học kỳ II năm 2026',
-                'start_date' => '2026-07-01',
-                'end_date' => '2026-09-30',
-                'enrollment_deadline' => '2026-10-15',
                 'status' => Intake::STATUS_UPCOMING,
             ],
         ];
