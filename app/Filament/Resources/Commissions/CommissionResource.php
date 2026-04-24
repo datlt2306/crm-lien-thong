@@ -167,19 +167,10 @@ class CommissionResource extends Resource {
                     ->tooltip('Hoa hồng này đã được điều chỉnh do SV chuyển hệ')
                     ->toggleable(),
 
-                // Cột mã số phiếu thu
-                // \Filament\Tables\Columns\TextColumn::make('commission.payment.receipt_number')
-                //     ->label('Số phiếu thu')
-                //     ->sortable()
-                //     ->formatStateUsing(function (?CommissionItem $record) {
-                //         if (!$record) return '—';
-                //         $payment = $record->commission->payment;
-                //         if (!$payment || !$payment->receipt_number) {
-                //             return '—';
-                //         }
-                //         return $payment->receipt_number;
-                //     })
-                //     ->visible(fn(): bool => Auth::user()->can('payment_view')),
+                \Filament\Tables\Columns\TextInputColumn::make('notes')
+                    ->label('Ghi chú riêng')
+                    ->placeholder('Nhập ghi chú...')
+                    ->visible(fn() => Auth::user()->can('commission_update')),
 
                 \Filament\Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
@@ -731,4 +722,9 @@ class CommissionResource extends Resource {
         return 'Tổng số bộ hoa hồng';
     }
 
+    public static function getWidgets(): array {
+        return [
+            \App\Filament\Resources\Commissions\CommissionResource\Widgets\CommissionStatsWidget::class,
+        ];
+    }
 }

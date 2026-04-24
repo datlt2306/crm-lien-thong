@@ -13,9 +13,16 @@ use Filament\Schemas\Components\Grid;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FeeClosingExport;
+use App\Filament\Resources\Commissions\CommissionResource\Widgets\CommissionStatsWidget;
 
 class ListCommissions extends ListRecords {
     protected static string $resource = CommissionResource::class;
+
+    protected function getHeaderWidgets(): array {
+        return [
+            CommissionStatsWidget::class,
+        ];
+    }
 
     public static function canAccess(array $parameters = []): bool {
         $user = Auth::user();
@@ -99,10 +106,7 @@ class ListCommissions extends ListRecords {
                     $count = \App\Models\CommissionItem::query()
                         ->where('recipient_collaborator_id', $collaboratorId)
                         ->where('status', \App\Models\CommissionItem::STATUS_PAYABLE)
-                        ->whereHas('commission.payment', function ($query) use ($startDate, $endDate) {
-                            $query->where('status', \App\Models\Payment::STATUS_VERIFIED)
-                                ->whereBetween('verified_at', [$startDate, $endDate]);
-                        })
+                        ->whereBetween('payable_at', [$startDate, $endDate])
                         ->count();
 
                     \Filament\Notifications\Notification::make()
@@ -163,14 +167,8 @@ class ListCommissions extends ListRecords {
                     // Tìm các CommissionItem khớp tiêu chí
                     $items = \App\Models\CommissionItem::query()
                         ->where('recipient_collaborator_id', $collaboratorId)
-                        ->whereIn('status', [
-                            \App\Models\CommissionItem::STATUS_PAYABLE,
-                            \App\Models\CommissionItem::STATUS_PENDING
-                        ])
-                        ->whereHas('commission.payment', function ($query) use ($startDate, $endDate) {
-                            $query->where('status', \App\Models\Payment::STATUS_VERIFIED)
-                                ->whereBetween('verified_at', [$startDate, $endDate]);
-                        })
+                        ->where('status', \App\Models\CommissionItem::STATUS_PAYABLE)
+                        ->whereBetween('payable_at', [$startDate, $endDate])
                         ->get();
 
                     if ($items->isEmpty()) {

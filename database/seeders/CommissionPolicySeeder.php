@@ -3,92 +3,270 @@
 namespace Database\Seeders;
 
 use App\Models\CommissionPolicy;
-use App\Models\Organization;
 use App\Models\Collaborator;
 use Illuminate\Database\Seeder;
 
 class CommissionPolicySeeder extends Seeder {
     public function run(): void {
-        // Truncate để tránh lỗi truy vấn JSON trên PostgreSQL khi dùng updateOrCreate
+        // Xóa sạch để nạp mới hoàn toàn
         CommissionPolicy::truncate();
 
-        $collaborators = Collaborator::where('status', 'active')->get();
-        if ($collaborators->isEmpty()) {
-            $this->command->error('Chưa có Collaborator active nào. Chạy CollaboratorSeeder trước.');
+        // Lấy ID của các nhân vật chính
+        $dat = Collaborator::where('email', 'datletrong2306@gmail.com')->first();
+        $long = Collaborator::where('email', 'tahailongseo@gmail.com')->first();
+        $son = Collaborator::where('email', 'sondt32@fpt.edu.vn')->first();
+
+        if (!$dat || !$long || !$son) {
+            $this->command->error('Thiếu Collaborator (Đạt/Long/Sơn). Vui lòng chạy CollaboratorSeeder trước.');
             return;
         }
 
-        // Global policies (Chính sách mặc định cho toàn hệ thống)
-        $globalPolicies = [
-            [
-                'collaborator_id' => null,
-                'program_type' => ['REGULAR', 'PART_TIME', 'DISTANCE'], // Áp dụng cho các hệ chuẩn
-                'role' => 'PRIMARY',
-                'type' => 'FIXED',
-                'payout_rules' => [
-                    'REGULAR' => [
-                        [
-                            'recipient_type' => 'direct_ctv',
-                            'amount_vnd' => 1750000,
-                            'payout_trigger' => 'payment_verified',
-                            'description' => 'Hoa hồng hệ chính quy (Đợt 1)'
-                        ]
-                    ],
-                    'PART_TIME' => [
-                        [
-                            'recipient_type' => 'direct_ctv',
-                            'amount_vnd' => 750000,
-                            'payout_trigger' => 'payment_verified',
-                            'description' => 'Hoa hồng hệ vừa học vừa làm'
-                        ]
-                    ],
-                    'DISTANCE' => [
-                        [
-                            'recipient_type' => 'direct_ctv',
-                            'amount_vnd' => 200000,
-                            'payout_trigger' => 'payment_verified',
-                            'description' => 'Hoa hồng hệ đào tạo từ xa'
-                        ]
-                    ],
-                    'default' => [
-                        [
-                            'recipient_type' => 'direct_ctv',
-                            'amount_vnd' => 0,
-                            'payout_trigger' => 'payment_verified',
-                            'description' => 'Chưa cấu hình'
-                        ]
+        // 1. CHÍNH SÁCH CHUNG (Mặc định cho toàn hệ thống)
+        CommissionPolicy::create([
+            'collaborator_id' => null,
+            'program_type' => ['REGULAR', 'PART_TIME', 'DISTANCE'],
+            'role' => 'PRIMARY',
+            'type' => 'FIXED',
+            'payout_rules' => [
+                'REGULAR' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 1750000,
+                        'payout_trigger' => 'payment_verified', // Mùng 5
+                        'description' => 'Hoa hồng trực tiếp hệ Chính quy'
                     ]
                 ],
-                'trigger' => 'ON_VERIFICATION',
-                'visibility' => 'INTERNAL',
-                'priority' => 0,
-                'active' => true,
-                'meta' => ['description' => 'Chính sách hoa hồng mặc định 2026 cho tất cả CTV'],
+                'PART_TIME' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 750000,
+                        'payout_trigger' => 'payment_verified', // Mùng 5
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 2200000,
+                        'payout_trigger' => 'student_enrolled', // Nhập học
+                        'description' => 'Hoa hồng sau khi nhập học'
+                    ]
+                ],
+                'DISTANCE' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 200000,
+                        'payout_trigger' => 'payment_verified', // Mùng 5
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 2200000,
+                        'payout_trigger' => 'student_enrolled', // Nhập học
+                        'description' => 'Hoa hồng sau khi nhập học'
+                    ]
+                ]
             ],
-        ];
+            'trigger' => 'ON_VERIFICATION',
+            'visibility' => 'INTERNAL',
+            'priority' => 0,
+            'active' => true,
+            'meta' => ['description' => 'Chính sách mặc định 2026 cho tất cả CTV'],
+        ]);
 
-        // Collaborator-specific policies (Ví dụ chính sách riêng cho 1 CTV đặc biệt)
-        $collabPolicies = [
-            [
-                'collaborator_id' => $collaborators->first()->id,
-                'program_type' => ['REGULAR'],
-                'role' => 'PRIMARY',
-                'type' => 'FIXED',
-                'amount_vnd' => 2000000, // CTV này được ưu đãi 2tr cho hệ CQ
-                'trigger' => 'ON_VERIFICATION',
-                'visibility' => 'INTERNAL',
-                'priority' => 20,
-                'active' => true,
-                'meta' => ['description' => 'Chính sách ưu đãi cho CTV VIP: ' . $collaborators->first()->full_name],
+        // 2. CHÍNH SÁCH RIÊNG CHO ĐẠT (CTV CHÍNH)
+        CommissionPolicy::create([
+            'collaborator_id' => $dat->id,
+            'program_type' => ['REGULAR', 'PART_TIME', 'DISTANCE'],
+            'role' => 'PRIMARY',
+            'type' => 'FIXED',
+            'payout_rules' => [
+                'REGULAR' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 1750000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng trực tiếp hệ Chính quy'
+                    ]
+                ],
+                'PART_TIME' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 750000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 2000000, // Cập nhật theo yêu cầu mới
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng sau khi nhập học'
+                    ]
+                ],
+                'DISTANCE' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 200000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 2000000, // Cập nhật theo yêu cầu mới
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng sau khi nhập học'
+                    ]
+                ]
             ],
-        ];
+            'trigger' => 'ON_VERIFICATION',
+            'visibility' => 'INTERNAL',
+            'priority' => 20,
+            'active' => true,
+            'meta' => ['description' => 'Chính sách riêng cho Đạt: 2000k sau nhập học'],
+        ]);
 
-        $allPolicies = array_merge($globalPolicies, $collabPolicies);
+        // 3. CHÍNH SÁCH RIÊNG CHO LONG
+        CommissionPolicy::create([
+            'collaborator_id' => $long->id,
+            'program_type' => ['REGULAR', 'PART_TIME', 'DISTANCE'],
+            'role' => 'PRIMARY',
+            'type' => 'FIXED',
+            'payout_rules' => [
+                'REGULAR' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 750000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng trực tiếp cho Long'
+                    ],
+                    [
+                        'recipient_type' => 'specific_ctv',
+                        'recipient_id' => $dat->id,
+                        'amount_vnd' => 1000000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng quản lý chia cho Đạt'
+                    ]
+                ],
+                'PART_TIME' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 750000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 950000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng nhập học cho Long'
+                    ],
+                    [
+                        'recipient_type' => 'specific_ctv',
+                        'recipient_id' => $dat->id,
+                        'amount_vnd' => 1150000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng quản lý sau nhập học cho Đạt'
+                    ]
+                ],
+                'DISTANCE' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 200000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 950000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng nhập học cho Long'
+                    ],
+                    [
+                        'recipient_type' => 'specific_ctv',
+                        'recipient_id' => $dat->id,
+                        'amount_vnd' => 1150000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng quản lý sau nhập học cho Đạt'
+                    ]
+                ]
+            ],
+            'trigger' => 'ON_VERIFICATION',
+            'visibility' => 'INTERNAL',
+            'priority' => 10,
+            'active' => true,
+            'meta' => ['description' => 'Chính sách riêng cho Long: Chia 1150k cho Đạt sau nhập học'],
+        ]);
 
-        foreach ($allPolicies as $policyData) {
-            CommissionPolicy::create($policyData);
-        }
+        // 4. CHÍNH SÁCH RIÊNG CHO SƠN
+        CommissionPolicy::create([
+            'collaborator_id' => $son->id,
+            'program_type' => ['REGULAR', 'PART_TIME', 'DISTANCE'],
+            'role' => 'PRIMARY',
+            'type' => 'FIXED',
+            'payout_rules' => [
+                'REGULAR' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 750000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng trực tiếp cho Sơn'
+                    ],
+                    [
+                        'recipient_type' => 'specific_ctv',
+                        'recipient_id' => $dat->id,
+                        'amount_vnd' => 1000000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng quản lý chia cho Đạt'
+                    ]
+                ],
+                'PART_TIME' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 750000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 1350000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng nhập học cho Sơn'
+                    ],
+                    [
+                        'recipient_type' => 'specific_ctv',
+                        'recipient_id' => $dat->id,
+                        'amount_vnd' => 650000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng quản lý sau nhập học cho Đạt'
+                    ]
+                ],
+                'DISTANCE' => [
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 200000,
+                        'payout_trigger' => 'payment_verified',
+                        'description' => 'Hoa hồng đợt 1 (Mùng 5)'
+                    ],
+                    [
+                        'recipient_type' => 'direct_ctv',
+                        'amount_vnd' => 1350000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng nhập học cho Sơn'
+                    ],
+                    [
+                        'recipient_type' => 'specific_ctv',
+                        'recipient_id' => $dat->id,
+                        'amount_vnd' => 650000,
+                        'payout_trigger' => 'student_enrolled',
+                        'description' => 'Hoa hồng quản lý sau nhập học cho Đạt'
+                    ]
+                ]
+            ],
+            'trigger' => 'ON_VERIFICATION',
+            'visibility' => 'INTERNAL',
+            'priority' => 10,
+            'active' => true,
+            'meta' => ['description' => 'Chính sách riêng cho Sơn: Chia 650k cho Đạt sau nhập học'],
+        ]);
 
-        $this->command->info('Đã tạo mới ' . count($allPolicies) . ' chính sách hoa hồng chuẩn 2026.');
+        $this->command->info('Đã cập nhật xong hoa hồng nhập học (VHVL/DTTX) cho Đạt, Long, Sơn.');
     }
 }

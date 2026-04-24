@@ -103,47 +103,42 @@ class PermissionSeeder extends Seeder {
         $superAdmin->syncPermissions(Permission::all());
 
 
-        // Gán permissions cho CTV
+        // Gán permissions cho CTV (Đúng 11 quyền yêu cầu)
         $ctv->syncPermissions([
-            'commission_view_any',
-            'payment_view_any',
-            'payment_view',
-            'payment_view_bill',
-            'payment_upload_bill',
-            'payment_upload_receipt',
-            'payment_update_receipt',
-            'student_view_any',
-            'student_view',
-            'student_create',
-            'student_update',
-            'audit_log_view',
-            'intake_view_any',
-            'annual_quota_view_any',
-            'quota_view_any',
+            'student_view_any',      // 1. Xem danh sách sinh viên
+            'student_view',          // 2. Xem chi tiết sinh viên
+            'payment_view_any',      // 3. Xem danh sách phiếu thu
+            'payment_view',          // 4. Xem file Phiếu thu
+            'payment_view_bill',     // 5. Xem Bill
+            'payment_upload_bill',   // 6. Tải Bill lên
+            'commission_view_any',   // 7. Xem danh sách hoa hồng
+            'commission_view',       // 8. Xem chi tiết hoa hồng
+            'intake_view_any',       // 9. Xem danh sách đợt tuyển sinh
+            'annual_quota_view_any', // 10. Xem danh sách chỉ tiêu năm
+            'audit_log_view',        // 11. Xem nhật ký hoạt động học viên
         ]);
 
-        // Gán permissions cho accountant
+        // Gán permissions cho accountant (Đúng danh sách yêu cầu)
         $accountant->syncPermissions([
-            'student_view_any',
-            'student_view',
-            'student_update',
-            'commission_view_any',
-            'commission_view',
-            'payment_view_any',
-            'payment_view',
-            'payment_view_bill',
-            'payment_upload_bill',
-            'payment_upload_receipt',
-            'payment_update_receipt',
-            'payment_verify',
-            'payment_reverse',
-            'payment_refund',
-            'report_view_finance',
-            'audit_log_view',
-            'audit_log_view_all',
-            'intake_view_any',
-            'annual_quota_view_any',
-            'quota_view_any',
+            'student_view_any',      // Xem danh sách sinh viên
+            'student_view',          // Xem chi tiết sinh viên
+            'payment_view_any',      // Xem danh sách phiếu thu
+            'payment_view',          // Xem chi tiết/File phiếu thu
+            'payment_view_bill',     // Xem Bill
+            'payment_verify',        // Duyệt thanh toán
+            'payment_reverse',       // Hủy xác nhận (chưa có phiếu thu)
+            'payment_refund',        // Hoàn trả (đã có phiếu thu)
+            'payment_upload_bill',   // Tải Bill lên
+            'payment_upload_receipt', // Tải Phiếu thu lên
+            'payment_update_receipt', // Sửa Phiếu thu
+            'commission_view_any',   // Xem danh sách hoa hồng
+            'commission_view',       // Xem chi tiết hoa hồng
+            'intake_view_any',       // Xem danh sách đợt tuyển sinh
+            'annual_quota_view_any', // Xem danh sách chỉ tiêu năm
+            'quota_view_any',        // Xem danh sách chỉ tiêu chi tiết
+            'audit_log_view_all',    // Xem nhật ký hoạt động học viên
+            'report_view_finance',   // Báo cáo doanh thu
+            'report_view_enrollment', // Báo cáo tuyển sinh
         ]);
 
         // Gán permissions cho admissions
@@ -165,26 +160,23 @@ class PermissionSeeder extends Seeder {
             'quota_update',
         ]);
 
-        // Gán permissions cho document
+        // Gán permissions cho document (Đúng danh sách yêu cầu)
         $document->syncPermissions([
-            'student_view_any',
-            'student_view',
-            'student_update',
-            'payment_view_any',
-            'payment_view',
-            'payment_view_bill',
-            'payment_upload_bill',
-            'payment_upload_receipt',
-            'payment_update_receipt',
-            'payment_verify',
-            'payment_reverse',
-            'payment_refund',
-            'commission_view_any',
-            'commission_view',
-            'audit_log_view_all',
-            'intake_view_any',
-            'annual_quota_view_any',
-            'quota_view_any',
+            'student_view_any',      // Xem danh sách sinh viên
+            'student_view',          // Xem chi tiết sinh viên
+            'student_update',        // Chỉnh sửa sinh viên
+            'payment_view_any',      // Xem danh sách phiếu thu
+            'payment_view',          // Xem chi tiết/File phiếu thu
+            'payment_view_bill',     // Xem Bill
+            'payment_verify',        // Duyệt thanh toán
+            'payment_reverse',       // Hủy xác nhận (chưa có phiếu thu)
+            'payment_refund',        // Hoàn trả (đã có phiếu thu)
+            'payment_upload_bill',   // Tải Bill lên
+            'payment_upload_receipt', // Tải Phiếu thu lên
+            'payment_update_receipt', // Sửa Phiếu thu
+            'intake_view_any',       // Xem danh sách đợt tuyển sinh
+            'annual_quota_view_any', // Xem danh sách chỉ tiêu năm
+            'quota_view_any',        // Xem danh sách chỉ tiêu chi tiết
         ]);
 
         $this->command->info('Permissions and roles created successfully!');
