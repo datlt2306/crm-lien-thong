@@ -123,6 +123,11 @@ class FileController extends Controller {
             abort(404, 'File không tồn tại');
         }
 
+        // 1. Thử kiểm tra ở Local trước (vì mày đang chạy 127.0.0.1)
+        if (Storage::disk('public')->exists($filePath)) {
+            return response()->file(storage_path('app/public/' . $filePath));
+        }
+
         try {
             $disk = Storage::disk('google');
             
@@ -135,29 +140,28 @@ class FileController extends Controller {
             $url = $disk->url($filePath);
             
             // Chuyển đổi link download sang link xem trực tiếp (View) của Google Drive
-            // Hỗ trợ cả link cũ uc?id= và link mới
             $fileId = null;
             if (str_contains($url, 'uc?id=')) {
                 parse_str(parse_url($url, PHP_URL_QUERY), $query);
                 $fileId = $query['id'] ?? null;
             } elseif (preg_match('/[-\w]{25,}/', $filePath, $matches)) {
-                // Nếu filePath bản chất là một Google ID
                 $fileId = $matches[0];
             }
 
             if ($fileId) {
-                // Dùng link drive.google.com chuẩn để xem được PDF/Ảnh và In ấn
                 return redirect("https://drive.google.com/file/d/{$fileId}/view");
             }
 
             return redirect($url);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('File View Error: ' . $e->getMessage());
-            // Nếu lỗi Disk Google, thử kiểm tra xem filePath có phải là ID trực tiếp không
-            if (preg_match('/[-\w]{25,}/', $filePath, $matches)) {
-                return redirect("https://drive.google.com/file/d/{$matches[0]}/view");
+            \Illuminate\Support\Facades\Log::error('File View Error (Google): ' . $e->getMessage());
+            
+            // Nếu lỗi Google mà nãy chưa check Local thì check lại phát cuối (đề phòng)
+            if (Storage::disk('public')->exists($filePath)) {
+                return response()->file(storage_path('app/public/' . $filePath));
             }
-            abort(404, 'Không thể mở file. Lỗi: ' . $e->getMessage());
+
+            abort(404, 'Không thể mở file. Lỗi Drive: ' . $e->getMessage());
         }
     }
 }

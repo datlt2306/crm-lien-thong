@@ -91,15 +91,10 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
                 "🎂 *Ngày sinh:* {$birthday}\n" .
                 "🏠 *Địa chỉ:* {$address}\n" .
                 "📚 *Ngành:* {$this->student->major}\n" .
-                "🏫 *Hệ:* {$this->student->program_type_label}\n" .
+                "🏫 *Hệ:* *{$this->student->program_type_label}*\n" .
                 "📅 *Đợt:* {$intake}\n" .
                 "🤝 *Người giới thiệu:* {$collaboratorName}\n" .
                 "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'));
-
-        // Chỉ hiện nút xem hồ sơ nếu gửi cho Master (Đạt), vì Proxy (Long/Sơn) không có quyền vào CRM
-        if ($chatId == $notifiable->telegram_chat_id) {
-            $message->button('Xem hồ sơ chi tiết', $url);
-        }
 
         return $message;
     }

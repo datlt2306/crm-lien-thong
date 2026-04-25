@@ -6,8 +6,11 @@ use App\Models\RefCode;
 use App\Models\Student;
 use App\Models\Collaborator;
 use App\Models\CommissionItem;
+use App\Models\Payment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class TelegramBotService
 {
@@ -25,9 +28,18 @@ class TelegramBotService
 
         $chatId = $message['chat']['id'];
         $text = $message['text'] ?? '';
+        $photo = $message['photo'] ?? null;
+        $document = $message['document'] ?? null;
+        $replyTo = $message['reply_to_message'] ?? null;
+
+        // Xử lý nộp Bill qua Reply ảnh hoặc File
+        if (($photo || $document) && $replyTo) {
+            $this->handleBillUploadViaReply($chatId, $photo, $document, $replyTo);
+            return;
+        }
 
         if (str_starts_with($text, '/start')) {
-            $this->sendMessage($chatId, "👋 Chào mừng bạn đến với hệ thống đối soát CRM!\n\nHãy dùng lệnh /check để xem báo cáo của mình.\nID Telegram của bạn là: `{$chatId}`");
+            $this->sendMessage($chatId, "👋 Chào mừng bạn đến với hệ thống đối soát CRM!\n\nHãy dùng lệnh /check để xem báo cáo của mình.\nID Telegram của bạn là: `{$chatId}`\n\n💡 *Mẹo:* Bạn có thể TRẢ LỜI (Reply) tin nhắn thông báo sinh viên mới bằng một ảnh chuyển khoản để nộp hóa đơn nhanh!");
             return;
         }
 
@@ -37,9 +49,102 @@ class TelegramBotService
         }
     }
 
+    protected function handleBillUploadViaReply($chatId, $photo, $document, $replyTo)
+    {
+        $originalText = $replyTo['text'] ?? $replyTo['caption'] ?? '';
+        Log::info("Telegram Reply Received from {$chatId}. Original Text: " . $originalText);
+        
+        // Regex linh hoạt hơn để bắt mã hồ sơ
+        if (!preg_match('/HS\d{4}[A-Z0-9]{4}\d{3}/', $originalText, $matches)) {
+            Log::warning("Telegram Bill Upload: Could not find Profile Code in original message.");
+            return; // Im hơi lặng tiếng nếu không phải reply tin nhắn thông báo HS
+        }
+
+        $profileCode = $matches[0];
+        $student = Student::where('profile_code', $profileCode)->first();
+
+        if (!$student) {
+            $this->sendMessage($chatId, "⚠️ Không tìm thấy hồ sơ `{$profileCode}` trên hệ thống.");
+            return;
+        }
+
+        $payment = $student->payment;
+
+        // Chặn upload nếu đã thanh toán thành công (tránh spam)
+        if ($payment && $payment->status === Payment::STATUS_VERIFIED) {
+            $this->sendMessage($chatId, "🚫 *Thông báo:* Hồ sơ `{$profileCode}` của sinh viên *{$student->full_name}* đã được kế toán xác nhận thanh toán thành công.\n\nBạn không cần gửi thêm minh chứng cho hồ sơ này nữa.");
+            return;
+        }
+
+        // Lấy File ID (Ưu tiên Document, sau đó đến Photo chất lượng cao nhất)
+        $fileId = null;
+        $extension = 'jpg';
+
+        if ($document) {
+            // Kiểm tra xem có phải là ảnh không (mime_type)
+            $mimeType = $document['mime_type'] ?? '';
+            if (!str_starts_with($mimeType, 'image/')) {
+                $this->sendMessage($chatId, "⚠️ File bạn gửi không phải là định dạng ảnh. Vui lòng gửi ảnh Bill chuyển khoản.");
+                return;
+            }
+            $fileId = $document['file_id'];
+            $extension = pathinfo($document['file_name'] ?? 'bill.jpg', PATHINFO_EXTENSION) ?: 'jpg';
+        } elseif ($photo) {
+            $fileId = end($photo)['file_id'];
+        }
+
+        if (!$fileId) return;
+        
+        try {
+            $this->sendMessage($chatId, "⏳ Đang tải ảnh và cập nhật hồ sơ `{$profileCode}`...");
+
+            // Lấy path từ Telegram
+            $fileResponse = Http::get("https://api.telegram.org/bot{$this->token}/getFile", ['file_id' => $fileId]);
+            $filePath = $fileResponse->json('result.file_path');
+
+            if (!$filePath) throw new \Exception("Không lấy được đường dẫn file từ Telegram.");
+
+            $fileUrl = "https://api.telegram.org/file/bot{$this->token}/{$filePath}";
+            
+            // Tải file về
+            $fileContent = Http::get($fileUrl)->body();
+
+            $payment = $student->payment ?: $student->payment()->create([
+                'status' => Payment::STATUS_NOT_PAID,
+                'amount' => 0,
+                'program_type' => $student->program_type,
+                'primary_collaborator_id' => $student->collaborator_id,
+            ]);
+
+            $targetPath = $payment->generateStandardBillPath($extension);
+            
+            // Lưu vào Storage (Thử dùng google trước, nếu lỗi thì dùng public)
+            try {
+                Storage::disk('google')->put($targetPath, $fileContent);
+                Log::info("Telegram Bill: Uploaded to Google Drive successfully.");
+            } catch (\Exception $e) {
+                Log::warning("Telegram Bill: Google Drive upload failed, falling back to Local. Error: " . $e->getMessage());
+                Storage::disk('public')->put($targetPath, $fileContent);
+            }
+
+            // Cập nhật Database
+            $payment->update([
+                'bill_path' => $targetPath,
+                'status' => Payment::STATUS_SUBMITTED,
+            ]);
+
+            $this->sendMessage($chatId, "✅ *Thành công!* Đã nhận hóa đơn cho sinh viên: *{$student->full_name}* ({$profileCode}).\n\nKế toán đã nhận được thông báo và sẽ duyệt sớm nhất có thể.");
+            
+            Log::info("Telegram Bill Upload Success: {$profileCode} by ChatID {$chatId}");
+
+        } catch (\Exception $e) {
+            Log::error("Telegram Bill Upload Error: " . $e->getMessage());
+            $this->sendMessage($chatId, "❌ Có lỗi xảy ra khi tải ảnh: " . $e->getMessage());
+        }
+    }
+
     protected function handleCheckCommand($chatId)
     {
-        // Ưu tiên check Proxy trước
         $refCode = RefCode::where('telegram_chat_id', $chatId)->first();
         if ($refCode) {
             $this->sendProxyReport($refCode, $chatId);
@@ -78,7 +183,6 @@ class TelegramBotService
             }
         }
 
-        // Tính phần trực tiếp của Đạt
         $masterRefIds = [$master->ref_id, null, ''];
         $directStudentIds = Student::where('collaborator_id', $master->id)
             ->where(function($q) use ($masterRefIds) {

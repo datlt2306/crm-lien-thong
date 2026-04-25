@@ -34,8 +34,31 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
 
     public function toTelegram(object $notifiable) {
         $student = $this->payment->student;
-        $amountLabel = number_format($this->payment->amount, 0, ',', '.') . ' VNĐ';
         $url = url('/admin/payments');
+
+        // Map tên hệ đào tạo và phí mặc định
+        $programLabels = [
+            'REGULAR' => 'Chính quy',
+            'PART_TIME' => 'Vừa học vừa làm',
+            'DISTANCE' => 'Đào tạo từ xa',
+        ];
+        
+        // Phí mặc định từ StudentFeeService (Dùng fallback nếu service không gọi được)
+        $defaultFees = [
+            'REGULAR' => 1750000,
+            'PART_TIME' => 750000,
+            'DISTANCE' => 750000,
+        ];
+
+        $pType = strtoupper((string)$this->payment->program_type);
+        $programLabel = $programLabels[$pType] ?? $pType;
+        
+        // Ưu tiên lấy số tiền đã nộp (nếu > 0), nếu không thì lấy phí mặc định của hệ
+        $displayAmount = $this->payment->amount > 0 
+            ? $this->payment->amount 
+            : ($defaultFees[$pType] ?? 0);
+
+        $amountLabel = number_format($displayAmount, 0, ',', '.') . ' VNĐ';
 
         if ($this->status === 'VERIFIED') {
             $title = "✅ *HÓA ĐƠN ĐÃ ĐƯỢC DUYỆT*";
@@ -54,10 +77,9 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
                 "🆔 *Mã hồ sơ:* `{$student?->profile_code}`\n" .
                 "👤 *Họ tên:* {$student?->full_name}\n" .
                 "📚 *Ngành:* {$student?->major}\n" .
-                "🏫 *Hệ:* {$this->payment->program_type}\n" .
+                "🏫 *Hệ:* *{$programLabel}*\n" .
                 "💰 *Số tiền:* `{$amountLabel}`\n" .
-                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
-            ->button('Xem chi tiết', $url);
+                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'));
     }
 
     public function toArray(object $notifiable): array {
