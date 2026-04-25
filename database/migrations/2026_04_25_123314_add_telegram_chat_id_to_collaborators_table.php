@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('collaborators', function (Blueprint $table) {
-            $table->string('telegram_chat_id')->nullable()->after('email');
-        });
+        if (!Schema::hasColumn('collaborators', 'telegram_chat_id')) {
+            Schema::table('collaborators', function (Blueprint $table) {
+                $table->string('telegram_chat_id')->nullable()->after('email');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('collaborators', function (Blueprint $table) {
-            $table->dropColumn('telegram_chat_id');
-        });
+        if (Schema::hasColumn('collaborators', 'telegram_chat_id')) {
+            Schema::table('collaborators', function (Blueprint $table) {
+                $table->dropColumn('telegram_chat_id');
+            });
+        }
     }
 };
