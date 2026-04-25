@@ -27,18 +27,23 @@ class CommissionStatsWidget extends BaseWidget {
         }
 
         $totalAmount = (float) $query->sum('amount');
-        $studentCount = $query->count();
+        
+        // Đếm số lượng học viên duy nhất thay vì đếm số dòng (items)
+        $uniqueCommissionsQuery = $query->clone()
+            ->join('commissions', 'commission_items.commission_id', '=', 'commissions.id');
+        
+        $studentCount = $uniqueCommissionsQuery->clone()->distinct('commissions.student_id')->count('commissions.student_id');
 
-        // Thống kê theo Hệ đào tạo
-        $programStats = $query->clone()
+        // Thống kê theo Hệ đào tạo (đếm theo học viên duy nhất)
+        $programStats = $uniqueCommissionsQuery->clone()
             ->selectRaw("
                 CASE 
-                    WHEN UPPER(COALESCE(meta->>'program_type', '')) = 'REGULAR' THEN 'Chính quy'
-                    WHEN UPPER(COALESCE(meta->>'program_type', '')) = 'PART_TIME' THEN 'VHVL'
-                    WHEN UPPER(COALESCE(meta->>'program_type', '')) = 'DISTANCE' THEN 'Từ xa'
+                    WHEN UPPER(COALESCE(commission_items.meta->>'program_type', '')) = 'REGULAR' THEN 'Chính quy'
+                    WHEN UPPER(COALESCE(commission_items.meta->>'program_type', '')) = 'PART_TIME' THEN 'VHVL'
+                    WHEN UPPER(COALESCE(commission_items.meta->>'program_type', '')) = 'DISTANCE' THEN 'Từ xa'
                     ELSE 'Khác'
                 END as label,
-                count(*) as count
+                count(DISTINCT commissions.student_id) as count
             ")
             ->groupBy('label')
             ->pluck('count', 'label')
@@ -49,14 +54,13 @@ class CommissionStatsWidget extends BaseWidget {
             $programDescription[] = "{$label}: {$count}";
         }
 
-        // Thống kê theo Ngành học (lấy từ Student qua Commission)
-        $majorStats = $query->clone()
-            ->join('commissions', 'commission_items.commission_id', '=', 'commissions.id')
+        // Thống kê theo Ngành học (đếm theo học viên duy nhất)
+        $majorStats = $uniqueCommissionsQuery->clone()
             ->join('students', 'commissions.student_id', '=', 'students.id')
-            ->selectRaw('students.major as label, count(*) as count')
+            ->selectRaw('students.major as label, count(DISTINCT students.id) as count')
             ->groupBy('students.major')
             ->orderByDesc('count')
-            ->take(3) // Chỉ lấy 3 ngành nhiều nhất để tránh quá tải UI
+            ->take(3)
             ->pluck('count', 'label')
             ->toArray();
 

@@ -53,15 +53,13 @@ class CommissionResource extends Resource {
         }
 
         return $table
-            ->query(CommissionItem::query())
-            // Hiển thị filter như segmented control phía trên bảng
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('commission.student.full_name')
+                \Filament\Tables\Columns\TextColumn::make('student.full_name')
                     ->label('Họ và tên')
                     ->searchable()
                     ->sortable()
-                    ->description(function (CommissionItem $record) {
-                        $student = $record->commission->student;
+                    ->description(function (Commission $record) {
+                        $student = $record->student;
                         if (!$student) return '';
 
                         $lines = [];
@@ -74,31 +72,30 @@ class CommissionResource extends Resource {
                         return implode(' | ', $lines);
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.dob')
+                \Filament\Tables\Columns\TextColumn::make('student.dob')
                     ->label('Ngày sinh')
                     ->date('d/m/Y')
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.major')
+                \Filament\Tables\Columns\TextColumn::make('student.major')
                     ->label('Ngành học')
                     ->searchable(),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.address')
+                \Filament\Tables\Columns\TextColumn::make('student.address')
                     ->label('Địa chỉ')
                     ->limit(50)
                     ->searchable(),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.intake.name')
+                \Filament\Tables\Columns\TextColumn::make('student.intake.name')
                     ->label('Đợt tuyển')
-                    ->formatStateUsing(fn($state, $record) => $state ?: ($record->commission?->student?->intake_month ? "Tháng {$record->commission->student->intake_month}" : '—'))
+                    ->formatStateUsing(fn($state, $record) => $state ?: ($record->student?->intake_month ? "Tháng {$record->student->intake_month}" : '—'))
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('commission.student.program_type')
+                \Filament\Tables\Columns\TextColumn::make('student.program_type')
                     ->label('Hệ tuyển sinh')
-                    ->state(function (CommissionItem $record) {
-                        return $record->meta['program_type'] ?? 
-                               ($record->commission?->rule['program_type'] ?? 
-                                $record->commission?->student?->program_type);
+                    ->state(function (Commission $record) {
+                        return $record->rule['program_type'] ?? 
+                                $record->student?->program_type;
                     })
                     ->formatStateUsing(fn($state) => match (strtoupper((string)$state)) {
                         'REGULAR' => '🎓 Chính quy',
@@ -114,49 +111,40 @@ class CommissionResource extends Resource {
                         default => 'gray'
                     }),
 
-                // Trạng thái sinh viên: hiển thị "Đã nhập học" nếu đã ENROLLED
-                \Filament\Tables\Columns\BadgeColumn::make('student_status')
-                    ->label('Trạng thái SV')
-                    ->state(function ($record) {
-                        /** @var CommissionItem|null $record */
-                        if (!$record) return null;
-                        $student = $record->commission?->student;
-                        if (!$student) return null;
-                        return $student->status === \App\Models\Student::STATUS_ENROLLED ? 'Đã nhập học' : null;
+                \Filament\Tables\Columns\TextColumn::make('items')
+                    ->label('Phân bổ hoa hồng (CTV - Số tiền - Trạng thái)')
+                    ->state(function (Commission $record) {
+                        return $record->items->map(function ($item) {
+                            $statusLabel = match ($item->status) {
+                                CommissionItem::STATUS_PAID, CommissionItem::STATUS_RECEIVED_CONFIRMED => '✅',
+                                CommissionItem::STATUS_PAYMENT_CONFIRMED => '🏦',
+                                CommissionItem::STATUS_PAYABLE => '⏳',
+                                CommissionItem::STATUS_CANCELLED => '❌',
+                                default => '💤',
+                            };
+                            return "• {$item->recipient->full_name}: " . number_format($item->amount, 0, ',', '.') . " {$statusLabel}";
+                        })->implode("\n");
                     })
-                    ->color(function ($state) {
-                        return $state ? 'success' : 'gray';
-                    }),
-
-                \Filament\Tables\Columns\TextColumn::make('recipient.full_name')
-                    ->label('CTV nhận hoa hồng')
-                    ->searchable()
-                    ->sortable()
+                    ->listWithLineBreaks()
                     ->visible(fn(): bool => !$isCtv),
 
-                // \Filament\Tables\Columns\TextColumn::make('meta.description')
-                //     ->label('Nội dung')
-                //     ->wrap()
-                //     ->formatStateUsing(function ($state, $record) {
-                //         if ($state) return $state;
-                //         return match ($record->role) {
-                //             'direct' => 'Hoa hồng trực tiếp',
-                //             'override' => 'Hoa hồng quản lý/thưởng',
-                //             default => 'Phân bổ hoa hồng'
-                //         };
-                //     })
-                //     ->searchable(),
+                \Filament\Tables\Columns\TextColumn::make('recipient_ctv')
+                    ->label('Hoa hồng của tôi')
+                    ->state(function (Commission $record) use ($user) {
+                        $collab = Collaborator::where('email', $user->email)->first();
+                        if (!$collab) return '—';
+                        $item = $record->items->where('recipient_collaborator_id', $collab->id)->first();
+                        if (!$item) return '—';
+                        return number_format($item->amount, 0, ',', '.') . ' VND';
+                    })
+                    ->visible(fn(): bool => $isCtv),
 
-                \Filament\Tables\Columns\TextColumn::make('amount')
-                    ->label('Số tiền hoa hồng')
+                \Filament\Tables\Columns\TextColumn::make('total_amount')
+                    ->label('Tổng hoa hồng hồ sơ')
+                    ->state(fn(Commission $record) => $record->items->sum('amount'))
                     ->money('VND')
                     ->sortable()
-                    ->description(function (CommissionItem $record) {
-                        if ($record->is_adjusted && $record->original_amount > 0) {
-                            return 'Gốc: ' . number_format($record->original_amount, 0, ',', '.') . ' VND';
-                        }
-                        return null;
-                    }),
+                    ->visible(fn(): bool => !$isCtv),
 
                 \Filament\Tables\Columns\IconColumn::make('is_adjusted')
                     ->label('Điều chỉnh')
@@ -172,52 +160,20 @@ class CommissionResource extends Resource {
                     ->placeholder('Nhập ghi chú...')
                     ->visible(fn() => Auth::user()->can('commission_update')),
 
-                \Filament\Tables\Columns\BadgeColumn::make('status')
-                    ->label('Trạng thái')
-                    ->color(function (string $state): string {
-                        return match ($state) {
-                            CommissionItem::STATUS_PENDING => 'gray',
-                            CommissionItem::STATUS_PAYABLE => 'warning',
-                            CommissionItem::STATUS_PAID => 'success',
-                            CommissionItem::STATUS_CANCELLED => 'danger',
-                            CommissionItem::STATUS_PAYMENT_CONFIRMED => 'info',
-                            CommissionItem::STATUS_RECEIVED_CONFIRMED => 'success',
-                            default => 'gray',
-                        };
-                    })
-                    ->formatStateUsing(function (string $state, CommissionItem $record) use ($user) {
-                        if (Auth::user()->role === 'ctv' && $state === CommissionItem::STATUS_PAYABLE) {
-                            return 'Chưa nhận được hoa hồng';
-                        }
-                        if ($state === CommissionItem::STATUS_PAYMENT_CONFIRMED) {
-                            return 'Đã chốt & Đã chi';
-                        }
-                        if ($state === CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            return 'CTV đã nhận tiền';
-                        }
-                        return CommissionItem::getStatusOptions()[$state] ?? $state;
-                    })
-                    ->description(function (CommissionItem $record) {
-                        $payment = $record->commission?->payment;
+                \Filament\Tables\Columns\BadgeColumn::make('status_summary')
+                    ->label('Trạng thái chi trả')
+                    ->state(function (Commission $record) {
+                        $total = $record->items->count();
+                        $paid = $record->items->whereIn('status', [CommissionItem::STATUS_PAID, CommissionItem::STATUS_PAYMENT_CONFIRMED, CommissionItem::STATUS_RECEIVED_CONFIRMED])->count();
                         
-                        // 1. Ưu tiên hiển thị lý do nếu bị Hoàn trả tiền (SV rút hồ sơ)
-                        if ($payment && $payment->status === \App\Models\Payment::STATUS_REVERTED) {
-                            return "Lý do hoàn trả: " . ($payment->edit_reason ?? 'Không có ghi chú');
-                        }
-
-                        if ($record->is_adjusted || $record->notes) {
-                            $notes = $record->notes ?? 'Đã điều chỉnh';
-                            
-                            $sentences = preg_split('/(?<=\.)\s+/', $notes, -1, PREG_SPLIT_NO_EMPTY);
-                            if (is_array($sentences)) {
-                                $uniqueSentences = array_unique(array_map('trim', $sentences));
-                                $notes = implode(' ', $uniqueSentences);
-                            }
-                            
-                            return $notes;
-                        }
-
-                        return null;
+                        if ($paid === 0) return 'Chưa chi';
+                        if ($paid < $total) return "Đang chi ({$paid}/{$total})";
+                        return 'Hoàn tất';
+                    })
+                    ->color(fn($state) => match (true) {
+                        $state === 'Hoàn tất' => 'success',
+                        str_contains($state, 'Đang chi') => 'warning',
+                        default => 'gray',
                     }),
 
                 \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
@@ -232,9 +188,6 @@ class CommissionResource extends Resource {
                     ->label('Trạng thái hoa hồng')
                     ->options(CommissionItem::getStatusOptions()),
 
-                // Đã loại bỏ filter Cấp 1/Cấp 2 - hệ thống chỉ còn 1 cấp
-
-                // Filter Trạng thái SV: Tất cả / Đã nhập học / Chưa nhập học
                 \Filament\Tables\Filters\SelectFilter::make('student_status')
                     ->label('Trạng thái SV')
                     ->options([
@@ -247,17 +200,15 @@ class CommissionResource extends Resource {
                     ->query(function ($query, array $data) {
                         $value = strtoupper((string) ($data['value'] ?? 'ALL'));
                         if ($value === 'ENROLLED') {
-                            $query->whereHas('commission.student', function ($q) {
+                            $query->whereHas('student', function ($q) {
                                 $q->where('status', \App\Models\Student::STATUS_ENROLLED);
                             });
                         } elseif ($value === 'NOT_ENROLLED') {
-                            $query->whereHas('commission.student', function ($q) {
+                            $query->whereHas('student', function ($q) {
                                 $q->where('status', '!=', \App\Models\Student::STATUS_ENROLLED);
                             });
                         }
                     }),
-
-                // Bỏ filter "Điều kiện kích hoạt"
             ])
             ->actions([
                 ActionGroup::make([
@@ -270,15 +221,15 @@ class CommissionResource extends Resource {
                         ->modalDescription('Đánh dấu commission này đã đến hạn chi, CTV có thể nhận.')
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(function (CommissionItem $record) use ($user): bool {
-                            return $record->status === CommissionItem::STATUS_PENDING && $user->can('commission_update');
+                        ->visible(function (Commission $record) use ($user): bool {
+                            return $record->items()->where('status', CommissionItem::STATUS_PENDING)->exists() && $user->can('commission_update');
                         })
-                        ->action(function (CommissionItem $record) {
-                            $record->markAsPayable();
+                        ->action(function (Commission $record) {
+                            $record->items()->where('status', CommissionItem::STATUS_PENDING)->each(fn($item) => $item->markAsPayable());
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã đánh dấu có thể thanh toán')
-                                ->body('CTV có thể nhận hoa hồng này.')
+                                ->body('CTV có thể nhận hoa hồng cho các phần đã đến hạn.')
                                 ->success()
                                 ->send();
                         }),
@@ -299,17 +250,17 @@ class CommissionResource extends Resource {
                         ->modalDescription('Xác nhận đã thanh toán hoa hồng cho CTV. Bạn có thể tải bill lên nếu muốn lưu trữ.')
                         ->modalSubmitActionLabel('Xác nhận thanh toán')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(function (CommissionItem $record) use ($user): bool {
+                        ->visible(function (Commission $record) use ($user): bool {
                             return $user->can('commission_payout')
-                                && $record->role === 'direct'
-                                && in_array($record->status, [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING]);
+                                && $record->items()->where('role', 'direct')->whereIn('status', [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])->exists();
                         })
-                        ->action(function (CommissionItem $record, array $data) {
-                            $record->markAsPaymentConfirmed($data['bill'] ?? null, \Illuminate\Support\Facades\Auth::user()->id);
+                        ->action(function (Commission $record, array $data) {
+                            $record->items()->where('role', 'direct')->whereIn('status', [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])
+                                ->each(fn($item) => $item->markAsPaymentConfirmed($data['bill'] ?? null, \Illuminate\Support\Facades\Auth::user()->id));
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã xác nhận thanh toán')
-                                ->body('Bill đã được upload và CTV sẽ được thông báo.')
+                                ->body('Các khoản hoa hồng trực tiếp đã được chốt chi.')
                                 ->success()
                                 ->send();
                         }),
@@ -323,17 +274,29 @@ class CommissionResource extends Resource {
                         ->modalDescription('Xác nhận đã nhận được tiền hoa hồng.')
                         ->modalSubmitActionLabel('Xác nhận đã nhận')
                         ->modalCancelActionLabel('Hủy')
-                        ->visible(function (CommissionItem $record) use ($user): bool {
+                        ->visible(function (Commission $record) use ($user): bool {
                             if ($user->role !== 'ctv') return false;
                             $collab = \App\Models\Collaborator::where('email', $user->email)->first();
                             if (!$collab) return false;
-                            return $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED
-                                && $record->role === 'direct'
-                                && $record->recipient_collaborator_id === $collab->id;
+                            
+                            return $record->items()
+                                ->where('status', CommissionItem::STATUS_PAYMENT_CONFIRMED)
+                                && $record->items()->where('role', 'direct')
+                                && $record->items()->where('recipient_collaborator_id', $collab->id)
+                                ->exists();
                         })
-                        ->action(function (CommissionItem $record) {
-                            $service = new \App\Services\CommissionService();
-                            $service->confirmDirectReceived($record, \Illuminate\Support\Facades\Auth::user()->id);
+                        ->action(function (Commission $record) use ($user) {
+                            $collab = \App\Models\Collaborator::where('email', $user->email)->first();
+                            $item = $record->items()
+                                ->where('status', CommissionItem::STATUS_PAYMENT_CONFIRMED)
+                                ->where('role', 'direct')
+                                ->where('recipient_collaborator_id', $collab->id)
+                                ->first();
+
+                            if ($item) {
+                                $service = new \App\Services\CommissionService();
+                                $service->confirmDirectReceived($item, $user->id);
+                            }
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã xác nhận nhận tiền')
@@ -346,44 +309,44 @@ class CommissionResource extends Resource {
                         ->label('Xem bill nộp tiền')
                         ->icon('heroicon-o-eye')
                         ->color('info')
-                        ->url(fn (CommissionItem $record) => $record->commission->payment?->bill_url)
+                        ->url(fn (Commission $record) => $record->payment?->bill_url)
                         ->openUrlInNewTab()
-                        ->visible(function (CommissionItem $record) use ($user): bool {
-                            $payment = $record->commission->payment;
+                        ->visible(function (Commission $record) use ($user): bool {
+                            $payment = $record->payment;
                             return $payment && !empty($payment->bill_path);
                         }),
 
                     Action::make('view_bill_transfer')
                         ->label('Minh chứng chi')
                         ->icon('heroicon-o-document-magnifying-glass')
-                        ->url(fn (CommissionItem $record) => $record->bill_url)
+                        ->url(fn (Commission $record) => $record->items()->whereNotNull('payment_bill_path')->first()?->bill_url)
                         ->openUrlInNewTab()
-                        ->visible(fn (CommissionItem $record): bool => !empty($record->payment_bill_path)),
+                        ->visible(fn (Commission $record): bool => $record->items()->whereNotNull('payment_bill_path')->exists()),
 
                     Action::make('view_bill_receipt')
                         ->label('Xem phiếu thu')
                         ->icon('heroicon-o-receipt-percent')
-                        ->url(fn (CommissionItem $record) => $record->commission->payment?->receipt_url)
+                        ->url(fn (Commission $record) => $record->payment?->receipt_url)
                         ->openUrlInNewTab()
-                        ->visible(function (CommissionItem $record) use ($user): bool {
-                            $payment = $record->commission->payment;
+                        ->visible(function (Commission $record) use ($user): bool {
+                            $payment = $record->payment;
                             if (!$payment || !$payment->receipt_path) return false;
                             
                             return $user->can('payment_view');
                         }),
 
                     Action::make('manage_receipt')
-                        ->label(function (CommissionItem $record): string {
-                            $payment = $record->commission->payment;
+                        ->label(function (Commission $record): string {
+                            $payment = $record->payment;
                             return $payment && $payment->receipt_path ? 'Chỉnh sửa phiếu thu' : 'Upload phiếu thu';
                         })
-                        ->icon(function (CommissionItem $record): string {
-                            $payment = $record->commission->payment;
+                        ->icon(function (Commission $record): string {
+                            $payment = $record->payment;
                             return $payment && $payment->receipt_path ? 'heroicon-o-pencil-square' : 'heroicon-o-document-plus';
                         })
                         ->color('primary')
-                        ->form(function (CommissionItem $record): array {
-                            $payment = $record->commission->payment;
+                        ->form(function (Commission $record): array {
+                            $payment = $record->payment;
                             $hasReceipt = $payment && $payment->receipt_path;
 
                             return [
@@ -399,8 +362,8 @@ class CommissionResource extends Resource {
                                     ->maxSize(5120)
                                     ->disk('google')
                                     ->directory('/')
-                                    ->getUploadedFileNameForStorageUsing(function ($file, CommissionItem $record) {
-                                        $payment = $record->commission->payment;
+                                    ->getUploadedFileNameForStorageUsing(function ($file, Commission $record) {
+                                        $payment = $record->payment;
                                         $student = $payment->student;
                                         $year = now()->format('Y');
                                         $profileCode = $student->profile_code;
@@ -415,7 +378,6 @@ class CommissionResource extends Resource {
                                             default => $student->program_type
                                         };
 
-                                        // Format: HS2026000194_Dat Le Trong_CNTT_CQ.png
                                         $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
                                         
                                         return "Phiếu thu/{$year}/{$fileName}";
@@ -423,8 +385,8 @@ class CommissionResource extends Resource {
                                     ->required(!$hasReceipt)
                             ];
                         })
-                        ->visible(function (CommissionItem $record) use ($user): bool {
-                            $payment = $record->commission?->payment;
+                        ->visible(function (Commission $record) use ($user): bool {
+                            $payment = $record->payment;
                             if ($payment && $payment->receipt_path) {
                                 if (!$user->can('payment_update_receipt')) {
                                     return false;
@@ -434,13 +396,13 @@ class CommissionResource extends Resource {
                                     return false;
                                 }
                             }
-                            return in_array($record->status, [
+                            return $record->items()->where('role', 'direct')->whereIn('status', [
                                 CommissionItem::STATUS_PAYABLE,
                                 CommissionItem::STATUS_PAYMENT_CONFIRMED,
-                            ]) && $record->role === 'direct';
+                            ])->exists();
                         })
-                        ->action(function (array $data, CommissionItem $record) {
-                            $payment = $record->commission->payment;
+                        ->action(function (array $data, Commission $record) {
+                            $payment = $record->payment;
                             if ($payment) {
                                 $updateData = [
                                     'receipt_uploaded_by' => Auth::id(),
@@ -460,7 +422,7 @@ class CommissionResource extends Resource {
                         ->label('Hoàn tác Chốt sổ')
                         ->icon('heroicon-o-arrow-path')
                         ->color('danger')
-                        ->visible(fn($record) => $record->status === CommissionItem::STATUS_PAYMENT_CONFIRMED && Auth::user()->can('commission_payout'))
+                        ->visible(fn($record) => $record->items()->where('status', CommissionItem::STATUS_PAYMENT_CONFIRMED)->exists() && Auth::user()->can('commission_payout'))
                         ->requiresConfirmation()
                         ->modalHeading('Hoàn tác trạng thái Chốt sổ')
                         ->modalDescription('Học viên này sẽ quay trở lại trạng thái "Có thể thanh toán" và xuất hiện trong danh sách Chốt sổ lần sau.')
@@ -471,22 +433,23 @@ class CommissionResource extends Resource {
                                 ->placeholder('Nhập lý do tại sao bạn muốn hoàn tác việc chốt sổ này...'),
                         ])
                         ->action(function ($record, array $data) {
-                            // Merge reason into request so HasAuditLog trait captures it
                             request()->merge(['audit_reason' => "Hoàn tác chốt sổ: " . $data['reason']]);
                             
-                            $record->update([
-                                'status' => CommissionItem::STATUS_PAYABLE,
-                                'payment_bill_path' => null,
-                                'payment_confirmed_at' => null,
-                                'payment_confirmed_by' => null,
-                                'meta' => array_merge($record->meta ?? [], [
-                                    'rollback_history' => array_merge($record->meta['rollback_history'] ?? [], [[
-                                        'reason' => $data['reason'],
-                                        'at' => now()->toDateTimeString(),
-                                        'by' => Auth::user()->name,
-                                    ]])
-                                ]),
-                            ]);
+                            $record->items()->where('status', CommissionItem::STATUS_PAYMENT_CONFIRMED)->each(function ($item) use ($data) {
+                                $item->update([
+                                    'status' => CommissionItem::STATUS_PAYABLE,
+                                    'payment_bill_path' => null,
+                                    'payment_confirmed_at' => null,
+                                    'payment_confirmed_by' => null,
+                                    'meta' => array_merge($item->meta ?? [], [
+                                        'rollback_history' => array_merge($item->meta['rollback_history'] ?? [], [[
+                                            'reason' => $data['reason'],
+                                            'at' => now()->toDateTimeString(),
+                                            'by' => Auth::user()->name,
+                                        ]])
+                                    ]),
+                                ]);
+                            });
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Đã hoàn tác chốt sổ thành công')
@@ -511,9 +474,9 @@ class CommissionResource extends Resource {
                                 ->placeholder('Nhập lý do hoàn trả tiền...'),
                         ])
                         ->modalSubmitActionLabel('Xác nhận hoàn trả')
-                        ->visible(function (CommissionItem $record): bool {
+                        ->visible(function (Commission $record): bool {
                             $user = Auth::user();
-                            $payment = $record->commission?->payment;
+                            $payment = $record->payment;
                             
                             if (!$payment || $payment->status !== \App\Models\Payment::STATUS_VERIFIED) {
                                 return false;
@@ -532,9 +495,9 @@ class CommissionResource extends Resource {
                             // Nếu chưa có phiếu thu, chỉ yêu cầu quyền Hủy xác nhận (Reverse)
                             return $user->can('payment_reverse');
                         })
-                        ->action(function (array $data, CommissionItem $record) {
-                            $payment = $record->commission?->payment;
-                            $student = $record->commission?->student;
+                        ->action(function (array $data, Commission $record) {
+                            $payment = $record->payment;
+                            $student = $record->student;
                             
                             if (!$payment || !$student) return;
 
@@ -564,11 +527,9 @@ class CommissionResource extends Resource {
                             $student->update(['status' => \App\Models\Student::STATUS_NEW]);
 
                             // HUỶ toàn bộ hoa hồng liên quan đến đợt thanh toán này
-                            if ($record->commission) {
-                                $record->commission->items()->update([
-                                    'status' => CommissionItem::STATUS_CANCELLED
-                                ]);
-                            }
+                            $record->items()->update([
+                                'status' => CommissionItem::STATUS_CANCELLED
+                            ]);
                             
                             \Filament\Notifications\Notification::make()
                                 ->success()
@@ -604,32 +565,33 @@ class CommissionResource extends Resource {
                             $successCount = 0;
 
                             foreach ($records as $record) {
-                                // Cho phép chốt những ai đang có thể thanh toán, chờ nhập học, hoặc đã thanh toán cũ
-                                if (in_array($record->status, [
-                                    CommissionItem::STATUS_PAYABLE, 
-                                    CommissionItem::STATUS_PENDING,
-                                    CommissionItem::STATUS_PAID
-                                ])) {
-                                    $studentName = $record->commission?->student?->full_name ?? 'N/A';
-                                    $collaboratorName = $record->recipient?->full_name ?? 'N/A';
-                                    $amount = (float)($record->amount ?? 0);
+                                $studentName = $record->student?->full_name ?? 'N/A';
+                                
+                                $record->items()
+                                    ->whereIn('status', [
+                                        CommissionItem::STATUS_PAYABLE, 
+                                        CommissionItem::STATUS_PENDING,
+                                        CommissionItem::STATUS_PAID
+                                    ])
+                                    ->each(function ($item) use (&$batchData, &$totalAmount, &$successCount, $studentName, $userId) {
+                                        $collaboratorName = $item->recipient?->full_name ?? 'N/A';
+                                        $amount = (float)($item->amount ?? 0);
 
-                                    $batchData[] = [
-                                        'student' => $studentName,
-                                        'collaborator' => $collaboratorName,
-                                        'amount' => $amount,
-                                    ];
-                                    $totalAmount += $amount;
+                                        $batchData[] = [
+                                            'student' => $studentName,
+                                            'collaborator' => $collaboratorName,
+                                            'amount' => $amount,
+                                        ];
+                                        $totalAmount += $amount;
 
-                                    // Cập nhật âm thầm (không trigger trait HasAuditLog) để tránh rác 100 log lẻ
-                                    $record->updateQuietly([
-                                        'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
-                                        'payment_confirmed_at' => now(),
-                                        'payment_confirmed_by' => $userId,
-                                    ]);
-                                    
-                                    $successCount++;
-                                }
+                                        $item->updateQuietly([
+                                            'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                            'payment_confirmed_at' => now(),
+                                            'payment_confirmed_by' => $userId,
+                                        ]);
+                                        
+                                        $successCount++;
+                                    });
                             }
 
                             if ($successCount > 0) {
@@ -672,17 +634,18 @@ class CommissionResource extends Resource {
                 $user = Auth::user();
 
                 if ($user->role === 'ctv') {
-                    // CTV chỉ thấy commission của chính mình (role nào xem role đó)
+                    // CTV chỉ thấy các commission mà mình có trong danh sách recipient
                     $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
-                        $query->where('recipient_collaborator_id', $collaborator->id);
+                        $query->whereHas('items', function ($q) use ($collaborator) {
+                            $q->where('recipient_collaborator_id', $collaborator->id);
+                        });
                     } else {
                         $query->whereNull('id');
                     }
                     return;
                 }
 
-                // Nếu có quyền xem bất kỳ (Hồ sơ, Kế toán, Admin)
                 if ($user->can('commission_view_any')) {
                     return;
                 }
@@ -702,14 +665,17 @@ class CommissionResource extends Resource {
             if (!$user) return null;
 
             if ($user->can('commission_view_any')) {
-                if ($user->role !== 'ctv') {
-                    return (string) CommissionItem::count();
+                $query = Commission::query();
+                
+                if ($user->role === 'ctv') {
+                    $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
+                    if (!$collaborator) return '0';
+                    $query->whereHas('items', function ($q) use ($collaborator) {
+                        $q->where('recipient_collaborator_id', $collaborator->id);
+                    });
                 }
 
-                $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-                if (!$collaborator) return '0';
-                
-                return (string) CommissionItem::where('recipient_collaborator_id', $collaborator->id)->count();
+                return (string) $query->count();
             }
 
             return null;

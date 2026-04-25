@@ -96,7 +96,7 @@ class FeeClosingSheet implements FromCollection, WithHeadings, WithMapping, With
             default => $student->program_type
         } : 'N/A';
 
-        $description = $item->notes ?: ($item->meta['description'] ?? ($this->data['note'] ?? 'Lệ phí hồ sơ'));
+        $description = $item->notes ?: ($this->data['note'] ?? 'Lệ phí hồ sơ');
 
         return [
             $this->rowNumber,
