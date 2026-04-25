@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\StudentApiController;
+use App\Http\Controllers\TelegramWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,3 +19,6 @@ Route::middleware(['auth:web'])->group(function () {
     Route::get('/students', [StudentApiController::class, 'index'])->name('api.students.index');
     Route::get('/students/{id}', [StudentApiController::class, 'show'])->name('api.students.show');
 });
+
+// Telegram Bot Webhook
+Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle']);

@@ -107,49 +107,38 @@ class CommissionPolicyForm {
 
     protected static function getRulesRepeater(string $type, string $label): Repeater {
         return Repeater::make("payout_rules.{$type}")
-            ->label("Quy tắc chia tiền - {$label}")
+            ->label("Cấu hình số tiền - {$label}")
             ->schema([
                 Grid::make(2)
                     ->schema([
-                        Select::make('recipient_type')
-                            ->label('Người nhận')
-                            ->options([
-                                'direct_ctv' => '🎯 CTV giới thiệu (Trực tiếp)',
-                                'specific_ctv' => '👤 Một CTV cụ thể (Quản lý/Bạn)',
-                            ])
+                        // Ẩn đi vì luôn trả cho CTV trực tiếp (Đạt)
+                        \Filament\Forms\Components\Hidden::make('recipient_type')
+                            ->default('direct_ctv'),
+                        TextInput::make('amount_vnd')
+                            ->label('Số tiền hoa hồng (VND)')
+                            ->numeric()
                             ->required()
-                            ->reactive(),
-                        Select::make('recipient_id')
-                            ->label('Chọn CTV cụ thể')
-                            ->relationship('collaborator', 'full_name')
-                            ->searchable()
-                            ->preload()
-                            ->visible(fn($get) => $get('recipient_type') === 'specific_ctv')
-                            ->required(fn($get) => $get('recipient_type') === 'specific_ctv'),
+                            ->columnSpanFull()
+                            ->prefix('₫'),
                     ]),
                 Grid::make(2)
                     ->schema([
-                        TextInput::make('amount_vnd')
-                            ->label('Số tiền (VND)')
-                            ->numeric()
-                            ->required()
-                            ->prefix('₫'),
                         Select::make('payout_trigger')
-                            ->label('Thời điểm trả')
+                            ->label('Thời điểm chi trả')
                             ->options([
-                                'payment_verified' => '📅 Mùng 5 tháng sau',
-                                'student_enrolled' => '🎓 Sau khi nhập học',
+                                'payment_verified' => '📅 Mùng 5 tháng sau (Sau khi nộp phí)',
+                                'student_enrolled' => '🎓 Sau khi sinh viên nhập học thực tế',
                             ])
                             ->required()
                             ->default('payment_verified'),
+                        TextInput::make('description')
+                            ->label('Ghi chú nội dung')
+                            ->placeholder('VD: Hoa hồng tuyển sinh...'),
                     ]),
-                TextInput::make('description')
-                    ->label('Ghi chú')
-                    ->placeholder('Vd: Tiền cắt phế...'),
             ])
-            ->addActionLabel('Thêm người nhận tiền')
-            ->itemLabel(fn (array $state): ?string => ($state['recipient_type'] ?? '') === 'direct_ctv' ? '🎯 CTV Trực tiếp' : '👤 CTV Cụ thể')
-            ->collapsible()
-            ->defaultItems(1);
+            ->addable(false)      // Không cho thêm người nhận
+            ->deletable(false)    // Không cho xóa
+            ->reorderable(false)  // Không cho sắp xếp
+            ->collapsible();
     }
 }

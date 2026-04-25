@@ -34,8 +34,11 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
             $channels[] = 'mail';
         }
 
-        if ($notifiable->wantsNotification('student_registered', 'telegram') && $notifiable->routeNotificationForTelegram()) {
-            $channels[] = TelegramChannel::class;
+        if ($notifiable->wantsNotification('student_registered', 'telegram')) {
+            $chatId = \App\Models\RefCode::resolveTelegramChatId($this->student->source_ref ?? null, $notifiable);
+            if ($chatId) {
+                $channels[] = TelegramChannel::class;
+            }
         }
 
         return $channels;
@@ -66,12 +69,22 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
         $url = url('/admin/students/' . $this->student->id);
         
         $collaboratorName = $this->student->collaborator?->full_name ?? 'Trực tiếp';
+        
+        // Nếu có mã ref phụ (Proxy), lấy tên của Proxy đó hiển thị cho chuyên nghiệp
+        if ($this->student->source_ref) {
+            $refCode = \App\Models\RefCode::where('code', $this->student->source_ref)->first();
+            if ($refCode) {
+                $collaboratorName = $refCode->name;
+            }
+        }
         $birthday = $this->student->dob ? \Illuminate\Support\Carbon::parse($this->student->dob)->format('d/m/Y') : 'Chưa cập nhật';
         $intake = $this->student->intake?->name ?? ($this->student->intake_month ? "Tháng {$this->student->intake_month}" : 'Chưa xác định');
         $address = $this->student->address ?? 'Chưa cập nhật';
 
-        return TelegramMessage::create()
-            ->to($notifiable->routeNotificationForTelegram())
+        $chatId = \App\Models\RefCode::resolveTelegramChatId($this->student->source_ref ?? null, $notifiable);
+
+        $message = TelegramMessage::create()
+            ->to($chatId)
             ->content("*🎓 CÓ SINH VIÊN ĐĂNG KÝ MỚI*\n\n" .
                 "🆔 *Mã hồ sơ:* `{$this->student->profile_code}`\n" .
                 "👤 *Họ tên:* {$this->student->full_name}\n" .
@@ -81,8 +94,14 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
                 "🏫 *Hệ:* {$this->student->program_type_label}\n" .
                 "📅 *Đợt:* {$intake}\n" .
                 "🤝 *Người giới thiệu:* {$collaboratorName}\n" .
-                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
-            ->button('Xem hồ sơ chi tiết', $url);
+                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'));
+
+        // Chỉ hiện nút xem hồ sơ nếu gửi cho Master (Đạt), vì Proxy (Long/Sơn) không có quyền vào CRM
+        if ($chatId == $notifiable->telegram_chat_id) {
+            $message->button('Xem hồ sơ chi tiết', $url);
+        }
+
+        return $message;
     }
 
     /**

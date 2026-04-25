@@ -6,8 +6,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasAuditLog;
 
+use Illuminate\Notifications\Notifiable;
+
 class Collaborator extends Model {
-    use HasFactory, HasAuditLog;
+    use HasFactory, HasAuditLog, Notifiable;
+
+    /**
+     * Kiểm tra xem CTV có muốn nhận loại thông báo này qua kênh này không
+     */
+    public function wantsNotification(string $type, string $channel): bool {
+        // Tạm thời cho phép tất cả để test cho mượt
+        return true;
+    }
+
+    /**
+     * Route cho Telegram
+     */
+    public function routeNotificationForTelegram() {
+        // Chat ID của Master Đạt (hoặc lấy từ ref_codes nếu là Proxy)
+        return $this->telegram_chat_id;
+    }
     protected $fillable = [
         'full_name',
         'phone',
@@ -20,6 +38,7 @@ class Collaborator extends Model {
         'note',
         'status',
         'is_active',
+        'telegram_chat_id',
     ];
 
     protected $casts = [
@@ -44,6 +63,13 @@ class Collaborator extends Model {
      */
     public function payments() {
         return $this->hasMany(Payment::class, 'primary_collaborator_id');
+    }
+
+    /**
+     * Quan hệ: Mã Ref phụ (Proxy)
+     */
+    public function refCodes() {
+        return $this->hasMany(RefCode::class);
     }
 
     // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====

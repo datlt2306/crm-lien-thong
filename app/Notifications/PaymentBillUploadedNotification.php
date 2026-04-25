@@ -34,8 +34,11 @@ class PaymentBillUploadedNotification extends Notification implements ShouldQueu
             $channels[] = 'mail';
         }
 
-        if ($notifiable->wantsNotification('payment_bill_uploaded', 'telegram') && $notifiable->routeNotificationForTelegram()) {
-            $channels[] = TelegramChannel::class;
+        if ($notifiable->wantsNotification('payment_bill_uploaded', 'telegram')) {
+            $chatId = \App\Models\RefCode::resolveTelegramChatId($this->payment->student?->source_ref ?? null, $notifiable);
+            if ($chatId) {
+                $channels[] = TelegramChannel::class;
+            }
         }
 
         return $channels;
@@ -67,12 +70,22 @@ class PaymentBillUploadedNotification extends Notification implements ShouldQueu
         
         $amountLabel = number_format($this->payment->amount, 0, ',', '.') . ' VNĐ';
         $collaboratorName = $this->payment->collaborator?->full_name ?? 'Trực tiếp';
+        
+        // Nếu có mã ref phụ (Proxy), lấy tên của Proxy đó hiển thị
+        if ($student && $student->source_ref) {
+            $refCode = \App\Models\RefCode::where('code', $student->source_ref)->first();
+            if ($refCode) {
+                $collaboratorName = $refCode->name;
+            }
+        }
         $birthday = $student->dob ? \Illuminate\Support\Carbon::parse($student->dob)->format('d/m/Y') : 'Chưa cập nhật';
         $intake = $student->intake?->name ?? ($student->intake_month ? "Tháng {$student->intake_month}" : 'Chưa xác định');
         $address = $student->address ?? 'Chưa cập nhật';
 
-        return TelegramMessage::create()
-            ->to($notifiable->routeNotificationForTelegram())
+        $chatId = \App\Models\RefCode::resolveTelegramChatId($student?->source_ref ?? null, $notifiable);
+
+        $message = TelegramMessage::create()
+            ->to($chatId)
             ->content("*💰 HÓA ĐƠN MỚI CHỜ XÁC NHẬN*\n\n" .
                 "🆔 *Mã hồ sơ:* `{$student->profile_code}`\n" .
                 "👤 *Họ tên:* {$student->full_name}\n" .
@@ -83,8 +96,14 @@ class PaymentBillUploadedNotification extends Notification implements ShouldQueu
                 "📅 *Đợt:* {$intake}\n" .
                 "🤝 *Người giới thiệu:* {$collaboratorName}\n" .
                 "💵 *Số tiền:* `{$amountLabel}`\n" .
-                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'))
-            ->button('Kiểm tra & Xác nhận', $url);
+                "🕒 *Thời gian:* " . now()->format('H:i d/m/Y'));
+
+        // Chỉ hiện nút kiểm tra nếu gửi cho Master (Đạt)
+        if ($chatId == $notifiable->telegram_chat_id) {
+            $message->button('Kiểm tra & Xác nhận', $url);
+        }
+
+        return $message;
     }
 
     /**

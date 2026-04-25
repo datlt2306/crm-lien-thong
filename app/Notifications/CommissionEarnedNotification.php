@@ -33,8 +33,12 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
         }
 
         // Add telegram if user wants it
-        if ($notifiable->wantsNotification('commission_earned', 'telegram') && $notifiable->routeNotificationForTelegram()) {
-            $channels[] = TelegramChannel::class;
+        if ($notifiable->wantsNotification('commission_earned', 'telegram')) {
+            $student = $this->commissionItem->commission?->student;
+            $chatId = \App\Models\RefCode::resolveTelegramChatId($student?->source_ref ?? null, $notifiable);
+            if ($chatId) {
+                $channels[] = TelegramChannel::class;
+            }
         }
 
         return $channels;
@@ -50,8 +54,10 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
         $url = url('/admin/commissions');
         $statusLabel = $this->getStatusLabel($this->commissionItem->status);
 
+        $chatId = \App\Models\RefCode::resolveTelegramChatId($student?->source_ref ?? null, $notifiable);
+
         return TelegramMessage::create()
-            ->to($notifiable->routeNotificationForTelegram())
+            ->to($chatId)
             ->content("💰 *GHI NHẬN HOA HỒNG MỚI (DỰ KIẾN)*\n\n" .
                 "Hệ thống vừa ghi nhận một khoản hoa hồng mới dành cho bạn. Khoản này sẽ được chi trả sau khi đối soát trạng thái nhập học của sinh viên.\n\n" .
                 "🆔 *Mã hồ sơ:* `{$student?->profile_code}`\n" .

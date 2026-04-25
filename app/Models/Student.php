@@ -104,6 +104,7 @@ class Student extends Model {
         'intermediate_gpa',                 // Điểm trung bình Trung cấp
         'is_active',
         'has_transferred',
+        'source_ref',
     ];
 
     protected $casts = [

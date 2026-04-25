@@ -30,7 +30,10 @@ class PublicStudentController extends Controller {
     public function showForm($ref_id) {
         // Lưu ref_id vào cookie
         $this->refTrackingService->setRefCookie(request(), $ref_id);
-        $collaborator = Collaborator::where('ref_id', $ref_id)->first();
+        
+        // Tìm collaborator (Trực tiếp hoặc Proxy)
+        $collaborator = $this->refTrackingService->getCollaborator(request(), $ref_id);
+        
         if (!$collaborator) {
             abort(404, 'Liên kết không hợp lệ!');
         }
@@ -144,7 +147,7 @@ class PublicStudentController extends Controller {
         }
 
         try {
-            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes, $request) {
+            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes, $request, $ref_id) {
                 $student = Student::create([
                     'full_name' => $validated['full_name'],
                     'dob' => $validated['dob'],
@@ -152,6 +155,7 @@ class PublicStudentController extends Controller {
                     'phone' => $validated['phone'],
                     'email' => $validated['email'] ?? null,
                     'collaborator_id' => $collaborator->id,
+                    'source_ref' => $ref_id ?: $this->refTrackingService->getRefFromCookie($request),
                     'instructor' => $collaborator->full_name ?? null,
 
                     'target_university' => $quota->intake?->name, 

@@ -5,55 +5,34 @@ namespace Database\Seeders;
 use App\Models\Collaborator;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class CollaboratorSeeder extends Seeder {
     public function run(): void {
-
-        $collaborators = [
+        // Master Collaborator (Đạt)
+        $datUser = User::updateOrCreate(
+            ['email' => 'datletrong2306@gmail.com'],
             [
+                'name' => 'Lê Trọng Đạt',
+                'password' => Hash::make('password'),
+            ]
+        );
+        $datUser->assignRole('ctv');
+
+        $dat = Collaborator::updateOrCreate(
+            ['email' => 'datletrong2306@gmail.com'],
+            [
+                'user_id' => $datUser->id,
                 'full_name' => 'Lê Trọng Đạt',
                 'phone' => '0987654321',
-                'email' => 'datletrong2306@gmail.com',
-                'note' => 'Admin - CTV chính',
+                'ref_id' => 'DAT',
                 'status' => 'active',
-            ],
-            [
-                'full_name' => 'Tạ Hải Long',
-                'phone' => '0987654322',
-                'email' => 'tahailongseo@gmail.com',
-                'note' => 'CTV Marketing',
-                'status' => 'active',
-            ],
-            [
-                'full_name' => 'Đặng Tiến Sơn',
-                'phone' => '0987654323',
-                'email' => 'sondt32@fpt.edu.vn',
-                'note' => 'CTV Admissions',
-                'status' => 'active',
-            ],
-        ];
+                'telegram_chat_id' => '233224973', // ID của mày
+            ]
+        );
 
-        foreach ($collaborators as $collaboratorData) {
-            // Tạo hoặc cập nhật User account cho collaborator
-            $user = User::firstOrCreate(
-                ['email' => $collaboratorData['email']],
-                [
-                    'name' => $collaboratorData['full_name'],
-                    'password' => bcrypt('123456'), // Mật khẩu mặc định chỉ dùng nếu tạo mới
-                    'role' => 'ctv',
-                ]
-            );
-
-            // Đảm bảo role 'ctv' được gán
-            if (!$user->hasRole('ctv')) {
-                $user->assignRole('ctv');
-            }
-
-            // Tạo hoặc cập nhật Collaborator record
-            Collaborator::updateOrCreate(
-                ['email' => $collaboratorData['email']],
-                $collaboratorData
-            );
-        }
+        // Tạo sẵn các Proxy Ref cho Đạt
+        $dat->refCodes()->updateOrCreate(['code' => 'L8A2M'], ['name' => 'Nguồn Long', 'telegram_chat_id' => '233224973']); // Test với cùng ID của mày
+        $dat->refCodes()->updateOrCreate(['code' => 'S3B8X'], ['name' => 'Nguồn Sơn']);
     }
 }

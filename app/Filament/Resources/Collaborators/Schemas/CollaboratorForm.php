@@ -25,6 +25,10 @@ class CollaboratorForm {
                     ->email()
                     ->unique(ignoreRecord: true)
                     ->nullable(),
+                TextInput::make('telegram_chat_id')
+                    ->label('Telegram Chat ID')
+                    ->helperText('Dùng để nhận báo cáo đối soát tổng hợp qua Bot Telegram')
+                    ->nullable(),
 
                 Section::make('Thông tin định danh & thanh toán')
                     ->description('CCCD, mã số thuế và tài khoản ngân hàng dùng cho KYC và chi trả hoa hồng.')
@@ -72,7 +76,6 @@ class CollaboratorForm {
                     ->same('password'),
                 \Filament\Forms\Components\TextInput::make('ref_id')
                     ->label('Link giới thiệu')
-                    ->readOnly()
                     ->unique(ignoreRecord: true)
                     ->required()
                     ->default(fn() => strtoupper(Str::random(8)))
@@ -91,6 +94,26 @@ class CollaboratorForm {
                     })
                     ->copyable()
                     ->helperText('Click vào field hoặc icon để copy link'),
+                \Filament\Forms\Components\Repeater::make('refCodes')
+                    ->relationship('refCodes')
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('Tên gợi nhớ (VD: Nguồn Long)'),
+                        TextInput::make('code')
+                            ->label('Mã Ref')
+                            ->required()
+                            ->disabled(fn ($state) => !empty($state))
+                            ->dehydrated()
+                            ->default(fn() => strtoupper(Str::random(5))),
+                        TextInput::make('telegram_chat_id')
+                            ->label('Telegram ID nhận tin')
+                            ->nullable(),
+                    ])
+                    ->label('Các Link Ref phụ (Proxy Ref)')
+                    ->helperText('Sử dụng nếu muốn gửi link cho CTV phụ nhưng tiền vẫn tính cho tài khoản này.')
+                    ->collapsible()
+                    ->columns(3)
+                    ->columnSpanFull(),
                 // Đã loại bỏ chọn CTV cấp trên - hệ thống chỉ còn 1 cấp
                 \Filament\Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')

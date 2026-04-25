@@ -22,8 +22,11 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
     public function via(object $notifiable): array {
         $channels = ['database'];
 
-        if ($notifiable->wantsNotification('payment_bill_uploaded', 'telegram') && $notifiable->routeNotificationForTelegram()) {
-            $channels[] = TelegramChannel::class;
+        if ($notifiable->wantsNotification('payment_bill_uploaded', 'telegram')) {
+            $chatId = \App\Models\RefCode::resolveTelegramChatId($this->payment->student?->source_ref ?? null, $notifiable);
+            if ($chatId) {
+                $channels[] = TelegramChannel::class;
+            }
         }
 
         return $channels;
@@ -42,8 +45,10 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
             $message = "Rất tiếc! Hóa đơn của sinh viên *{$student?->full_name}* không được chấp nhận. Vui lòng kiểm tra lại hình ảnh bill hoặc số tiền.";
         }
 
+        $chatId = \App\Models\RefCode::resolveTelegramChatId($student?->source_ref ?? null, $notifiable);
+
         return TelegramMessage::create()
-            ->to($notifiable->routeNotificationForTelegram())
+            ->to($chatId)
             ->content("{$title}\n\n" .
                 "{$message}\n\n" .
                 "🆔 *Mã hồ sơ:* `{$student?->profile_code}`\n" .
