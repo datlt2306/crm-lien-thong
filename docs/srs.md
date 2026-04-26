@@ -1,325 +1,614 @@
+# SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+
+## Hệ thống CRM Quản lý Cộng tác viên và Học viên Liên thông
+
+### 1. TỔNG QUAN HỆ THỐNG
+
+#### 1.1 Mục đích
+
+Hệ thống CRM được phát triển để quản lý quy trình tuyển sinh liên thông đại học, bao gồm:
+
+-   Quản lý cộng tác viên (CTV) theo cấp bậc
+-   Quản lý học viên và quy trình đăng ký
+-   Xử lý thanh toán và hoa hồng
+-   Quản lý tổ chức và chương trình đào tạo
+
+#### 1.2 Phạm vi
+
+-   Hệ thống web-based sử dụng Laravel Framework
+-   Giao diện quản trị sử dụng Filament Admin Panel
+-   Hệ thống phân quyền dựa trên vai trò người dùng
+-   Tích hợp xử lý thanh toán và tính toán hoa hồng tự động
+
+#### 1.3 Công nghệ sử dụng
+
+-   **Backend**: Laravel 12.x, PHP 8.2+
+-   **Frontend**: Filament 4.x, TailwindCSS
+-   **Database**: SQLite (development), MySQL/PostgreSQL (production)
+-   **Authentication**: Laravel Auth + Spatie Permission
+-   **File Storage**: Laravel Storage
+
+### 2. CÁC VAI TRÒ NGƯỜI DÙNG
+
+#### 2.1 Super Admin
+
+-   **Quyền hạn**: Toàn quyền truy cập hệ thống
+-   **Chức năng chính**:
+    -   Quản lý tất cả tổ chức, CTV, học viên
+    -   Cấu hình chính sách hoa hồng
+    -   Xem báo cáo tổng hợp
+    -   Quản lý người dùng hệ thống
+
+#### 2.2 Chủ đơn vị
+
+-   **Quyền hạn**: Quản lý tổ chức của mình
+-   **Chức năng chính**:
+    -   Xem danh sách CTV cấp 1 trong tổ chức
+    -   Xác nhận thanh toán học viên
+    -   Quản lý chương trình và ngành học
+    -   Xem báo cáo tài chính
+
+#### 2.3 Cộng tác viên (CTV)
+
+-   **Quyền hạn**: Quản lý tuyến dưới và học viên
+-   **Chức năng chính**:
+    -   Xem danh sách CTV cấp 2 (nếu có)
+    -   Quản lý học viên của mình
+    -   Xem ví tiền và hoa hồng
+    -   Tạo link giới thiệu
+
+#### 2.4 Kế toán
+
+-   **Quyền hạn**: Xử lý thanh toán và hóa đơn
+-   **Chức năng chính**:
+    -   Xem danh sách thanh toán
+    -   Upload phiếu thu sau khi xác nhận thanh toán
+
+### 3. CẤU TRÚC DỮ LIỆU
+
+#### 3.1 Các Entity chính
+
+**User (Người dùng)**
+
+-   id, name, email, phone, avatar, password, role
+-   Vai trò: super_admin, chủ đơn vị, ctv, kế toán
+
+**Organization (Tổ chức)**
+
+-   id, name, code, contact_name, contact_phone, status, owner_id
+-   Quan hệ: hasMany Collaborators, hasMany Students
+
+**Collaborator (Cộng tác viên)**
+
+-   id, full_name, phone, email, organization_id, ref_id, upline_id, note, status
+-   Quan hệ: belongsTo Organization, belongsTo upline, hasMany downlines
+
+**Student (Học viên)**
+
+-   id, full_name, phone, email, organization_id, collaborator_id, target_university, major, intake_month, program_type, source, status, notes, dob, address
+-   Trạng thái: new, contacted, submitted, approved, enrolled, rejected
+
+**Payment (Thanh toán)**
+
+-   id, organization_id, student_id, primary_collaborator_id, sub_collaborator_id, program_type, amount, bill_path, receipt_path, status, verified_by, verified_at
+-   Trạng thái: SUBMITTED, VERIFIED, REJECTED
+
+**Commission (Hoa hồng)**
+
+-   id, organization_id, payment_id, student_id, rule, generated_at
+-   Quan hệ: hasMany CommissionItems
+
+**CommissionItem (Chi tiết hoa hồng)**
+
+-   id, commission_id, recipient_collaborator_id, role, amount, status, trigger, payable_at, visibility, meta
+-   Trạng thái: PENDING, PAYABLE, PAYMENT_CONFIRMED, COMPLETED
+
+**Wallet (Ví tiền)**
+
+-   id, collaborator_id, balance, status
+-   Quan hệ: hasMany WalletTransactions
+
+**Major (Ngành học)**
+
+-   id, code, name, is_active
+-   Quan hệ: belongsToMany Organizations
+
+**Program (Chương trình)**
+
+-   id, code, name, is_active, direct_commission_amount
+-   Quan hệ: belongsToMany Organizations
+
+#### 3.2 Quan hệ dữ liệu
+
+-   Organization → hasMany Collaborators
+-   Collaborator → belongsTo upline, hasMany downlines
+-   Student → belongsTo Collaborator, Organization
+-   Payment → belongsTo Student, Organization, Collaborators
+-   Commission → hasMany CommissionItems
+-   Wallet → belongsTo Collaborator
+
+### 4. LUỒNG HOẠT ĐỘNG CHO TỪNG ACTOR
+
+#### 4.1 Super Admin
+
+**4.1.1 Luồng quản lý hệ thống**
+
+1. **Đăng nhập hệ thống**
+
+    - Truy cập admin panel
+    - Xem dashboard tổng quan
+    - Kiểm tra thống kê hệ thống
+
+2. **Quản lý tổ chức**
+
+    - Tạo/sửa/xóa tổ chức
+    - Gán chủ đơn vị cho tổ chức
+    - Cấu hình chương trình và ngành học
+    - Phân bổ chỉ tiêu theo ngành
+
+3. **Quản lý người dùng**
+
+    - Tạo tài khoản cho các vai trò
+    - Phân quyền chi tiết
+    - Reset mật khẩu khi cần
+    - Theo dõi hoạt động người dùng
+
+4. **Cấu hình hệ thống**
+    - Thiết lập chính sách hoa hồng
+    - Cấu hình thông báo
+    - Quản lý file và backup
+    - Monitor hiệu suất hệ thống
+
+**4.1.2 Luồng xử lý báo cáo**
+
+1. **Tạo báo cáo tổng hợp**
+
+    - Thống kê doanh thu theo tổ chức
+    - Báo cáo hiệu suất CTV
+    - Phân tích nguồn tuyển sinh
+    - Xuất dữ liệu Excel/PDF
+
+2. **Theo dõi hoạt động**
+    - Monitor đăng ký học viên real-time
+    - Theo dõi thanh toán và hoa hồng
+    - Cảnh báo bất thường
+    - Audit log hệ thống
+
+#### 4.2 Chủ đơn vị
+
+**4.2.1 Luồng quản lý tổ chức**
+
+1. **Thiết lập ban đầu**
+
+    - Đăng nhập với tài khoản được cấp
+    - Cập nhật thông tin tổ chức
+    - Cấu hình chương trình đào tạo
+    - Thiết lập ngành học và chỉ tiêu
+
+2. **Quản lý CTV cấp 1**
+
+    - Xem danh sách CTV cấp 1 trong tổ chức
+    - Phê duyệt đăng ký CTV mới
+    - Theo dõi hiệu suất CTV
+    - Cập nhật thông tin CTV
+
+3. **Quản lý học viên**
+    - Xem danh sách học viên đã nộp tiền
+    - Theo dõi pipeline học viên
+    - Cập nhật trạng thái học viên
+    - Xử lý hồ sơ học viên
+
+**4.2.2 Luồng xử lý thanh toán**
+
+1. **Xác nhận thanh toán**
+
+    - Nhận thông báo có thanh toán mới
+    - Xem chi tiết hóa đơn học viên
+    - Xác minh thông tin thanh toán
+    - Xác nhận → chuyển status VERIFIED
+
+2. **Quản lý tài chính**
+    - Theo dõi doanh thu theo thời gian
+    - Xem báo cáo thanh toán
+    - Quản lý hoa hồng CTV
+    - Xuất báo cáo tài chính
+
+#### 4.3 Cộng tác viên (CTV)
+
+**4.3.1 Luồng tuyển sinh học viên**
+
+1. **Tạo link giới thiệu**
+
+    - Đăng nhập hệ thống
+    - Lấy link ref_id của mình
+    - Chia sẻ link qua các kênh marketing
+    - Theo dõi hiệu quả link
+
+2. **Hỗ trợ học viên đăng ký**
+
+    - Hướng dẫn học viên điền form
+    - Thu thập thông tin học viên
+    - Theo dõi trạng thái đăng ký
+    - Hỗ trợ nộp hóa đơn thanh toán
+
+3. **Quản lý học viên**
+    - Xem danh sách học viên của mình
+    - Cập nhật thông tin học viên
+    - Theo dõi pipeline từ đăng ký đến nhập học
+    - Liên hệ hỗ trợ học viên
+
+**4.3.2 Luồng quản lý tuyến dưới**
+
+1. **Tuyển CTV cấp 2**
+
+    - Chia sẻ link đăng ký CTV
+    - Hướng dẫn CTV mới đăng ký
+    - Phê duyệt đăng ký CTV cấp 2
+    - Đào tạo và hỗ trợ CTV mới
+
+2. **Quản lý CTV cấp 2**
+    - Xem danh sách CTV cấp 2 (nếu có)
+    - Theo dõi hiệu suất CTV cấp 2
+    - Hỗ trợ và đào tạo CTV
+    - Quản lý hoa hồng cho CTV cấp 2
+
+**4.3.3 Luồng quản lý hoa hồng**
+
+1. **Theo dõi hoa hồng**
+
+    - Xem ví tiền và số dư
+    - Theo dõi hoa hồng từ học viên
+    - Xem lịch sử giao dịch
+    - Kiểm tra trạng thái thanh toán
+
+2. **Xử lý hoa hồng CTV cấp 2**
+    - Nhận thông báo hoa hồng cho CTV cấp 2
+    - Xác nhận đã chuyển tiền cho CTV cấp 2
+    - Upload hóa đơn chuyển tiền
+    - Theo dõi trạng thái thanh toán
+
+#### 4.4 Kế toán
+
+**4.4.1 Luồng xử lý thanh toán**
+
+1. **Theo dõi thanh toán**
+
+    - Xem danh sách thanh toán đã xác nhận
+    - Kiểm tra thông tin thanh toán
+    - Theo dõi trạng thái xử lý
+    - Liên hệ với chủ đơn vị khi cần
+
+2. **Upload phiếu thu**
+    - Nhận thông báo thanh toán được xác nhận
+    - Tải lên phiếu thu tương ứng
+    - Liên kết phiếu thu với Payment
+    - Cập nhật trạng thái hoàn thành
+
+**4.4.2 Luồng quản lý tài chính**
+
+1. **Theo dõi tài chính**
+
+    - Xem báo cáo thanh toán theo thời gian
+    - Theo dõi doanh thu tổ chức
+    - Kiểm tra tính chính xác dữ liệu
+    - Xuất báo cáo tài chính
+
+2. **Xử lý hóa đơn**
+    - Quản lý file hóa đơn và phiếu thu
+    - Đảm bảo tính bảo mật file
+    - Backup dữ liệu tài chính
+    - Audit trail cho các giao dịch
+
+#### 4.5 Học viên (End User)
+
+**4.5.1 Luồng đăng ký học viên**
+
+1. **Tìm hiểu chương trình**
+
+    - Nhận link giới thiệu từ CTV
+    - Truy cập form đăng ký `/ref/{ref_id}`
+    - Đọc thông tin chương trình
+    - Liên hệ CTV để được tư vấn
+
+2. **Điền form đăng ký**
+
+    - Nhập thông tin cá nhân
+    - Chọn ngành học và trường đích
+    - Cung cấp thông tin liên hệ
+    - Submit form đăng ký
+
+3. **Nộp hóa đơn thanh toán**
+    - Nhận hướng dẫn từ CTV
+    - Truy cập form thanh toán `/ref/{ref_id}/payment`
+    - Upload hóa đơn thanh toán
+    - Chờ xác nhận từ tổ chức
+
+**4.5.2 Luồng theo dõi hồ sơ**
+
+1. **Cập nhật thông tin**
+
+    - Liên hệ CTV để cập nhật thông tin
+    - Bổ sung giấy tờ cần thiết
+    - Theo dõi tiến độ xử lý hồ sơ
+    - Nhận thông báo từ hệ thống
+
+2. **Hoàn thiện hồ sơ**
+    - Cung cấp thông tin bổ sung
+    - Nộp giấy tờ theo yêu cầu
+    - Tham gia phỏng vấn (nếu có)
+    - Nhận kết quả tuyển sinh
+
+### 5. CHỨC NĂNG HỆ THỐNG
+
+#### 4.1 Quản lý Cộng tác viên
+
+**4.1.1 Đăng ký CTV**
+
+-   Form đăng ký công khai tại `/ctv/register`
+-   Tự động gán vào tổ chức của CTV giới thiệu
+-   Tạo ref_id duy nhất 8 ký tự
+-   Gửi thông báo xác nhận
+
+**4.1.2 Phân cấp CTV**
+
+-   CTV cấp 1: Không có upline (upline_id = null)
+-   CTV cấp 2: Có upline là CTV cấp 1
+-   Hiển thị menu theo cấp:
+    -   Chủ đơn vị: Xem CTV cấp 1
+    -   CTV cấp 1: Xem CTV cấp 2 (nếu có)
+    -   CTV không có tuyến dưới: Ẩn menu
+
+**4.1.3 Quản lý CTV**
+
+-   CRUD operations cho CTV
+-   Theo dõi trạng thái: active/inactive
+-   Quản lý thông tin liên hệ
+-   Tạo link giới thiệu
+
+#### 4.2 Quản lý Học viên
+
+**4.2.1 Đăng ký học viên**
+
+-   Form đăng ký công khai tại `/ref/{ref_id}`
+-   Tự động gán CTV từ ref_id
+-   Thu thập thông tin: họ tên, SĐT, email, ngành học, trường đích
+-   Theo dõi nguồn tuyển sinh
+
+**4.2.2 Pipeline học viên**
+
+-   Trạng thái: new → contacted → submitted → approved → enrolled
+-   Cập nhật trạng thái theo quy trình
+-   Gửi thông báo khi thay đổi trạng thái
+
+**4.2.3 Quản lý học viên**
+
+-   Tìm kiếm và lọc theo nhiều tiêu chí
+-   Xem chi tiết thông tin học viên
+-   Cập nhật trạng thái và ghi chú
+-   Theo dõi lịch sử thay đổi
+
+#### 4.3 Hệ thống Thanh toán
+
+**4.3.1 Quy trình thanh toán**
+
+1. Học viên nộp hóa đơn qua form `/ref/{ref_id}/payment`
+2. Hệ thống tạo Payment với status SUBMITTED
+3. Chủ đơn vị xác nhận → status VERIFIED
+4. Tự động tạo Commission và CommissionItems
+
+**4.3.2 Quản lý thanh toán**
+
+-   Xem danh sách thanh toán theo trạng thái
+-   Upload và xem hóa đơn
+-   Xác nhận thanh toán
+-   Theo dõi lịch sử thay đổi
+
+**4.3.3 Upload phiếu thu**
+
+-   Kế toán upload phiếu thu sau khi xác nhận
+-   Lưu trữ file an toàn
+-   Liên kết với Payment record
+
+#### 4.4 Hệ thống Hoa hồng
+
+**4.4.1 Tính toán hoa hồng**
+
+-   CTV cấp 1: Nhận hoa hồng trực tiếp từ học viên
+-   CTV cấp 2: Nhận hoa hồng từ CTV cấp 1
+-   Sử dụng CommissionPolicy để tính toán
+-   Hỗ trợ các loại: FIXED, PERCENT, PASS_THROUGH
+
+**4.4.2 Chính sách hoa hồng**
+
+-   Cấu hình theo chương trình (REGULAR, PART_TIME)
+-   Cấu hình theo vai trò (PRIMARY, DOWNLINE)
+-   Trigger: PAYMENT_VERIFIED, STUDENT_ENROLLED
+-   Ưu tiên và hiệu lực thời gian
+
+**4.4.3 Quản lý hoa hồng**
+
+-   Tự động tạo khi Payment được xác nhận
+-   Theo dõi trạng thái: PENDING → PAYABLE → PAYMENT_CONFIRMED → COMPLETED
+-   Tính toán số tiền theo chính sách
+-   Lịch sử giao dịch hoa hồng
+
+#### 4.5 Hệ thống Ví tiền
+
+**4.5.1 Quản lý ví**
+
+-   Mỗi CTV có một ví riêng
+-   Theo dõi số dư hiện tại
+-   Lịch sử giao dịch chi tiết
+
+**4.5.2 Giao dịch ví**
+
+-   Nạp tiền từ hoa hồng
+-   Rút tiền (nếu có)
+-   Chuyển tiền giữa các ví
+-   Theo dõi trạng thái giao dịch
+
+#### 4.6 Quản lý Tổ chức
+
+**4.6.1 Thông tin tổ chức**
+
+-   Tên, mã, thông tin liên hệ
+-   Chủ sở hữu (owner)
+-   Trạng thái hoạt động
+
+**4.6.2 Chương trình và Ngành học**
+
+-   Quản lý chương trình đào tạo
+-   Quản lý ngành học
+-   Phân bổ chỉ tiêu theo ngành
+-   Cấu hình hoa hồng theo chương trình
+
+### 5. GIAO DIỆN NGƯỜI DÙNG
+
+#### 5.1 Admin Panel (Filament)
+
+-   **Dashboard**: Tổng quan hệ thống, thống kê
+-   **Quản lý dữ liệu**: Users, Organizations, Collaborators, Students, Majors, Programs
+-   **Thanh toán & Hoa hồng**: Payments, Commissions, Wallets
+-   **Báo cáo**: Thống kê, biểu đồ, xuất dữ liệu
+
+#### 5.2 Giao diện công khai
+
+-   **Form đăng ký học viên**: `/ref/{ref_id}`
+-   **Form thanh toán**: `/ref/{ref_id}/payment`
+-   **Form đăng ký CTV**: `/ctv/register`
+-   **Form đăng ký CTV qua ref**: `/ref/{ref_id}/ctv`
+
+#### 5.3 Responsive Design
+
+-   Tối ưu cho mobile và desktop
+-   Sử dụng TailwindCSS
+-   Giao diện thân thiện, dễ sử dụng
+
+### 6. BẢO MẬT VÀ PHÂN QUYỀN
+
+#### 6.1 Authentication
+
+-   Laravel Auth system
+-   Session-based authentication
+-   Password hashing với bcrypt
+
+#### 6.2 Authorization
+
+-   Spatie Permission package
+-   Role-based access control
+-   Policy-based authorization
+-   Gate definitions cho các chức năng
+
+#### 6.3 Data Security
+
+-   Input validation và sanitization
+-   SQL injection prevention
+-   XSS protection
+-   CSRF protection
+-   File upload security
+
+### 7. TÍNH NĂNG NÂNG CAO
+
+#### 7.1 Tracking và Analytics
+
+-   Theo dõi nguồn tuyển sinh
+-   Thống kê hiệu suất CTV
+-   Báo cáo tài chính
+-   Dashboard với biểu đồ
+
+#### 7.2 Notification System
+
+-   Email notifications
+-   In-app notifications
+-   Status change alerts
+-   Commission notifications
+
+#### 7.3 File Management
+
+-   Upload và lưu trữ hóa đơn
+-   Upload phiếu thu
+-   Secure file access
+-   File type validation
+
+#### 7.4 Quota Management
+
+-   Quản lý chỉ tiêu theo ngành
+-   Tự động giảm quota khi có thanh toán
+-   Cảnh báo khi hết quota
+-   Theo dõi quota usage
+
+### 8. TÍNH NĂNG KỸ THUẬT
+
+#### 8.1 Performance
+
+-   Database indexing
+-   Query optimization
+-   Caching strategies
+-   Lazy loading relationships
+
+#### 8.2 Scalability
+
+-   Modular architecture
+-   Service layer pattern
+-   Repository pattern
+-   Event-driven architecture
+
+#### 8.3 Monitoring
+
+-   Error logging
+-   Performance monitoring
+-   Database query logging
+-   User activity tracking
+
+#### 8.4 Testing
+
+-   Unit tests với Pest
+-   Feature tests
+-   Database testing
+-   API testing
+
+### 9. DEPLOYMENT VÀ MAINTENANCE
+
+#### 9.1 Environment
+
+-   Development: SQLite database
+-   Production: MySQL/PostgreSQL
+-   Environment configuration
+-   Secret management
+
+#### 9.2 Deployment
+
+-   Laravel deployment best practices
+-   Database migrations
+-   Asset compilation
+-   Queue processing
+
+#### 9.3 Backup và Recovery
+
+-   Database backup
+-   File storage backup
+-   Disaster recovery plan
+-   Data integrity checks
+
+### 10. ROADMAP VÀ PHÁT TRIỂN
+
+#### 10.1 Tính năng sắp tới
+
+-   API RESTful cho mobile app
+-   Real-time notifications
+-   Advanced reporting
+-   Multi-language support
+
+#### 10.2 Cải tiến
+
+-   Performance optimization
+-   UI/UX improvements
+-   Security enhancements
+-   Integration capabilities
+
 ---
----
 
-phase: requirements
-title: Yêu cầu & Hiểu bài toán
-description: Làm rõ bài toán, thu thập yêu cầu và xác định tiêu chí thành công
-
----
-
-# Yêu cầu & Hiểu bài toán
-
-> **Ghi chú định hướng kiến trúc:** Toàn bộ hệ thống CRM Tuyển sinh Liên thông được thiết kế theo mô hình **API-first (Backend-only)** trong giai đoạn hiện tại. Tài liệu này đồng thời đóng vai trò **SRS (Software Requirements Specification)** cho hệ thống backend.
-
-## Mô tả bài toán
-
-**Chúng ta đang giải quyết vấn đề gì?**
-
-Hiện tại, quy trình tuyển sinh liên thông đang được vận hành chủ yếu bằng phương pháp thủ công (form đăng ký đơn giản, Excel rời rạc, gọi điện và nhắc hồ sơ thủ công), dẫn đến các vấn đề sau:
-
-- Sinh viên chỉ điền rất ít thông tin ban đầu, thiếu dữ liệu để đánh giá điều kiện học tập.
-- Gần đến kỳ thi, cô Ly phải gọi điện từng sinh viên để nhắc nộp hồ sơ, kiểm tra thiếu sót và nhập tay rất nhiều thông tin.
-- Việc kiểm tra điều kiện ngành (ngành tốt nghiệp có phù hợp với ngành đăng ký hay không) đang làm thủ công, dễ sai sót.
-- Sinh viên thường xuyên xin dời đợt thi hoặc đổi nguyện vọng, gây khó khăn trong việc theo dõi lịch sử và cập nhật dữ liệu.
-- Dữ liệu hồ sơ, thanh toán, hoa hồng và danh sách gửi Trường bị phân tán ở nhiều file Excel và Google Drive.
-
-**Ai đang bị ảnh hưởng bởi vấn đề này?**
-
-- Cô Ly: quá tải nhập liệu, kiểm tra hồ sơ và nhắc sinh viên.
-- Cô Vinh: khó nắm tổng quan số lượng hồ sơ, chỉ tiêu theo ngành và theo đợt.
-- Kế toán: đối soát và chi trả hoa hồng thủ công, tiềm ẩn rủi ro nhầm lẫn.
-- Cộng tác viên: không theo dõi được tiến độ hồ sơ sinh viên mình phụ trách.
-- Sinh viên: không biết trạng thái hồ sơ, không rõ mình còn thiếu gì, phụ thuộc hoàn toàn vào việc được gọi nhắc.
-
-**Tình trạng hiện tại / cách làm tạm thời**
-
-- Form đăng ký chỉ thu thập thông tin tối thiểu.
-- Cô Ly gọi điện, nhắn Zalo để bổ sung thông tin.
-- Kiểm tra điều kiện ngành chủ yếu dựa vào kinh nghiệm cá nhân.
-- Tổng hợp hồ sơ bằng Excel và upload thủ công lên Google Drive.
-
----
-
-## Mục tiêu & Định hướng
-
-**Chúng ta muốn đạt được điều gì?**
-
-### Mục tiêu chính
-
-- Xây dựng **SRS cho hệ thống CRM Tuyển sinh Liên thông theo mô hình API-first**.
-- Chuẩn hoá toàn bộ quy trình tuyển sinh liên thông thành các **nghiệp vụ backend rõ ràng, có thể kiểm soát bằng API**.
-- Giảm tối thiểu 50–70% khối lượng nhập tay của cô Ly thông qua phân quyền nhập liệu và checklist số hoá.
-- Cho phép sinh viên tự theo dõi, tự nhập và tự bổ sung hồ sơ thông qua các API portal.
-- Kiểm soát chặt chẽ điều kiện ngành, đợt tuyển sinh và chỉ tiêu ngay từ tầng backend.
-
-### Mục tiêu phụ
-
-- Tạo nền tảng backend ổn định để dễ dàng phát triển các client sau này (Admin Web, Portal Sinh viên, Mobile App).
-- Minh bạch hoá trạng thái hồ sơ và hoa hồng cộng tác viên thông qua API.
-- Dễ dàng xuất dữ liệu đúng định dạng để gửi Trường thông qua API export.
-- Lưu trữ tập trung hồ sơ và file Excel trên Google Drive, quản lý bằng link và metadata.
-
-### Ngoài phạm vi (không làm trong giai đoạn này)
-
-- Không xây dựng giao diện người dùng hoàn chỉnh (Admin UI / Portal sinh viên chỉ ở mức tối thiểu để test API nếu cần).
-- Không xây dựng hệ thống học tập (LMS).
-- Không xử lý nghiệp vụ đào tạo sau khi sinh viên đã nhập học.
-- Không thay thế hoàn toàn Google Drive, chỉ tích hợp và liên kết.
-
----
-
-## Câu chuyện người dùng & Trường hợp sử dụng
-
-**Người dùng sẽ tương tác với hệ thống như thế nào?**
-
-### Sinh viên
-
-- Là sinh viên, tôi muốn đăng nhập để xem trạng thái hồ sơ để biết mình còn thiếu gì.
-- Là sinh viên, tôi muốn tự nhập và cập nhật thông tin cá nhân để không phải gửi nhiều lần qua Zalo.
-- Là sinh viên, tôi muốn tải lên giấy tờ theo checklist để hồ sơ được duyệt nhanh hơn.
-
-### Cộng tác viên (CTV)
-
-- Là CTV, tôi muốn tạo lead sinh viên để theo dõi tiến độ tuyển sinh.
-- Là CTV, tôi muốn xem trạng thái hồ sơ sinh viên của mình để biết khi nào cần nhắc.
-
-### Cô Ly (phụ trách hồ sơ)
-
-- Là người phụ trách hồ sơ, tôi muốn xem checklist để biết sinh viên còn thiếu giấy tờ nào.
-- Là người phụ trách hồ sơ, tôi muốn hệ thống tự kiểm tra điều kiện ngành để giảm rủi ro sai sót.
-- Là người phụ trách hồ sơ, tôi chỉ muốn nhập hoặc sửa thông tin khi thật sự cần để giảm nhập tay.
-
-### Cô Vinh (quản trị)
-
-- Là quản trị, tôi muốn tạo ngành, đợt và chỉ tiêu để quản lý quy mô tuyển sinh.
-- Là quản trị, tôi muốn xem dashboard tổng hợp để nắm toàn bộ tình hình.
-
-### Kế toán
-
-- Là kế toán, tôi muốn đối soát phí và hoa hồng để chi trả chính xác và minh bạch.
-
-**Các trường hợp đặc biệt (edge cases)**
-
-- Sinh viên không đủ điều kiện ngành.
-- Sinh viên xin dời sang đợt sau nhiều lần.
-- Sinh viên nhập sai thông tin cần được chỉnh sửa và lưu lịch sử.
-- Sinh viên đăng ký trực tiếp tại văn phòng tuyển sinh (**không qua CTV/Ref**) → hồ sơ phải có `source = walkin`, `collaborator_id = null`, **không phát sinh hoa hồng**.
-
----
-
-## Tiêu chí thành công
-
-**Khi nào thì coi như hệ thống đạt yêu cầu?**
-
-- Ít nhất 70% hồ sơ được sinh viên tự nhập và tải đủ giấy tờ trước khi cô Ly kiểm tra.
-- Thời gian xử lý trung bình một hồ sơ giảm tối thiểu 50%.
-- Không xảy ra trường hợp gửi hồ sơ sai ngành cho Trường.
-- Kế toán có thể đối soát và chi trả hoa hồng hoàn toàn trong hệ thống.
-- Xuất được file Excel đúng định dạng Trường chỉ với một thao tác.
-
----
-
-## Ràng buộc & Giả định
-
-**Những giới hạn cần tuân thủ trong SRS**
-
-### Ràng buộc kỹ thuật
-
-- Hệ thống được thiết kế và triển khai theo mô hình **Backend-only / API-first**.
-- Toàn bộ nghiệp vụ phải được thể hiện rõ ở tầng API (không phụ thuộc UI).
-- API có thể là REST hoặc GraphQL, nhưng phải thống nhất và có tài liệu.
-- Bắt buộc có:
-    - Phân quyền theo vai trò
-    - Workflow trạng thái hồ sơ
-    - Kiểm soát điều kiện ngành
-    - Log thay đổi dữ liệu (audit log)
-    - Upload tài liệu và quản lý file
-    - Tích hợp Google Drive
-    - Xuất Excel theo template tuyển sinh
-
-### Ràng buộc bảo mật & Quy tắc vận hành lõi
-
-- **Ví nội bộ & Hoa hồng (Wallet)**: Quản lý hoa hồng và ví điện tử nội bộ phải tuân thủ nghiêm ngặt nguyên tắc **Chặn Giao Dịch Âm (Negative Amount Exploit)** và có Lock File (`DB::transaction`) nhằm tránh Data Race (Race Condition).
-- **Chỉ tiêu tuyển sinh (Quota)**: Quỹ chỉ tiêu được lưu giữ an toàn, khi một thanh toán được duyệt Kế toán mới trừ chỉ tiêu. Nếu hồ sơ bị hủy/trả về, slot chỉ tiêu bắt buộc phải được **Hoàn lại (Auto-Refund)** về kho của Tổ chức đó.
-- **Mô hình Cộng tác viên**: Toàn bộ quy trình Tuyển dụng/Ghi nhận Cộng tác viên chạy theo mô hình **Hoa hồng Trực tiếp 1 cấp** (Direct Commission). Không cho phép đăng ký CTV tự do (Public form) mà phải được cấp quyền tài khoản qua Quản trị/Chủ đơn vị.
-
-### Ràng buộc nghiệp vụ
-
-- Quy trình thủ công hiện tại vẫn phải chạy song song trong giai đoạn đầu.
-- Không được làm gián đoạn hoạt động tuyển sinh đang diễn ra.
-- Cô Ly vẫn là người kiểm soát cuối cùng trước khi gửi hồ sơ cho Trường.
-
-### Ràng buộc thời gian / ngân sách
-
-- Ưu tiên triển khai theo từng module backend (MVP → mở rộng).
-- Ngân sách và nguồn lực IT có hạn, cần thiết kế đủ dùng nhưng không thừa.
-
-### Giả định
-
-- Sinh viên có smartphone và có thể tương tác với API thông qua portal/web/app.
-- Cô Ly, CTV, Kế toán sẽ sử dụng hệ thống thông qua các client được xây dựng sau.
-
----
-
-**Những giới hạn cần tuân thủ**
-
-### Ràng buộc kỹ thuật
-
-- Giai đoạn hiện tại hệ thống được triển khai theo mô hình **API-first / Backend-only**.
-- Hệ thống chỉ cần xây dựng các API nghiệp vụ (REST hoặc GraphQL), chưa yêu cầu xây dựng giao diện người dùng hoàn chỉnh.
-- API phải được thiết kế đủ tổng quát để có thể tích hợp với nhiều client trong tương lai (Admin web, Portal sinh viên, Mobile app).
-- Dù chỉ triển khai API, hệ thống vẫn bắt buộc có đầy đủ: phân quyền theo vai trò, workflow trạng thái hồ sơ, kiểm soát nghiệp vụ, log thay đổi dữ liệu.
-- Cần hỗ trợ upload file, liên kết Google Drive và xuất Excel theo template tuyển sinh.
-
-### Ràng buộc nghiệp vụ
-
-- Quy trình thủ công hiện tại vẫn phải chạy song song trong giai đoạn đầu.
-- Không được làm gián đoạn hoạt động tuyển sinh đang diễn ra.
-
-### Ràng buộc thời gian / ngân sách
-
-- Ưu tiên triển khai từng phần (MVP → mở rộng).
-- Ngân sách và nguồn lực IT có hạn.
-
-### Giả định
-
-- Sinh viên có smartphone và có thể tự tải hồ sơ.
-- Cô Ly và CTV sẵn sàng chuyển dần sang CRM.
-
----
-
-## Bổ sung: Yêu cầu dữ liệu hồ sơ sinh viên (Data Requirements)
-
-Hệ thống CRM phải hỗ trợ đầy đủ các trường dữ liệu hồ sơ sinh viên theo đúng biểu mẫu tuyển sinh hiện hành, đồng thời tối ưu hoá việc phân quyền nhập liệu nhằm giảm tải nhập tay cho cô Ly.
-
-### 1. Nguyên tắc thiết kế dữ liệu
-
-- Trường dữ liệu nào sinh viên có thể tự nhập và tự cung cấp minh chứng thì cho phép sinh viên nhập trực tiếp.
-- Cô Ly chỉ kiểm tra, duyệt, chỉnh sửa các trường hợp sai hoặc thiếu (ngoại lệ).
-- Các trường có thể suy ra, tính toán hoặc tra cứu thì hệ thống tự động sinh.
-- Mọi chỉnh sửa đều phải được lưu lịch sử (ai sửa, thời điểm, nội dung thay đổi).
-
----
-
-### 2. Nhóm trường hệ thống tự sinh
-
-- STT
-- Ngày tháng (ngày tạo / ngày cập nhật hồ sơ)
-- Trạng thái hồ sơ
-- Tình trạng hồ sơ
-- Phiếu tuyển sinh
-- Lệ phí (tự động theo Hệ ĐKLT)
-- Hình thức tuyển sinh
-- KV ưu tiên (tính theo địa chỉ hoặc trường THPT nếu có quy tắc)
-
----
-
-### 3. Nhóm trường sinh viên tự nhập
-
-#### 3.1 Thông tin cá nhân
-
-- Họ và tên
-- Ngày sinh
-- Nơi sinh
-- Hộ khẩu thường trú
-- Số điện thoại
-- Dân tộc
-- Giới tính
-- CCCD
-- Ngày cấp CCCD
-- Nơi cấp CCCD
-
-#### 3.2 Thông tin THPT
-
-- Tên trường THPT
-- Mã trường
-- Tên tỉnh/TP
-- Mã tỉnh
-- Tên quận/huyện
-- Mã quận/huyện
-- Năm tốt nghiệp THPT
-- Học lực cả năm
-- Hạnh kiểm
-
-#### 3.3 Thông tin văn bằng Cao đẳng / Trung cấp
-
-- Trường tốt nghiệp CĐ
-- Ngành tốt nghiệp CĐ
-- Xếp loại
-- Hệ đào tạo tốt nghiệp
-- Năm tốt nghiệp
-- Số hiệu bằng TN CĐ
-- Số vào sổ cấp bằng TN CĐ
-- Ngày ký bằng TN CĐ
-- Người ký bằng TN CĐ
-- Thông tin Trung cấp (nếu có)
-
-#### 3.4 Tải lên giấy tờ minh chứng
-
-- Bằng TN CĐ (bản sao / bản scan)
-- Bảng điểm CĐ
-- Bằng TN THPT
-- Giấy khai sinh
-- CCCD (mặt trước / sau)
-- Ảnh cá nhân
-- Giấy khám sức khoẻ
-
----
-
-### 4. Nhóm trường cô Ly hoàn thiện và duyệt
-
-- Kiểm tra điều kiện ngành (Đạt / Không đạt / Cần xem xét)
-- Ngành đăng ký liên thông
-- Trường đăng ký liên thông
-- Hệ đăng ký liên thông
-- Đợt đăng ký liên thông
-- Ghi chú nghiệp vụ
-
----
-
-### 5. Quy tắc khoá – duyệt – chỉnh sửa dữ liệu
-
-- Sinh viên được chỉnh sửa dữ liệu trước khi nộp hồ sơ.
-- Sau khi nộp, các trường quan trọng sẽ bị khoá và chỉ được sửa khi gửi yêu cầu.
-- Cô Ly có quyền chỉnh sửa khi duyệt hồ sơ, bắt buộc nhập lý do chỉnh sửa.
-- Hệ thống lưu song song giá trị sinh viên nhập và giá trị đã duyệt.
-- Quy tắc nguồn tuyển sinh:
-    - Nếu `source = ref` (CTV/Đối tác giới thiệu) thì có thể gán `collaborator_id` để ghi nhận kênh giới thiệu và tính hoa hồng theo chính sách.
-    - Nếu `source = walkin` (đến trực tiếp / văn phòng tuyển sinh) thì **bắt buộc** `collaborator_id = null` và **không ghi nhận hoa hồng**.
-
----
-
-### 6. Yêu cầu tích hợp Google Drive & Excel
-
-- Mỗi đợt tuyển sinh có một thư mục Google Drive riêng.
-- Mỗi sinh viên có một thư mục con chứa toàn bộ giấy tờ.
-- CRM phải xuất được file Excel đúng template tuyển sinh hiện hành.
-- Link Google Drive và file Excel được lưu trực tiếp trong hồ sơ sinh viên.
-
----
-
-## Câu hỏi & Vấn đề cần làm rõ (Open Items cho SRS)
-
-- Danh sách mapping ngành đầu vào – đầu ra chính thức từ Trường để đưa vào rule backend.
-
-- Template Excel cuối cùng Trường yêu cầu (có thay đổi theo từng đợt hay không).
-
-- Những trường dữ liệu nào sinh viên được phép chỉnh sửa sau khi đã nộp hồ sơ (rule khoá field).
-
-- Cách xử lý các trường hợp ngoại lệ: ngành gần, bằng đặc thù, chuyển đợt nhiều lần.
-
-- Thứ tự triển khai các module API:
-    - Hồ sơ sinh viên
-    - Quản lý ngành / đợt / chỉ tiêu
-    - Thanh toán & hoa hồng
-    - Export & Google Drive integration
-
-- Danh sách mapping ngành đầu vào – đầu ra chính thức từ Trường.
-
-- Template Excel cuối cùng Trường yêu cầu (có thay đổi theo từng đợt hay không).
-
-- Các trường dữ liệu nào sinh viên được phép chỉnh sửa sau khi đã nộp hồ sơ.
-
-- Quy định xử lý các trường hợp ngoại lệ (bằng liên thông đặc thù, ngành gần).
-
-- Lộ trình triển khai: ưu tiên module hồ sơ sinh viên, quản lý ngành hay kế toán trước.
+**Phiên bản**: 1.0  
+**Ngày tạo**: 2024  
+**Tác giả**: Development Team  
+**Trạng thái**: Production Ready
