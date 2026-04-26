@@ -23,6 +23,7 @@ class SecurityHeaders
             $response->header('X-XSS-Protection', '1; mode=block');
             $response->header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
             $response->header('Referrer-Policy', 'strict-origin-when-cross-origin');
+            $response->header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         }
 
         return $response;

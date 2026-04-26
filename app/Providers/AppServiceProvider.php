@@ -47,7 +47,7 @@ class AppServiceProvider extends ServiceProvider {
             }
 
             // CTV có thể xem finance của mình
-            if ($user->role === 'ctv') {
+            if ($user->role === 'collaborator') {
                 return true;
             }
 
@@ -62,8 +62,8 @@ class AppServiceProvider extends ServiceProvider {
             return $user->hasPermissionTo('manage_commission');
         });
 
-        Gate::define('manage_ctv', function ($user) {
-            return $user->hasPermissionTo('manage_ctv');
+        Gate::define('manage_collaborator', function ($user) {
+            return $user->hasPermissionTo('manage_collaborator');
         });
 
 

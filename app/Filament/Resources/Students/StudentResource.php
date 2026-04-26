@@ -82,7 +82,7 @@ class StudentResource extends Resource {
                 }
 
                 // CTV đếm học viên của mình
-                if ($user->role === 'ctv') {
+                if ($user->role === 'collaborator') {
                     return $query->whereRelation('collaborator', 'email', $user->email)->count();
                 }
 
@@ -113,7 +113,7 @@ class StudentResource extends Resource {
         }
 
         // 2. CTV: Chỉ thấy sinh viên của mình (bao gồm cả Inactive)
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             return $query->whereRelation('collaborator', 'email', $user->email);
         }
 

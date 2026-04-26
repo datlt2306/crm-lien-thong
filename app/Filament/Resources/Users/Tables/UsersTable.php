@@ -57,7 +57,7 @@ class UsersTable {
                         return match ($state) {
                             'super_admin' => 'Super Admin',
 
-                            'ctv' => 'Cộng tác viên',
+                            'collaborator' => 'Cộng tác viên',
                             default => $state
                         };
                     })
@@ -66,7 +66,7 @@ class UsersTable {
                         return match ($state) {
                             'super_admin' => 'danger',
 
-                            'ctv' => 'info',
+                            'collaborator' => 'info',
                             default => 'gray'
                         };
                     })

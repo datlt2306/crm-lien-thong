@@ -23,7 +23,7 @@ class FileController extends Controller {
         }
 
         // CTV xem bill của học viên mình quản lý
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
                 return $this->serveFile($payment->bill_path);
@@ -62,7 +62,7 @@ class FileController extends Controller {
         }
 
         // CTV xem bill của chính mình
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $commissionItem->recipient_collaborator_id === $collaborator->id) {
                 return $this->serveFile($commissionItem->payment_bill_path);
@@ -85,7 +85,7 @@ class FileController extends Controller {
         }
 
         // CTV xem phiếu thu của học viên mình
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
                 return $this->serveFile($payment->receipt_path);
@@ -108,7 +108,7 @@ class FileController extends Controller {
         }
 
         // CTV xem minh chứng hoàn tiền của học viên mình
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator && $payment->primary_collaborator_id === $collaborator->id) {
                 return $this->serveFile($payment->refund_proof_path);

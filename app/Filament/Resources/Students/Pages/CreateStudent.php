@@ -11,12 +11,16 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateStudent extends CreateRecord {
     protected static string $resource = StudentResource::class;
+    
+    protected function afterCreate(): void {
+        $this->dispatch('form-submitted');
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array {
         $user = Auth::user();
 
         if ($user) {
-            if (in_array($user->role, ['ctv'])) {
+            if (in_array($user->role, ['collaborator'])) {
                 // Tìm collaborator của user hiện tại
                 $collaborator = Collaborator::where('email', $user->email)->first();
                 if ($collaborator) {

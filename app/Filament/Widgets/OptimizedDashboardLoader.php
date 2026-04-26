@@ -29,7 +29,7 @@ class OptimizedDashboardLoader extends Widget {
                 'admin:collab_revenue',
                 'kpi:comparison'
             ];
-        } elseif ($role === 'ctv') {
+        } elseif ($role === 'collaborator') {
             $cacheKeys = [
                 "ctv:personal:{$user->id}",
                 "ctv:wallet:{$user->id}",

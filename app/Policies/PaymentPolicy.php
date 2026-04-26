@@ -7,7 +7,7 @@ use App\Models\User;
 
 class PaymentPolicy {
     public function viewAny(User $user): bool {
-        return $user->can('payment_view_any') || $user->hasRole(['super_admin', 'admin', 'accountant', 'document', 'ctv']);
+        return $user->can('payment_view_any') || $user->hasRole(['super_admin', 'admin', 'accountant', 'document', 'collaborator']);
     }
 
     public function view(User $user, Payment $payment): bool {
@@ -22,7 +22,7 @@ class PaymentPolicy {
         }
 
         // CTV chỉ được xem của mình
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             return in_array($user->id, [
                 $payment->primary_collaborator_id,
                 $payment->sub_collaborator_id,

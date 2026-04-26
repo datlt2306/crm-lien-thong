@@ -33,10 +33,10 @@ class UserForm {
                 TextInput::make('phone')
                     ->label('Số điện thoại')
                     ->tel()
-                    ->required(fn(callable $get) => $get('role') === 'ctv')
+                    ->required(fn(callable $get) => $get('role') === 'collaborator')
                     ->rules([
                         function (callable $get, $record) {
-                            if ($get('role') !== 'ctv') return null;
+                            if ($get('role') !== 'collaborator') return null;
                             $rule = \Illuminate\Validation\Rule::unique('collaborators', 'phone');
                             if ($record) {
                                 $collab = \App\Models\Collaborator::where('email', $record->email)->first();
@@ -54,13 +54,13 @@ class UserForm {
                     ->options([
                         'super_admin' => 'Super Admin',
 
-                        'ctv' => 'Cộng tác viên',
+                        'collaborator' => 'Cộng tác viên',
                         'accountant' => 'Kế toán',
                         'admissions' => 'Cán bộ tuyển sinh',
                         'document' => 'Cán bộ hồ sơ',
                     ])
                     ->required()
-                    ->default('ctv')
+                    ->default('collaborator')
                     ->visible(fn() => in_array(\Illuminate\Support\Facades\Auth::user()?->role, ['super_admin', ]))
                     ->helperText('Chọn vai trò cho người dùng'),
                 \Filament\Forms\Components\TextInput::make('password')

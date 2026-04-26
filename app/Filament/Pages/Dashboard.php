@@ -49,7 +49,7 @@ class Dashboard extends BaseDashboard {
             ];
         }
 
-        if ($role === 'ctv') {
+        if ($role === 'collaborator') {
             return [
                 CtvUnifiedStats::class,
                 RevenueOverTime::class,

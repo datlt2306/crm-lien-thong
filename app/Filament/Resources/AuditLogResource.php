@@ -84,14 +84,14 @@ class AuditLogResource extends Resource
                         'accountant' => 'Kế toán',
                         'admissions' => 'Tuyển sinh',
                         'document' => 'Hồ sơ',
-                        'ctv' => 'Cộng tác viên',
+                        'collaborator' => 'Cộng tác viên',
                         default => $state,
                     })
                     ->color(fn (string $state): string => match ($state) {
                         'admin', 'super_admin' => 'danger',
                         'accountant' => 'success',
                         'admissions' => 'info',
-                        'ctv' => 'warning',
+                        'collaborator' => 'warning',
                         default => 'gray',
                     }),
                 TextColumn::make('event_type')

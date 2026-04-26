@@ -20,8 +20,8 @@ class AccountantSeeder extends Seeder {
             [
                 'name' => 'Kế toán',
                 'password' => bcrypt('ketoan@gmail.com'),
-                // Cột enum role của users không có 'accountant', dùng 'ctv' làm mặc định
-                'role' => 'ctv',
+                // Cột enum role của users không có 'accountant', dùng 'collaborator' làm mặc định
+                'role' => 'collaborator',
             ]
         );
 

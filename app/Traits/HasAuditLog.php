@@ -41,8 +41,14 @@ trait HasAuditLog
 
         $eventGroup = $this->getAuditLogGroup($eventType);
         
-        // ONLY log Financial and Deletion events as requested
-        if (!in_array($eventGroup, [AuditLog::GROUP_FINANCIAL, AuditLog::GROUP_ACCOUNT_DELETION])) {
+        // Log important events: Financial, Account Deletion, System and Security
+        // Only ignore if it's explicitly not in these groups (though it defaults to SYSTEM)
+        if (!in_array($eventGroup, [
+            AuditLog::GROUP_FINANCIAL, 
+            AuditLog::GROUP_ACCOUNT_DELETION,
+            AuditLog::GROUP_SYSTEM,
+            AuditLog::GROUP_SECURITY
+        ])) {
             return;
         }
         

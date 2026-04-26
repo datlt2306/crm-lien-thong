@@ -39,7 +39,7 @@ class CommissionResource extends Resource {
 
     public static function table(Table $table): Table {
         $user = Auth::user();
-        $isCtv = $user->role === 'ctv';
+        $isCtv = $user->role === 'collaborator';
 
         // Kiểm tra xem CTV có phải là người trực tiếp giới thiệu sinh viên không
         $isDirectRef = false;
@@ -161,6 +161,12 @@ class CommissionResource extends Resource {
                     ->tooltip('Hoa hồng này đã được điều chỉnh do SV chuyển hệ')
                     ->toggleable(),
 
+                \Filament\Tables\Columns\TextColumn::make('payment.verifier.name')
+                    ->label('Người thu')
+                    ->sortable()
+                    ->visible(fn(): bool => !$isCtv)
+                    ->placeholder('Hệ thống'),
+
                 \Filament\Tables\Columns\TextInputColumn::make('notes')
                     ->label('Ghi chú riêng')
                     ->placeholder('Nhập ghi chú...')
@@ -184,9 +190,17 @@ class CommissionResource extends Resource {
 
                 \Filament\Tables\Columns\TextColumn::make('payment_confirmed_at')
                     ->label('Đã thanh toán lúc')
+                    ->state(fn (Commission $record) => $record->items->where('role', 'direct')->first()?->payment_confirmed_at)
                     ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->visible(fn(): bool => Auth::user()->can('commission_view_any') && Auth::user()->role !== 'ctv'),
+                    ->sortable(query: function ($query, $direction) {
+                        return $query->addSelect([
+                            'direct_confirmed_at' => \App\Models\CommissionItem::select('payment_confirmed_at')
+                                ->whereColumn('commission_id', 'commissions.id')
+                                ->where('role', 'direct')
+                                ->limit(1),
+                        ])->orderBy('direct_confirmed_at', $direction);
+                    })
+                    ->visible(fn(): bool => Auth::user()->can('commission_view_any') && Auth::user()->role !== 'collaborator'),
 
             ])
             ->filters([
@@ -212,6 +226,18 @@ class CommissionResource extends Resource {
                         } elseif ($value === 'NOT_ENROLLED') {
                             $query->whereHas('student', function ($q) {
                                 $q->where('status', '!=', \App\Models\Student::STATUS_ENROLLED);
+                            });
+                        }
+                    }),
+
+                \Filament\Tables\Filters\SelectFilter::make('collector_id')
+                    ->label('Người thu (Accountant)')
+                    ->options(\App\Models\User::where('role', '!=', 'collaborator')->pluck('name', 'id'))
+                    ->searchable()
+                    ->query(function ($query, array $data) {
+                        if (!empty($data['value'])) {
+                            $query->whereHas('payment', function ($q) use ($data) {
+                                $q->where('verified_by', $data['value']);
                             });
                         }
                     }),
@@ -281,7 +307,7 @@ class CommissionResource extends Resource {
                         ->modalSubmitActionLabel('Xác nhận đã nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (Commission $record) use ($user): bool {
-                            if ($user->role !== 'ctv') return false;
+                            if ($user->role !== 'collaborator') return false;
                             $collab = \App\Models\Collaborator::where('email', $user->email)->first();
                             if (!$collab) return false;
                             
@@ -553,7 +579,7 @@ class CommissionResource extends Resource {
             ->bulkActions([
                 BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('bulk_confirm_payment')
-                        ->label('Chốt sổ & Xác nhận chi hàng loạt')
+                        ->label('Xác nhận chi cho các mục ĐÃ CHỌN')
                         ->icon('heroicon-o-check-badge')
                         ->color('success')
                         ->requiresConfirmation()
@@ -639,7 +665,7 @@ class CommissionResource extends Resource {
             ->modifyQueryUsing(function ($query) {
                 $user = Auth::user();
 
-                if ($user->role === 'ctv') {
+                if ($user->role === 'collaborator') {
                     // CTV chỉ thấy các commission mà mình có trong danh sách recipient
                     $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                     if ($collaborator) {
@@ -673,7 +699,7 @@ class CommissionResource extends Resource {
             if ($user->can('commission_view_any')) {
                 $query = Commission::query();
                 
-                if ($user->role === 'ctv') {
+                if ($user->role === 'collaborator') {
                     $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                     if (!$collaborator) return '0';
                     $query->whereHas('items', function ($q) use ($collaborator) {

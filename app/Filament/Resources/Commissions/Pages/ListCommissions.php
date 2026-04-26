@@ -33,7 +33,7 @@ class ListCommissions extends ListRecords {
 
         // Kiểm tra qua quyền hạn động hoặc vai trò cứng (Fallback)
         return $user->can('commission_view_any') || 
-            in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'accountant', 'ctv', 'document']);
+            in_array($user->role, ['super_admin', 'admin', 'organization_owner', 'accountant', 'collaborator', 'document']);
     }
 
 
@@ -57,45 +57,44 @@ class ListCommissions extends ListRecords {
                                 ->required()
                                 ->afterOrEqual('start_date'),
                         ]),
+                    \Filament\Forms\Components\Select::make('status')
+                        ->label('Trạng thái hoa hồng')
+                        ->options([
+                            \App\Models\CommissionItem::STATUS_PAYABLE => 'Chưa chi (Đang chờ đối soát)',
+                            \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED => 'Đã chi (Đã xác nhận thanh toán)',
+                        ])
+                        ->default(\App\Models\CommissionItem::STATUS_PAYABLE)
+                        ->required(),
                     \Filament\Forms\Components\Select::make('collaborator_id')
                         ->label('Người hướng dẫn')
                         ->options(\App\Models\Collaborator::pluck('full_name', 'id'))
                         ->searchable()
                         ->required()
-                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
+                        ->hidden(fn() => Auth::user()->hasRole('collaborator'))
                         ->dehydrated(true)
                         ->default(function() {
                             $user = Auth::user();
-                            if ($user->hasRole('ctv')) {
+                            if ($user->hasRole('collaborator')) {
                                 return \App\Models\Collaborator::where('email', $user->email)->first()?->id;
                             }
                             return null;
                         })
                         ->placeholder('Bắt buộc chọn một CTV')
                         ->helperText('Chọn CTV để lọc danh sách học viên'),
-                    \Filament\Forms\Components\Select::make('collector_user_id')
-                        ->label('Người thu')
-                        ->options(\App\Models\User::where('is_active', true)
-                            ->where('role', '!=', 'ctv')
-                            ->pluck('name', 'id'))
-                        ->searchable()
-                        ->required()
-                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
-                        ->default(fn() => Auth::id()),
                     TextInput::make('title')
                         ->label('Tiêu đề bảng kê')
-                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
-                        ->placeholder('Ví dụ: DANH SÁCH LỆ PHÍ CÔ LY THU TỪ NGÀY 22/01-03/02/2026')
-                        ->helperText('Để trống để tự động tạo theo mẫu: Danh sách lệ phí [Người thu] thu từ [Ngày] - [Ngày]'),
+                        ->hidden(fn() => Auth::user()->hasRole('collaborator'))
+                        ->placeholder('Ví dụ: BẢNG KÊ HOA HỒNG CTV NGUYỄN VĂN A')
+                        ->helperText('Để trống để tự động tạo theo mẫu: Danh sách lệ phí [Tên CTV] từ [Ngày] - [Ngày]'),
                     TextInput::make('note')
                         ->label('Ghi chú chung')
-                        ->hidden(fn() => Auth::user()->hasRole('ctv'))
-                        ->placeholder('Lệ phí hồ sơ')
-                        ->default('Lệ phí hồ sơ'),
+                        ->hidden(fn() => Auth::user()->hasRole('collaborator'))
+                        ->placeholder('Nhập ghi chú cho bảng kê (ví dụ: Lệ phí hồ sơ, Học phí...)')
+                        ->default(''),
                 ])
                 ->action(function (array $data) {
                     $user = Auth::user();
-                    if ($user->hasRole('ctv')) {
+                    if ($user->hasRole('collaborator')) {
                         $data['collaborator_id'] = \App\Models\Collaborator::where('email', $user->email)->first()?->id;
                     }
                     
@@ -127,105 +126,88 @@ class ListCommissions extends ListRecords {
                     );
                 }),
 
-            Action::make('batch_confirm_payout')
-                ->label('Xác nhận đã chi trả')
-                ->icon('heroicon-o-check-badge')
-                ->color('primary')
-                ->requiresConfirmation()
-                ->modalHeading('Xác nhận chi hoa hồng hàng loạt')
-                ->modalDescription('Hệ thống sẽ tìm tất cả các mục hoa hồng chưa chốt, khớp với tiêu chí bên dưới và đánh dấu là "Đã chốt & Đã chi". Bạn nên thực hiện hành động này sau khi đã gửi file cho CTV đối soát xong.')
+            Action::make('import_reconciliation')
+                ->label('Import đối soát (Từ Excel)')
+                ->icon('heroicon-o-document-arrow-up')
+                ->color('warning')
                 ->form([
-                    Grid::make(2)
-                        ->schema([
-                            DatePicker::make('start_date')
-                                ->label('Từ ngày (Ngày KT duyệt)')
-                                ->default(now()->startOfMonth())
-                                ->required(),
-                            DatePicker::make('end_date')
-                                ->label('Đến ngày (Ngày KT duyệt)')
-                                ->default(now())
-                                ->required()
-                                ->afterOrEqual('start_date'),
-                        ]),
-                    \Filament\Forms\Components\Select::make('collaborator_id')
-                        ->label('Người hướng dẫn (CTV)')
-                        ->options(\App\Models\Collaborator::pluck('full_name', 'id'))
-                        ->searchable()
+                    \Filament\Forms\Components\FileUpload::make('file')
+                        ->label('Chọn file Excel đã đối soát')
+                        ->disk('local')
+                        ->directory('temp-imports')
                         ->required()
-                        ->placeholder('Chọn CTV cần chốt chi'),
-                    \Filament\Forms\Components\Textarea::make('reason')
-                        ->label('Ghi chú chốt chi (nếu có)')
-                        ->placeholder('Ví dụ: Chốt chi đợt 1 tháng 2...'),
+                        ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']),
+                    \Filament\Forms\Components\Placeholder::make('help')
+                        ->label('Hướng dẫn')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <ul class="list-disc ml-5 text-sm">
+                                <li>Bước 1: Nhấn "Xuất bảng kê lệ phí" để tải file danh sách về.</li>
+                                <li>Bước 2: Mở file Excel, điền chữ <b>"X"</b> vào cột <b>"Xác nhận đã chi (Điền X)"</b> cho những người đã trả tiền.</li>
+                                <li>Bước 3: Lưu file và tải lên tại đây.</li>
+                                <li class="text-danger-600 font-bold">Lưu ý: KHÔNG ĐƯỢC thay đổi cột "ID" trong file Excel.</li>
+                            </ul>
+                        ')),
                 ])
                 ->visible(fn() => Auth::user()->can('commission_payout'))
                 ->action(function (array $data) {
-                    $startDate = Carbon::parse($data['start_date'])->startOfDay();
-                    $endDate = Carbon::parse($data['end_date'])->endOfDay();
-                    $collaboratorId = $data['collaborator_id'];
-                    $userId = Auth::id();
+                    $filePath = \Illuminate\Support\Facades\Storage::disk('local')->path($data['file']);
+                    
+                    try {
+                        $spreadsheet = \Maatwebsite\Excel\Facades\Excel::toArray([], $filePath);
+                        $totalUpdated = 0;
+                        $userId = Auth::id();
 
-                    // Tìm các CommissionItem khớp tiêu chí
-                    $items = \App\Models\CommissionItem::query()
-                        ->where('recipient_collaborator_id', $collaboratorId)
-                        ->where('status', \App\Models\CommissionItem::STATUS_PAYABLE)
-                        ->whereBetween('payable_at', [$startDate, $endDate])
-                        ->get();
+                        foreach ($spreadsheet as $sheet) {
+                            // Bỏ qua 2 dòng đầu (Tiêu đề và Header)
+                            $rows = array_slice($sheet, 2);
+                            
+                            foreach ($rows as $row) {
+                                // Cột I là Xác nhận (index 8), Cột J là ID (index 9)
+                                $confirmValue = trim((string)($row[8] ?? ''));
+                                $itemId = $row[9] ?? null;
 
-                    if ($items->isEmpty()) {
+                                if (!empty($confirmValue) && $itemId) {
+                                    $item = \App\Models\CommissionItem::find($itemId);
+                                    
+                                    if ($item && $item->status === \App\Models\CommissionItem::STATUS_PAYABLE) {
+                                        $item->updateQuietly([
+                                            'status' => \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                            'payment_confirmed_at' => now(),
+                                            'payment_confirmed_by' => $userId,
+                                        ]);
+                                        $totalUpdated++;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Xoá file sau khi xong
+                        \Illuminate\Support\Facades\Storage::disk('local')->delete($data['file']);
+
+                        if ($totalUpdated > 0) {
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title("Đối soát thành công")
+                                ->body("Đã cập nhật trạng thái 'Đã chi' cho {$totalUpdated} mục hoa hồng.")
+                                ->send();
+                        } else {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title("Không có dữ liệu thay đổi")
+                                ->body("Không tìm thấy mục hoa hồng nào có đánh dấu 'X' hoặc các mục đã được chốt trước đó.")
+                                ->send();
+                        }
+
+                    } catch (\Exception $e) {
                         \Filament\Notifications\Notification::make()
-                            ->warning()
-                            ->title('Không tìm thấy dữ liệu')
-                            ->body('Không có mục hoa hồng nào khớp với tiêu chí đã chọn hoặc tất cả đã được chốt trước đó.')
+                            ->danger()
+                            ->title("Lỗi xử lý file")
+                            ->body($e->getMessage())
                             ->send();
-                        return;
                     }
-
-                    $count = 0;
-                    $totalAmount = 0;
-                    $batchData = [];
-
-                    foreach ($items as $item) {
-                        $studentName = $item->commission?->student?->full_name ?? 'N/A';
-                        $amount = (float)($item->amount ?? 0);
-
-                        $batchData[] = [
-                            'student' => $studentName,
-                            'amount' => $amount,
-                        ];
-                        $totalAmount += $amount;
-
-                        $item->updateQuietly([
-                            'status' => \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
-                            'payment_confirmed_at' => now(),
-                            'payment_confirmed_by' => $userId,
-                        ]);
-                        $count++;
-                    }
-
-                    // Tạo Audit Log cho cả lô
-                    \App\Models\AuditLog::create([
-                        'event_group' => \App\Models\AuditLog::GROUP_FINANCIAL,
-                        'event_type' => \App\Models\AuditLog::TYPE_BATCH_CONFIRMED,
-                        'user_id' => $userId,
-                        'user_role' => Auth::user()->role,
-                        'metadata' => [
-                            'criteria' => $data,
-                            'count' => $count,
-                            'total_amount' => $totalAmount,
-                            'items_summary' => $batchData,
-                        ],
-                        'reason' => 'Xác nhận chi theo tiêu chí: ' . ($data['reason'] ?? 'Không có ghi chú'),
-                        'ip_address' => request()->ip(),
-                        'user_agent' => request()->userAgent(),
-                        'created_at' => now(),
-                    ]);
-
-                    \Filament\Notifications\Notification::make()
-                        ->success()
-                        ->title("Đã chốt chi thành công cho {$count} mục hoa hồng")
-                        ->body("Tổng số tiền: " . number_format($totalAmount, 0, ',', '.') . " VNĐ")
-                        ->send();
                 }),
+
+
         ];
     }
 

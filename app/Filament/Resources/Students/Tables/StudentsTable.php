@@ -34,7 +34,7 @@ class StudentsTable {
                 // Kiểm tra xem user có quyền chỉnh sửa sinh viên không
                 if ($user->can('student_update')) {
                     // Nếu là CTV, chỉ được phép nếu payment chưa verified
-                    if ($user->hasRole('ctv')) {
+                    if ($user->hasRole('collaborator')) {
                         $hasVerifiedPayment = $record->payment?->status === Payment::STATUS_VERIFIED;
                         if (!$hasVerifiedPayment) {
                             return \App\Filament\Resources\Students\StudentResource::getUrl('edit', ['record' => $record]);
@@ -459,7 +459,7 @@ class StudentsTable {
                             $user = Auth::user();
 
                             if ($user->can('student_update')) {
-                                if ($user->hasRole('ctv')) {
+                                if ($user->hasRole('collaborator')) {
                                     return $record->payment?->status !== Payment::STATUS_VERIFIED;
                                 }
                                 return true;
@@ -523,7 +523,7 @@ class StudentsTable {
                             if (!$user->can('payment_upload_bill')) return false;
 
                             // Ownership check for CTV: Only allow if they own the student
-                            if ($user->hasRole('ctv')) {
+                            if ($user->hasRole('collaborator')) {
                                 $collaborator = Collaborator::where('email', $user->email)->first();
                                 if (!$collaborator || $record->collaborator_id !== $collaborator->id) {
                                     return false;
@@ -1079,7 +1079,7 @@ class StudentsTable {
                             if (!$user || !$user->can('student_change_status')) return false;
 
                             // Đối với CTV (hoặc người chỉ có quyền cơ bản): Chỉ được ngưng hoạt động khi CHƯA nộp tiền
-                            if ($user->role === 'ctv') {
+                            if ($user->role === 'collaborator') {
                                 $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
                                 return $canToggle;
                             }

@@ -17,6 +17,9 @@ class EditStudent extends EditRecord {
     protected function afterSave(): void {
         $record = $this->record;
 
+        // Gửi sự kiện xóa bản nháp trong LocalStorage
+        $this->dispatch('form-submitted');
+
         // Nếu chuyển trạng thái sang Nhập học, mở khóa hoa hồng tương ứng
         if ($record->status === Student::STATUS_ENROLLED) {
             app(\App\Services\CommissionService::class)->unlockCommissionsOnEnrollment($record);
@@ -87,7 +90,7 @@ class EditStudent extends EditRecord {
                     }
 
                     // 4. Nếu là CTV, chỉ được confirm cho sinh viên của mình (phụ thuộc quyền can_update đã check ở trên)
-                    if ($user->role === 'ctv') {
+                    if ($user->role === 'collaborator') {
                         $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
                         if (!$collaborator || $record->collaborator_id !== $collaborator->id) {
                             return false;
@@ -201,7 +204,7 @@ class EditStudent extends EditRecord {
 
                     // Chỉ CTV (hoặc người có quyền) có ref_id trùng với collaborator_id của sinh viên mới được upload bill
                     // Logic check collaborator_id vẫn giữ nguyên cho CTV
-                    if ($user->hasRole('ctv')) {
+                    if ($user->hasRole('collaborator')) {
                         if ($record->collaborator_id !== $collaborator->id) {
                             return false;
                         }
@@ -601,7 +604,7 @@ class EditStudent extends EditRecord {
 
         if ($user->can('student_update')) {
             // CTV có quyền update nhưng cần kiểm tra payment verified
-            if ($user->hasRole('ctv')) {
+            if ($user->hasRole('collaborator')) {
                 if (isset($parameters['record'])) {
                     $recordId = $parameters['record'];
                     if (is_array($recordId)) {

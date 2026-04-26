@@ -61,27 +61,26 @@ class CollaboratorForm {
                 TextInput::make('password')
                     ->label('Mật khẩu')
                     ->password()
-                    ->default('123456')
                     ->nullable()
                     ->visible(fn($get) => !empty($get('email')))
-                    ->helperText('Mặc định: 123456. CTV có thể thay đổi sau khi đăng nhập.')
-                    ->minLength(6)
+                    ->helperText('Độ dài tối thiểu 8 ký tự. CTV có thể thay đổi sau khi đăng nhập.')
+                    ->minLength(8)
                     ->confirmed(),
                 TextInput::make('password_confirmation')
                     ->label('Xác nhận mật khẩu')
                     ->password()
-                    ->default('123456')
                     ->nullable()
                     ->visible(fn($get) => !empty($get('email')))
                     ->same('password'),
                 \Filament\Forms\Components\TextInput::make('ref_id')
-                    ->label('Link giới thiệu')
+                    ->label('Mã giới thiệu (Gốc)')
                     ->unique(ignoreRecord: true)
                     ->required()
+                    ->disabled(fn ($state) => !empty($state))
+                    ->dehydrated()
                     ->default(fn() => strtoupper(Str::random(8)))
                     ->formatStateUsing(function ($state) {
                         if (empty($state)) return '';
-                        // Tránh duplicate: nếu state đã là URL đầy đủ (chứa /ref/), chỉ lấy mã ref_id
                         $refCode = str_contains((string) $state, '/ref/')
                             ? Str::afterLast($state, '/')
                             : $state;
@@ -89,11 +88,10 @@ class CollaboratorForm {
                     })
                     ->dehydrateStateUsing(function ($state) {
                         if (empty($state)) return null;
-                        // Luôn lưu DB chỉ mã ref_id (bỏ URL nếu user paste cả link)
                         return Str::afterLast($state, '/') ?: $state;
                     })
                     ->copyable()
-                    ->helperText('Click vào field hoặc icon để copy link'),
+                    ->helperText('Mã định danh duy nhất. Không thể chỉnh sửa sau khi tạo.'),
                 \Filament\Forms\Components\Repeater::make('refCodes')
                     ->relationship('refCodes')
                     ->schema([

@@ -27,8 +27,8 @@ class SyncUserRolesSeeder extends Seeder {
             }
         }
 
-        // 2. Tạo Collaborator cho users có role 'ctv' (KHÔNG tạo cho organization_owner)
-        $ctvUsers = User::where('role', 'ctv')->get();
+        // 2. Tạo Collaborator cho users có role 'collaborator' (KHÔNG tạo cho organization_owner)
+        $ctvUsers = User::where('role', 'collaborator')->get();
         $organization = Organization::first(); // Lấy organization đầu tiên
 
         foreach ($ctvUsers as $user) {
@@ -73,6 +73,6 @@ class SyncUserRolesSeeder extends Seeder {
         echo "Organizations: " . Organization::count() . "\n";
         echo "Collaborators: " . Collaborator::count() . "\n";
         echo "Users with organization_owner role: " . User::where('role', 'organization_owner')->count() . "\n";
-        echo "Users with ctv role: " . User::where('role', 'ctv')->count() . "\n";
+        echo "Users with ctv role: " . User::where('role', 'collaborator')->count() . "\n";
     }
 }

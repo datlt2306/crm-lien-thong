@@ -77,7 +77,7 @@ class ChartTestDataSeeder extends Seeder {
                     'amount' => $admissionFee,
                     'status' => 'verified',
                     'verified_at' => $date,
-                    'verified_by' => 1,
+                    'verified_by' => 6,
                     'created_at' => $date,
                 ]
             );

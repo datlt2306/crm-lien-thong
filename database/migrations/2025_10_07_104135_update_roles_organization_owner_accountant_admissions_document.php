@@ -83,7 +83,7 @@ return new class extends Migration {
             });
 
             Schema::table('users', function (Blueprint $table) {
-                $table->enum('role', ['super_admin', 'organization_owner', 'ctv', 'accountant', 'admissions', 'document'])->default('ctv');
+                $table->enum('role', ['super_admin', 'organization_owner', 'collaborator', 'accountant', 'admissions', 'document'])->default('collaborator');
             });
         }
     }
@@ -143,7 +143,7 @@ return new class extends Migration {
             });
 
             Schema::table('users', function (Blueprint $table) {
-                $table->enum('role', ['super_admin', 'owner', 'ctv', 'kế toán'])->default('ctv');
+                $table->enum('role', ['super_admin', 'owner', 'collaborator', 'kế toán'])->default('collaborator');
             });
         }
     }

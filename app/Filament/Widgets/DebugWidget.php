@@ -25,7 +25,7 @@ class DebugWidget extends BaseWidget {
 
         // Kiểm tra dữ liệu theo role
         $userSpecificData = [];
-        if ($role === 'ctv') {
+        if ($role === 'collaborator') {
             $userId = $user->id;
             $userPayments = Payment::where('primary_collaborator_id', $userId)->count();
             $userStudents = Student::whereHas('payment', function ($query) use ($userId) {

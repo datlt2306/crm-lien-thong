@@ -82,7 +82,7 @@ class EditUser extends EditRecord {
                 $updatePayload['email'] = $user->email;
             }
             $collaborator->update($updatePayload);
-        } elseif ($user->role === 'ctv') {
+        } elseif ($user->role === 'collaborator') {
             CollaboratorValidationService::validateForCreation($user->email, $user->phone);
 
             \App\Models\Collaborator::create([

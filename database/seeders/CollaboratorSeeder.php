@@ -17,7 +17,7 @@ class CollaboratorSeeder extends Seeder {
                 'password' => Hash::make('password'),
             ]
         );
-        $datUser->assignRole('ctv');
+        $datUser->assignRole('collaborator');
 
         $dat = Collaborator::updateOrCreate(
             ['email' => 'datletrong2306@gmail.com'],
@@ -25,7 +25,6 @@ class CollaboratorSeeder extends Seeder {
                 'user_id' => $datUser->id,
                 'full_name' => 'Lê Trọng Đạt',
                 'phone' => '0987654321',
-                'ref_id' => 'DAT',
                 'status' => 'active',
                 'telegram_chat_id' => '233224973', // ID của mày
             ]

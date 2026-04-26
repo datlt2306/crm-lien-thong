@@ -84,6 +84,7 @@ class PermissionSeeder extends Seeder {
             'quota_create',
             'quota_update',
             'quota_delete',
+            'access_admin_panel',
         ];
 
         foreach ($permissions as $permission) {
@@ -93,7 +94,7 @@ class PermissionSeeder extends Seeder {
 
         // Tạo roles nếu chưa có
         $superAdmin = Role::firstOrCreate(['name' => 'super_admin']);
-        $ctv = Role::firstOrCreate(['name' => 'ctv']);
+        $collaborator = Role::firstOrCreate(['name' => 'collaborator']);
         $accountant = Role::firstOrCreate(['name' => 'accountant']);
         $admissions = Role::firstOrCreate(['name' => 'admissions']);
         $document = Role::firstOrCreate(['name' => 'document']);
@@ -102,8 +103,8 @@ class PermissionSeeder extends Seeder {
         $superAdmin->syncPermissions(Permission::all());
 
 
-        // Gán permissions cho CTV (Đúng 11 quyền yêu cầu)
-        $ctv->syncPermissions([
+        // Gán permissions cho Cộng tác viên (Đúng 11 quyền yêu cầu)
+        $collaborator->syncPermissions([
             'student_view_any',      // 1. Xem danh sách sinh viên
             'student_view',          // 2. Xem chi tiết sinh viên
             'payment_view_any',      // 3. Xem danh sách phiếu thu
@@ -115,6 +116,7 @@ class PermissionSeeder extends Seeder {
             'intake_view_any',       // 9. Xem danh sách đợt tuyển sinh
             'annual_quota_view_any', // 10. Xem danh sách chỉ tiêu năm
             'audit_log_view',        // 11. Xem nhật ký hoạt động học viên
+            'access_admin_panel',    // 12. Truy cập admin panel
         ]);
 
         // Gán permissions cho accountant (Đúng danh sách yêu cầu)
@@ -138,6 +140,7 @@ class PermissionSeeder extends Seeder {
             'audit_log_view_all',    // Xem nhật ký hoạt động học viên
             'report_view_finance',   // Báo cáo doanh thu
             'report_view_enrollment', // Báo cáo tuyển sinh
+            'access_admin_panel',    // Truy cập admin panel
         ]);
 
         // Gán permissions cho admissions
@@ -157,6 +160,7 @@ class PermissionSeeder extends Seeder {
             'quota_view_any',
             'quota_create',
             'quota_update',
+            'access_admin_panel',
         ]);
 
         // Gán permissions cho document (Đúng danh sách yêu cầu)
@@ -176,6 +180,7 @@ class PermissionSeeder extends Seeder {
             'intake_view_any',       // Xem danh sách đợt tuyển sinh
             'annual_quota_view_any', // Xem danh sách chỉ tiêu năm
             'quota_view_any',        // Xem danh sách chỉ tiêu chi tiết
+            'access_admin_panel',    // Truy cập admin panel
         ]);
 
         $this->command->info('Permissions and roles created successfully!');

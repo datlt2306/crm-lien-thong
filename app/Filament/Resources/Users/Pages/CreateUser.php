@@ -31,9 +31,9 @@ class CreateUser extends CreateRecord {
         // Tự động verify email cho user mới tạo
         $data['email_verified_at'] = now();
 
-        // Nếu chưa có role được chọn, mặc định là 'ctv'
+        // Nếu chưa có role được chọn, mặc định là 'collaborator'
         if (empty($data['role'])) {
-            $data['role'] = 'ctv';
+            $data['role'] = 'collaborator';
         }
 
         return $data;
@@ -50,7 +50,7 @@ class CreateUser extends CreateRecord {
         }
 
         // Đồng bộ collaborator cho user CTV trong mô hình single-organization.
-        if (($user->role ?? null) === 'ctv') {
+        if (($user->role ?? null) === 'collaborator') {
             CollaboratorValidationService::validateForCreation($user->email, $user->phone);
             \App\Models\Collaborator::updateOrCreate(
                 ['email' => $user->email],

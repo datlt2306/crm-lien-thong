@@ -91,8 +91,8 @@ class EditCollaborator extends EditRecord {
                     'name' => $data['full_name'] ?? $this->record->full_name,
                     'email' => $currentEmail,
                     'password' => Hash::make($password),
-                    'role' => 'ctv',
-                ])->assignRole('ctv');
+                    'role' => 'collaborator',
+                ])->assignRole('collaborator');
                 
                 \Illuminate\Support\Facades\Log::info("EditCollaborator: Created new user account for {$currentEmail}");
             }

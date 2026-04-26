@@ -136,7 +136,7 @@ class CollaboratorsTable {
                                         'name' => $record->full_name,
                                         'email' => $record->email,
                                         'password' => \Illuminate\Support\Facades\Hash::make('123456'),
-                                        'role' => 'ctv',
+                                        'role' => 'collaborator',
                                         'collaborator_id' => $record->id,
                                     ]);
                                 }
@@ -299,7 +299,7 @@ class CollaboratorsTable {
                                                 'name' => $record->full_name,
                                                 'email' => $record->email,
                                                 'password' => \Illuminate\Support\Facades\Hash::make('123456'),
-                                                'role' => 'ctv',
+                                                'role' => 'collaborator',
                                                 'collaborator_id' => $record->id,
                                             ]);
                                         }

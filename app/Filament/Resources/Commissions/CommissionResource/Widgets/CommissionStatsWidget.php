@@ -17,7 +17,7 @@ class CommissionStatsWidget extends BaseWidget {
             ->where('commission_items.status', CommissionItem::STATUS_PAYABLE);
 
         // Nếu là CTV, chỉ tính tiền của chính mình
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
                 $query->where('recipient_collaborator_id', $collaborator->id);

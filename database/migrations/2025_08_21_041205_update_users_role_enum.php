@@ -16,7 +16,7 @@ return new class extends Migration {
 
         Schema::table('users', function (Blueprint $table) {
             // Add the new enum with updated values
-            $table->enum('role', ['super_admin', 'chủ đơn vị', 'ctv'])->default('ctv');
+            $table->enum('role', ['super_admin', 'chủ đơn vị', 'collaborator'])->default('collaborator');
         });
     }
 

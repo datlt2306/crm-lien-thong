@@ -94,7 +94,8 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // 'sslmode' => env('DB_SSLMODE', 'require'),
             'dump' => [
                 'dump_binary_path' => '/opt/homebrew/Cellar/postgresql@17/17.4_1/bin',
             ],

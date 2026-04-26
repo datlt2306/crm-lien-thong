@@ -67,9 +67,9 @@ class CreateCollaborator extends CreateRecord {
                 'name' => $this->record->full_name,
                 'email' => $this->record->email,
                 'password' => Hash::make($this->pendingUserPassword ?? '123456'),
-                'role' => 'ctv',
+                'role' => 'collaborator',
             ]);
-            $userAccount->assignRole('ctv');
+            $userAccount->assignRole('collaborator');
         } else {
             $userAccount = $existingUser;
         }

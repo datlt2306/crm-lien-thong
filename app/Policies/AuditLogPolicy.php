@@ -12,7 +12,7 @@ class AuditLogPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['super_admin', 'admin', 'accountant', 'admissions', 'document', 'ctv']);
+        return in_array($user->role, ['super_admin', 'admin', 'accountant', 'admissions', 'document', 'collaborator']);
     }
 
     /**
@@ -24,7 +24,7 @@ class AuditLogPolicy
             return true;
         }
 
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             $collab = $user->collaborator;
             return $collab && $auditLog->student_id && $auditLog->student->collaborator_id === $collab->id;
         }

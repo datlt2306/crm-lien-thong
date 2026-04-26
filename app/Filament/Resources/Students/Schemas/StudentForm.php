@@ -33,21 +33,20 @@ class StudentForm {
         return $schema
             ->columns(12)
             ->schema([
+                \Filament\Schemas\Components\View::make('filament.components.auto-save-student')
+                    ->viewData(fn(?Student $record) => [
+                        'recordId' => $record?->id,
+                    ])
+                    ->columnSpanFull(),
+
                 // Left section: 8 columns - các tab thông tin & upload giấy tờ
                 Tabs::make('StudentInformation')
-                    ->columnSpan(fn() => Auth::user()?->role === 'ctv' ? 12 : 9)
+                    ->columnSpan(fn() => Auth::user()?->role === 'collaborator' ? 12 : 9)
                     ->tabs([
                         // Tab 1: Thông tin cơ bản
                         Tabs\Tab::make('Thông tin cơ bản')
                             ->icon('heroicon-o-identification')
                             ->schema([
-                                TextInput::make('audit_reason')
-                                    ->label('Lý do chỉnh sửa')
-                                    ->placeholder('Nhập lý do thay đổi thông tin (bắt buộc để lưu Nhật ký)')
-                                    ->required(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\EditRecord)
-                                    ->columnSpanFull()
-                                    ->helperText('Lý do này sẽ được lưu vào Nhật ký hệ thống để đối soát.')
-                                    ->visible(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\EditRecord),
                                 TextInput::make('profile_code')
                                     ->label('Mã hồ sơ')
                                     ->disabled()
@@ -57,48 +56,34 @@ class StudentForm {
                                 TextInput::make('full_name')
                                     ->label('Họ và tên')
                                     ->required(),
-                                TextInput::make('instructor')
+                                \Filament\Forms\Components\Select::make('collaborator_id')
                                     ->label('Người giới thiệu')
-                                    ->default(function (?Student $record) {
+                                    ->relationship('collaborator', 'full_name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->default(function () {
                                         $user = Auth::user();
-
-                                        // Nếu đang edit và đã có instructor, giữ nguyên
-                                        if ($record && $record->instructor) {
-                                            return $record->instructor;
-                                        }
-
-                                        // Nếu user là CTV hoặc organization_owner, lấy từ collaborator
-                                        if ($user && in_array($user->role, ['ctv', ])) {
+                                        if ($user && $user->role === 'collaborator') {
                                             $collaborator = Collaborator::where('email', $user->email)->first();
-                                            if ($collaborator && !empty($collaborator->full_name)) {
-                                                return $collaborator->full_name;
-                                            }
+                                            return $collaborator?->id;
                                         }
-
-                                        // Fallback về user name
-                                        return $user?->name ?? '';
+                                        return null;
                                     })
-                                    ->afterStateHydrated(function (TextInput $component, $state, ?Student $record) {
-                                        // Nếu edit và instructor rỗng nhưng có collaborator_id thì hiển thị tên collab
-                                        if (empty($state) && $record && $record->collaborator) {
-                                            $component->state($record->collaborator->full_name);
-                                        }
-                                        // Nếu state rỗng và đang tạo mới, tự động điền từ collaborator
-                                        elseif (empty($state) && !$record) {
-                                            $user = Auth::user();
-                                            if ($user && in_array($user->role, ['ctv', ])) {
-                                                $collaborator = Collaborator::where('email', $user->email)->first();
-                                                if ($collaborator && !empty($collaborator->full_name)) {
-                                                    $component->state($collaborator->full_name);
-                                                } elseif ($user->name) {
-                                                    $component->state($user->name);
-                                                }
-                                            } elseif ($user && $user->name) {
-                                                $component->state($user->name);
-                                            }
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        if ($state) {
+                                            $collaborator = Collaborator::find($state);
+                                            $set('instructor', $collaborator?->full_name);
+                                        } else {
+                                            $set('instructor', null);
                                         }
                                     })
-                                    ->maxLength(255),
+                                    ->afterStateHydrated(function ($state, $set, ?Student $record) {
+                                        if (!$state && $record && $record->collaborator_id) {
+                                            $set('collaborator_id', $record->collaborator_id);
+                                        }
+                                    }),
+                                \Filament\Forms\Components\Hidden::make('instructor'),
                                 TextInput::make('phone')
                                     ->label('Số điện thoại')
                                     ->tel()
@@ -246,7 +231,7 @@ class StudentForm {
                                         return null;
                                     })
                                     ->helperText('Chọn tình trạng chi tiết của hồ sơ')
-                                    ->visible(fn() => Auth::user()?->role !== 'ctv'),
+                                    ->visible(fn() => Auth::user()?->role !== 'collaborator'),
                                 \Filament\Forms\Components\Textarea::make('address')
                                     ->label('Địa chỉ')
                                     ->rows(3)
@@ -254,12 +239,14 @@ class StudentForm {
                                 \Filament\Forms\Components\Placeholder::make('fee_display')
                                     ->label('Lệ phí (VNĐ)')
                                     ->content(function (?Student $record) {
-                                        // Ưu tiên lấy từ payment->amount
                                         $amount = 0;
-                                        if ($record?->payment && $record->payment->amount) {
+                                        
+                                        if ($record?->payment && $record->payment->amount > 0) {
                                             $amount = (float) $record->payment->amount;
-                                        } elseif ($record?->fee) {
-                                            $amount = (float) $record->fee;
+                                        } else {
+                                            // Fallback: Lấy số tiền dự kiến từ StudentFeeService
+                                            $feeService = app(\App\Services\StudentFeeService::class);
+                                            $amount = $feeService->getExpectedFeeForStudent($record) ?? 0;
                                         }
 
                                         $amountFormatted = $amount > 0 ? number_format((int) round($amount), 0, '', '.') . ' VNĐ' : 'Chưa có thông tin';
@@ -294,7 +281,7 @@ class StudentForm {
                                         ");
                                     })
                                     ->helperText('Tiền lệ phí được quản lý thông qua luồng Tài chính, không thể chỉnh sửa trực tiếp tại đây.')
-                                    ->visible(fn() => Auth::user()?->role !== 'ctv'),
+                                    ->visible(fn() => Auth::user()?->role !== 'collaborator'),
                                 Textarea::make('notes')
                                     ->label('Ghi chú')
                                     ->columnSpanFull(),
@@ -304,7 +291,7 @@ class StudentForm {
                         // Tab 2: Thông tin cá nhân
                         Tabs\Tab::make('Thông tin cá nhân')
                             ->icon('heroicon-o-user')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->schema([
                                 \Filament\Forms\Components\DatePicker::make('dob')
                                     ->label('Ngày sinh')
@@ -350,7 +337,7 @@ class StudentForm {
                         // Tab 3: Thông tin THPT
                         Tabs\Tab::make('Thông tin THPT')
                             ->icon('heroicon-o-academic-cap')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->schema([
                                 TextInput::make('high_school_name')
                                     ->label('Tên trường THPT')
@@ -401,7 +388,7 @@ class StudentForm {
                         // Tab 4: Thông tin văn bằng Cao đẳng
                         Tabs\Tab::make('Thông tin văn bằng Cao đẳng')
                             ->icon('heroicon-o-document-text')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->schema([
                                 TextInput::make('college_graduation_school')
                                     ->label('Trường tốt nghiệp CĐ')
@@ -457,7 +444,7 @@ class StudentForm {
                         // Tab 5: Thông tin văn bằng Trung cấp
                         Tabs\Tab::make('Thông tin văn bằng Trung cấp')
                             ->icon('heroicon-o-document')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->schema([
                                 TextInput::make('intermediate_graduation_school')
                                     ->label('Trường tốt nghiệp TC')
@@ -513,7 +500,7 @@ class StudentForm {
                         // Tab 6: Giấy tờ (link file + loại BS/BG)
                         Tabs\Tab::make('Giấy tờ')
                             ->icon('heroicon-o-paper-clip')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->schema([
                                 TextInput::make('document_identity_card_front')
                                     ->label('File CCCD (mặt trước)')
@@ -590,11 +577,11 @@ class StudentForm {
                 // Right section: 4 columns - checklist hồ sơ nhập học
                 Tabs::make('StudentChecklist')
                     ->columnSpan(3)
-                    ->visible(fn() => Auth::user()?->role !== 'ctv')
+                    ->visible(fn() => Auth::user()?->role !== 'collaborator')
                     ->tabs([
                         Tabs\Tab::make('Checklist hồ sơ nhập học')
                             ->icon('heroicon-o-check-circle')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->schema([
                                 \Filament\Forms\Components\CheckboxList::make('document_checklist')
                                     ->label('Danh sách giấy tờ')
@@ -617,7 +604,7 @@ class StudentForm {
                             ]),
                         Tabs\Tab::make('Lịch sử chỉnh sửa')
                             ->icon('heroicon-o-clock')
-                            ->visible(fn() => Auth::user()?->role !== 'ctv')
+                            ->visible(fn() => Auth::user()?->role !== 'collaborator')
                             ->columns(12)
                             ->schema([
                                 \Filament\Forms\Components\DatePicker::make('history_date_from')

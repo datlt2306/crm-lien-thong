@@ -14,7 +14,7 @@ class CommissionSummary extends BaseWidget {
         $query = CommissionItem::query();
 
         // Nếu là CTV, chỉ thống kê tiền của chính mình
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
                 $query->where('recipient_collaborator_id', $collaborator->id);

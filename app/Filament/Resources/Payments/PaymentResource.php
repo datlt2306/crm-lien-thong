@@ -65,7 +65,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn(): bool => Auth::user()->can('payment_view_any') && Auth::user()->role !== 'ctv')
+                    ->visible(fn(): bool => Auth::user()->can('payment_view_any') && Auth::user()->role !== 'collaborator')
                     ->formatStateUsing(function ($record) {
                         $studentCtv = $record->student->collaborator;
                         return $studentCtv ? $studentCtv->full_name : '—';
@@ -74,7 +74,7 @@ class PaymentResource extends Resource {
                     ->label('Cộng tác viên')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn(): bool => Auth::user()->role === 'ctv'),
+                    ->visible(fn(): bool => Auth::user()->role === 'collaborator'),
 
                 \Filament\Tables\Columns\TextColumn::make('program_type')
                     ->label('Hệ đào tạo')
@@ -483,7 +483,7 @@ class PaymentResource extends Resource {
         }
 
         // CTV thấy payments của mình
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
                 return $query->whereIn('student_id', function ($q) use ($collaborator) {
@@ -506,7 +506,7 @@ class PaymentResource extends Resource {
             return false;
         }
 
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if (!$collaborator) {
                 return false;
@@ -529,7 +529,7 @@ class PaymentResource extends Resource {
             return false;
         }
 
-        if ($user->hasRole('ctv')) {
+        if ($user->hasRole('collaborator')) {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if (!$collaborator) {
                 return false;

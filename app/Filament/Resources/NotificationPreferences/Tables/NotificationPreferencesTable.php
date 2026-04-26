@@ -31,13 +31,13 @@ class NotificationPreferencesTable {
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'super_admin' => 'Super Admin',
 
-                        'ctv' => 'CTV',
+                        'collaborator' => 'Cộng tác viên',
                         'accountant' => 'Kế toán',
                         default => $state,
                     })
                     ->colors([
                         'danger' => 'super_admin',
-                        'success' => 'ctv',
+                        'success' => 'collaborator',
                         'info' => 'accountant',
                     ]),
 
@@ -65,7 +65,7 @@ class NotificationPreferencesTable {
                     ->options([
                         'super_admin' => 'Super Admin',
 
-                        'ctv' => 'CTV',
+                        'collaborator' => 'Cộng tác viên',
                         'accountant' => 'Kế toán',
                     ]),
             ])

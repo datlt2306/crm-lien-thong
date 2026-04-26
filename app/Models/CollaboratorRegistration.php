@@ -107,7 +107,7 @@ class CollaboratorRegistration extends Model {
                         'email' => $this->email,
                         'phone' => $this->phone,
                         'password' => $this->password, // Đã hash trước lúc lưu
-                        'role' => 'ctv',
+                        'role' => 'collaborator',
                     ]);
                 }
             }

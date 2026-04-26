@@ -106,7 +106,7 @@ class StudentApiController extends Controller {
 
 
         // CTV chỉ thấy student của chính mình (hệ thống chỉ còn 1 cấp CTV)
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
                 return $query->where('collaborator_id', $collaborator->id);

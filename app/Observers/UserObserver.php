@@ -14,7 +14,7 @@ class UserObserver {
         
 
         // 2. Tạo Collaborator record chỉ cho CTV
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             $this->createCollaboratorRecord($user);
         }
 
@@ -50,7 +50,7 @@ class UserObserver {
                     $user->syncRoles([]);
                 }
             }
-        } elseif ($newRole === 'ctv') {
+        } elseif ($newRole === 'collaborator') {
             // Nếu người này là CTV và role không đổi, update thông tin (tên, sđt, tổ chức)
             $collaborator = Collaborator::where('email', $user->email)->first();
             if ($collaborator) {
@@ -106,12 +106,12 @@ class UserObserver {
 
         if ($collaborator) {
             // Nếu chuyển từ role ctv sang role khác
-            if ($oldRole === 'ctv' && $newRole !== 'ctv') {
+            if ($oldRole === 'collaborator' && $newRole !== 'collaborator') {
                 $collaborator->delete();
             }
         } else {
             // Nếu chuyển sang role ctv (không tạo cho organization_owner)
-            if ($newRole === 'ctv') {
+            if ($newRole === 'collaborator') {
                 $this->createCollaboratorRecord($user);
             }
         }

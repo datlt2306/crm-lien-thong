@@ -36,8 +36,8 @@ return new class extends Migration {
         // 6. Xóa collaborators
         DB::table('collaborators')->delete();
 
-        // 7. Xóa users có role 'ctv' (cộng tác viên)
-        DB::table('users')->where('role', 'ctv')->delete();
+        // 7. Xóa users có role 'collaborator' (cộng tác viên)
+        DB::table('users')->where('role', 'collaborator')->delete();
 
         // 8. Xóa commissions trống
         DB::table('commissions')->delete();

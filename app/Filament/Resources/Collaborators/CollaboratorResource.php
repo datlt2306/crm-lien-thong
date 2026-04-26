@@ -102,7 +102,7 @@ class CollaboratorResource extends Resource {
         }
 
 
-        if ($user->role === 'ctv') {
+        if ($user->role === 'collaborator') {
             return null; // CTV không thấy menu nên không cần tooltip
         }
 
