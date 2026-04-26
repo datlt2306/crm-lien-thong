@@ -32,35 +32,21 @@ class CollaboratorRevenueChart extends ChartWidget {
         [$from, $to] = $this->getRangeBounds($filters);
         $tz = DashboardCacheService::getTimezone();
 
-        // Tổng doanh thu hoa hồng theo mọi cấp CTV dựa trên CommissionItem.recipient_collaborator_id
-        $itemsQuery = CommissionItem::query()
-            ->with(['recipient', 'commission.payment'])
-            ->whereHas('commission.payment', function ($q) use ($filters) {
-                $this->applyFilters($q, $filters, 'verified_at')
-                    ->whereNotNull('verified_at')
-                    ->where('status', Payment::STATUS_VERIFIED);
-            });
-
-        $items = $itemsQuery->get(['recipient_collaborator_id', 'amount']);
-
-        // Fallback toàn thời gian nếu RANGE trống
-        if ($items->isEmpty()) {
-            $items = CommissionItem::query()
-                ->with(['recipient', 'commission.payment'])
-                ->whereHas('commission.payment', function ($q) use ($filters) {
-                    $q->whereNotNull('verified_at')
-                        ->where('status', Payment::STATUS_VERIFIED);
-                    if (!empty($filters['program_type'])) {
-                        $q->where('program_type', $filters['program_type']);
-                    }
-                })
-                ->get(['recipient_collaborator_id', 'amount']);
-        }
+        // Tổng doanh thu thực tế từ học viên (Payment) được gán cho CTV
+        $payments = Payment::query()
+            ->with(['primaryCollaborator'])
+            ->where('status', Payment::STATUS_VERIFIED)
+            ->whereNotNull('verified_at')
+            ->whereNotNull('primary_collaborator_id')
+            ->when(!empty($filters['program_type']), function ($q) use ($filters) {
+                $q->where('program_type', $filters['program_type']);
+            })
+            ->get(['primary_collaborator_id', 'amount']);
 
         $sumByCollaborator = [];
-        foreach ($items as $it) {
-            $name = optional($it->recipient)->full_name ?? 'Khác';
-            $sumByCollaborator[$name] = ($sumByCollaborator[$name] ?? 0) + (float) $it->amount;
+        foreach ($payments as $p) {
+            $name = $p->primaryCollaborator->full_name ?? 'Khác';
+            $sumByCollaborator[$name] = ($sumByCollaborator[$name] ?? 0) + (float) $p->amount;
         }
 
         // Sắp xếp giảm dần và lấy top 10, gộp phần còn lại thành "Khác" nếu cần
