@@ -147,7 +147,7 @@ class ProfilePage extends Page {
                         ->helperText('Dùng để bạn nhận báo cáo tổng hợp và thông báo từ hệ thống.'),
                 ]),
 
-            Section::make('👥 Quản lý nguồn Proxy (CTV Phụ)')
+            Section::make('👥 Quản lý nguồn CTV Phụ')
                 ->description('Tạo thêm mã giới thiệu cho đàn em. Tiền về túi bạn, tin nhắn báo về Telegram đàn em.')
                 ->icon('heroicon-o-users')
                 ->visible(fn () => Auth::user()->collaborator !== null)
@@ -165,7 +165,7 @@ class ProfilePage extends Page {
                                 ->dehydrated()
                                 ->default(fn() => strtoupper(Str::random(5))),
                             TextInput::make('telegram_chat_id')
-                                ->label('ID Telegram đàn em')
+                                ->label('ID Telegram')
                                 ->nullable(),
                         ])
                         ->columns(3)
@@ -180,7 +180,7 @@ class ProfilePage extends Page {
                         ->compact()
                         ->schema([
                             Toggle::make('notifications.telegram_student_registered')->label('Sinh viên đăng ký mới'),
-                            Toggle::make('notifications.telegram_payment_bill_uploaded')->label('Sinh viên nộp hóa đơn'),
+                            Toggle::make('notifications.telegram_payment_bill_uploaded')->label('Minh chứng chuyển khoản'),
                             Toggle::make('notifications.telegram_payment_verified')->label('Thanh toán xác nhận'),
                             Toggle::make('notifications.telegram_payment_rejected')->label('Thanh toán bị từ chối'),
                             Toggle::make('notifications.telegram_commission_earned')->label('Nhận hoa hồng mới'),

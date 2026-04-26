@@ -45,7 +45,6 @@ class PermissionSeeder extends Seeder {
             'commission_calculate',
             'commission_update',
             'commission_payout',
-            'commission_view_team',
 
             // User & Personnel
             'user_view_any',

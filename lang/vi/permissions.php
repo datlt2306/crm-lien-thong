@@ -33,7 +33,6 @@ return [
     'commission_calculate' => 'Tính toán hoa hồng tự động',
     'commission_update' => 'Điều chỉnh mức hoa hồng',
     'commission_payout' => 'Xác nhận chi trả hoa hồng',
-    'commission_view_team' => 'Xem hoa hồng của đội nhóm',
 
     // Nhân sự hệ thống
     'user_view_any' => 'Xem danh sách nhân sự',

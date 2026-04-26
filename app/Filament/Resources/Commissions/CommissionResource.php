@@ -111,27 +111,16 @@ class CommissionResource extends Resource {
                         default => 'gray'
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('items')
-                    ->label('Phân bổ hoa hồng (CTV - Số tiền - Trạng thái)')
-                    ->state(function (Commission $record) {
-                        return $record->items->map(function ($item) {
-                            $statusLabel = match ($item->status) {
-                                CommissionItem::STATUS_PAID, CommissionItem::STATUS_RECEIVED_CONFIRMED => '✅',
-                                CommissionItem::STATUS_PAYMENT_CONFIRMED => '🏦',
-                                CommissionItem::STATUS_PAYABLE => '⏳',
-                                CommissionItem::STATUS_CANCELLED => '❌',
-                                default => '💤',
-                            };
-                            return "• {$item->recipient->full_name}: " . number_format($item->amount, 0, ',', '.') . " {$statusLabel}";
-                        })->implode("\n");
-                    })
-                    ->listWithLineBreaks()
+                \Filament\Tables\Columns\TextColumn::make('payment.amount')
+                    ->label('SV đóng phí')
+                    ->money('VND')
+                    ->sortable()
                     ->visible(fn(): bool => !$isCtv),
-
+                
                 \Filament\Tables\Columns\TextColumn::make('recipient_ctv')
                     ->label('Hoa hồng của tôi')
                     ->state(function (Commission $record) use ($user) {
-                        $collab = Collaborator::where('email', $user->email)->first();
+                        $collab = \App\Models\Collaborator::where('email', $user->email)->first();
                         if (!$collab) return '—';
                         $item = $record->items->where('recipient_collaborator_id', $collab->id)->first();
                         if (!$item) return '—';
@@ -140,9 +129,26 @@ class CommissionResource extends Resource {
                     ->visible(fn(): bool => $isCtv),
 
                 \Filament\Tables\Columns\TextColumn::make('total_amount')
-                    ->label('Tổng hoa hồng hồ sơ')
-                    ->state(fn(Commission $record) => $record->items->sum('amount'))
+                    ->label('Tổng & Chi trả')
+                    ->state(function (Commission $record) {
+                        $items = $record->items->where('status', '!=', \App\Models\CommissionItem::STATUS_CANCELLED);
+                        return $items->sum('amount');
+                    })
                     ->money('VND')
+                    ->description(function (Commission $record) {
+                        $items = $record->items->where('status', '!=', \App\Models\CommissionItem::STATUS_CANCELLED);
+                        $total = $items->sum('amount');
+                        $paid = $items->whereIn('status', [
+                            \App\Models\CommissionItem::STATUS_PAID,
+                            \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                            \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED
+                        ])->sum('amount');
+                        $remaining = $total - $paid;
+
+                        if ($paid == 0) return "Chưa chi trả";
+                        
+                        return "Đã chi: " . number_format($paid, 0, ',', '.') . " | Còn lại: " . number_format($remaining, 0, ',', '.');
+                    })
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv),
 

@@ -101,7 +101,7 @@ class UserForm {
                                 Toggle::make('telegram_student_registered')
                                     ->label('Sinh viên đăng ký mới'),
                                 Toggle::make('telegram_payment_bill_uploaded')
-                                    ->label('Sinh viên nộp hóa đơn mới'),
+                                    ->label('Minh chứng chuyển khoản mới'),
                                 Toggle::make('telegram_payment_verified')
                                     ->label('Thanh toán được xác nhận'),
                                 Toggle::make('telegram_payment_rejected')
@@ -117,7 +117,7 @@ class UserForm {
                                 Toggle::make('email_student_registered')
                                     ->label('Sinh viên đăng ký mới'),
                                 Toggle::make('email_payment_bill_uploaded')
-                                    ->label('Sinh viên nộp hóa đơn mới'),
+                                    ->label('Minh chứng chuyển khoản mới'),
                                 Toggle::make('email_payment_verified')
                                     ->label('Thanh toán được xác nhận'),
                                 Toggle::make('email_payment_rejected')

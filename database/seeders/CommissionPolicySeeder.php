@@ -28,10 +28,12 @@ class CommissionPolicySeeder extends Seeder {
                     ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh']
                 ],
                 'PART_TIME' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 2850000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh (Gộp)']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
                 ],
                 'DISTANCE' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 2300000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh (Gộp)']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
                 ]
             ],
             'trigger' => 'ON_VERIFICATION',
