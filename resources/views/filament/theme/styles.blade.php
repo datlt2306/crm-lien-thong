@@ -95,7 +95,6 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-size: 0.65rem !important;
-        margin-top: 1rem !important;
     }
 
     html:not(.dark) .fi-sidebar-item-icon {
@@ -119,5 +118,32 @@
 
     .fi-sidebar-nav::-webkit-scrollbar {
         display: none !important; /* Chrome, Safari and Opera */
+    }
+
+    /* Reduce sidebar group spacing */
+    .fi-sidebar-group {
+        margin-top: 0.25rem !important;
+    }
+
+    .fi-sidebar-nav-groups {
+        row-gap: 0.25rem;
+    }
+
+    .fi-sidebar-group-label {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.25rem !important;
+    }
+
+    /* Custom group label style for better visibility in dark mode too */
+    .fi-sidebar-group-label {
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        font-size: 0.7rem !important;
+        color: rgba(var(--gray-400), 1) !important;
+    }
+
+    .dark .fi-sidebar-group-label {
+        color: rgba(var(--gray-500), 1) !important;
     }
 </style>

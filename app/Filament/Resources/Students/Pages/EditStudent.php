@@ -117,7 +117,7 @@ class EditStudent extends EditRecord {
                             'student_id' => $record->id,
                             'primary_collaborator_id' => $record->collaborator_id,
                             'primary_collaborator_id' => $record->collaborator_id,
-                            'program_type' => $record->program_type ?? 'REGULAR',
+                            'program_type' => $record->program_type ?? 'regular',
                             'amount' => $amount,
                             'status' => Payment::STATUS_SUBMITTED,
                             'receipt_uploaded_by' => Auth::id(),
@@ -182,8 +182,8 @@ class EditStudent extends EditRecord {
                     \Filament\Forms\Components\Select::make('program_type')
                         ->label('Hệ liên thông')
                         ->options([
-                            'REGULAR' => 'Chính quy',
-                            'PART_TIME' => 'Vừa học vừa làm',
+                            'regular' => 'Chính quy',
+                            'part_time' => 'Vừa học vừa làm',
                         ])
                         ->required()
                         ->helperText('Chọn hệ liên thông của sinh viên'),
@@ -262,7 +262,7 @@ class EditStudent extends EditRecord {
                 ->label('Xem Phiếu Thu')
                 ->icon('heroicon-o-document-check')
                 ->color('success')
-                ->modalHeading('Phiếu thu từ Helen')
+                ->modalHeading('Phiếu thu')
                 ->modalContent(function () use ($record) {
                     if (!$record->payment || !$record->payment->receipt_path) {
                         return view('components.no-content', [
@@ -356,7 +356,7 @@ class EditStudent extends EditRecord {
                     \Filament\Forms\Components\TextInput::make('receipt_number')
                         ->label('Số phiếu thu')
                         ->required()
-                        ->helperText('Nhập số phiếu thu từ Helen'),
+                        ->helperText('Nhập số phiếu thu'),
                     \Filament\Forms\Components\FileUpload::make('receipt')
                         ->label('File phiếu thu')
                         ->acceptedFileTypes(['image/*', 'application/pdf'])
@@ -364,7 +364,7 @@ class EditStudent extends EditRecord {
                         ->disk('google')
                         ->directory('receipts')
                         ->required()
-                        ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
+                        ->helperText('Upload phiếu thu (JPG, PNG, PDF, tối đa 5MB)'),
                 ])
                 ->visible(function () use ($record): bool {
                     $user = Auth::user();
@@ -486,9 +486,9 @@ class EditStudent extends EditRecord {
                 ->outlined()
                 ->url(fn(): string => $this->getResource()::getUrl('index')),
             DeleteAction::make()
-                ->label('Xóa học viên')
+                ->label('Xóa học viên (BẢN MỚI)')
                 ->modalHeading('Xóa học viên')
-                ->modalDescription('Chỉ super admin được xóa. Hệ thống sẽ xóa mềm (có thể khôi phục).')
+                ->modalDescription('Hệ thống sẽ xóa mềm (chuyển vào Thùng rác).')
                 ->modalSubmitActionLabel('Xóa')
                 ->modalCancelActionLabel('Hủy')
                 ->visible(function () {

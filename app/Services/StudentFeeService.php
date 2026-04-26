@@ -16,12 +16,12 @@ class StudentFeeService {
      */
     public function getExpectedFeeForStudent(Student $student): ?float {
         // Mặc định theo yêu cầu
-        $programType = strtoupper((string) ($student->program_type ?? ''));
+        $programType = strtolower((string) ($student->program_type ?? ''));
         
         $defaultFees = [
-            'REGULAR' => 1750000,   // Chính Quy
-            'PART_TIME' => 750000,  // VHVL
-            'DISTANCE' => 200000,   // Đào tạo từ xa
+            Student::PROGRAM_REGULAR => 1750000,   // Chính Quy
+            Student::PROGRAM_PART_TIME => 750000,  // VHVL
+            Student::PROGRAM_DISTANCE => 200000,   // Đào tạo từ xa
         ];
 
         if (isset($defaultFees[$programType])) {

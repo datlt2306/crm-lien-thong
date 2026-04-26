@@ -17,7 +17,7 @@ use Filament\Tables\Table;
 class QuotaResource extends Resource {
     protected static ?string $model = Quota::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
+    protected static string|BackedEnum|null $navigationIcon = null;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Đợt tuyển & Chỉ tiêu';
     protected static ?int $navigationSort = 4;

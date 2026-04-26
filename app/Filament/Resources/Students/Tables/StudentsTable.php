@@ -3,16 +3,20 @@
 namespace App\Filament\Resources\Students\Tables;
 
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use App\Models\Payment;
 use App\Models\Commission;
 use App\Models\Collaborator;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -52,14 +56,6 @@ class StudentsTable {
                     ->label('Mã hồ sơ')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(),
-                Tables\Columns\IconColumn::make('is_active')
-                    ->label('Hoạt động')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('gray')
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('has_transferred')
                     ->label('Chuyển hệ')
@@ -133,22 +129,22 @@ class StudentsTable {
                 TextColumn::make('program_type')
                     ->label('Hệ tuyển sinh')
                     ->formatStateUsing(fn($state) => match ($state) {
-                        'REGULAR' => '🎓 Chính quy',
-                        'PART_TIME' => '⏰ Vừa học vừa làm',
-                        'DISTANCE' => '💻 Đào tạo từ xa',
+                        'regular' => '🎓 Chính quy',
+                        'part_time' => '⏰ Vừa học vừa làm',
+                        'distance' => '💻 Đào tạo từ xa',
                         default => '—'
                     })
                     ->badge()
                     ->color(fn($state) => match ($state) {
-                        'REGULAR' => 'success',      // Xanh lá rõ ràng
-                        'PART_TIME' => 'info',       // Xanh dương rõ ràng
-                        'DISTANCE' => 'warning',     // Cam/Vàng rõ ràng
+                        'regular' => 'success',      // Xanh lá rõ ràng
+                        'part_time' => 'info',       // Xanh dương rõ ràng
+                        'distance' => 'warning',     // Cam/Vàng rõ ràng
                         default => 'gray'
                     })
                     ->tooltip(fn($state) => match ($state) {
-                        'REGULAR' => '🎓 Hệ đào tạo chính quy, học tập toàn thời gian',
-                        'PART_TIME' => '⏰ Hệ vừa học vừa làm, linh hoạt thời gian',
-                        'DISTANCE' => '💻 Hệ đào tạo từ xa, học trực tuyến linh hoạt',
+                        'regular' => '🎓 Hệ đào tạo chính quy, học tập toàn thời gian',
+                        'part_time' => '⏰ Hệ vừa học vừa làm, linh hoạt thời gian',
+                        'distance' => '💻 Hệ đào tạo từ xa, học trực tuyến linh hoạt',
                         default => ''
                     })
                     ->sortable()
@@ -387,8 +383,8 @@ class StudentsTable {
                 \Filament\Tables\Filters\SelectFilter::make('program_type')
                     ->label('Hệ đào tạo')
                     ->options([
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'Vừa học vừa làm',
+                        'regular' => 'Chính quy',
+                        'part_time' => 'Vừa học vừa làm',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         if (!isset($data['value']) || $data['value'] === '') {
@@ -498,9 +494,9 @@ class StudentsTable {
                                     $ext = $file->getClientOriginalExtension();
                                     
                                     $systemCode = match (strtoupper((string)$record->program_type)) {
-                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
-                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                        'DISTANCE', 'TỪ XA' => 'TX',
+                                        'regular', 'CHÍNH QUY' => 'CQ',
+                                        'part_time', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                        'distance', 'TỪ XA' => 'TX',
                                         default => $record->program_type
                                     };
 
@@ -555,7 +551,7 @@ class StudentsTable {
                                 \App\Models\Payment::create([
                                     'student_id' => $record->id,
                                     'primary_collaborator_id' => $record->collaborator_id,
-                                    'program_type' => $record->program_type ?? 'REGULAR',
+                                    'program_type' => $record->program_type ?? 'regular',
                                     'amount' => $amount,
                                     'status' => Payment::STATUS_SUBMITTED,
                                     'bill_path' => $billPath,
@@ -677,9 +673,9 @@ class StudentsTable {
                                     $ext = $file->getClientOriginalExtension();
                                     
                                     $systemCode = match (strtoupper((string)$record->program_type)) {
-                                        'REGULAR', 'CHÍNH QUY' => 'CQ',
-                                        'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                        'DISTANCE', 'TỪ XA' => 'TX',
+                                        'regular', 'CHÍNH QUY' => 'CQ',
+                                        'part_time', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                        'distance', 'TỪ XA' => 'TX',
                                         default => $record->program_type
                                     };
 
@@ -717,7 +713,7 @@ class StudentsTable {
                                 $payment = \App\Models\Payment::create([
                                     'student_id' => $record->id,
                                     'primary_collaborator_id' => $record->collaborator_id,
-                                    'program_type' => $record->program_type ?? 'REGULAR',
+                                    'program_type' => $record->program_type ?? 'regular',
                                     'amount' => $amount,
                                     'status' => Payment::STATUS_NOT_PAID, // Sẽ update ngay sau đây
                                 ]);
@@ -772,9 +768,9 @@ class StudentsTable {
                                         $ext = $file->getClientOriginalExtension();
                                         
                                         $systemCode = match (strtoupper((string)$record->program_type)) {
-                                            'REGULAR', 'CHÍNH QUY' => 'CQ',
-                                            'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                            'DISTANCE', 'TỪ XA' => 'TX',
+                                            'regular', 'CHÍNH QUY' => 'CQ',
+                                            'part_time', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                            'distance', 'TỪ XA' => 'TX',
                                             default => $record->program_type
                                         };
 
@@ -891,9 +887,9 @@ class StudentsTable {
                                     $options = [];
                                     foreach ($quotas as $q) {
                                         $label = match($q->program_name) {
-                                            'REGULAR' => 'Chính quy',
-                                            'PART_TIME' => 'Vừa học vừa làm',
-                                            'DISTANCE' => 'Đào tạo từ xa',
+                                            'regular' => 'Chính quy',
+                                            'part_time' => 'Vừa học vừa làm',
+                                            'distance' => 'Đào tạo từ xa',
                                             default => $q->program_name
                                         };
 
@@ -1068,80 +1064,28 @@ class StudentsTable {
                                    $record->payment->excess_amount > 0 && 
                                    $record->payment->refund_status === 'pending';
                         }),
-                    Action::make('toggle_active')
-                        ->label(fn($record) => $record->is_active ? 'Ngưng hoạt động' : 'Kích hoạt lại')
-                        ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
-                        ->color(fn($record) => $record->is_active ? 'danger' : 'success')
-                        ->action(fn($record) => $record->update(['is_active' => !$record->is_active]))
-                        ->requiresConfirmation()
-                        ->visible(function (Student $record) {
-                            $user = Auth::user();
-                            if (!$user || !$user->can('student_change_status')) return false;
 
-                            // Đối với CTV (hoặc người chỉ có quyền cơ bản): Chỉ được ngưng hoạt động khi CHƯA nộp tiền
-                            if ($user->role === 'collaborator') {
-                                $canToggle = !$record->payment || $record->payment->status === \App\Models\Payment::STATUS_NOT_PAID;
-                                return $canToggle;
-                            }
 
-                            return true;
-                        }),
+                    RestoreAction::make()
+                        ->label('Khôi phục')
+                        ->color('success'),
 
-                    Action::make('force_delete_inactive')
+                    ForceDeleteAction::make()
                         ->label('Xóa vĩnh viễn')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
-                        ->requiresConfirmation()
                         ->modalHeading('Xóa vĩnh viễn học viên')
-                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
-                        ->action(fn($record) => $record->forceDelete())
-                        ->visible(function (Student $record) {
-                            $user = Auth::user();
-                            if ($record->is_active || !$user->can('student_force_delete')) return false;
-
-                            return true;
-                        }),
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống. Bạn chắc chắn chứ?'),
 
                     DeleteAction::make()
-                        ->label('Xóa')
+                        ->label('Xóa (BẢN MỚI)')
                         ->modalHeading('Xóa học viên')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Nếu học viên đã có dữ liệu tài chính, hệ thống sẽ tự động chuyển sang trạng thái Ngừng hoạt động.')
-                        ->modalSubmitActionLabel('Xóa/Vô hiệu hóa')
-                        ->visible(function (Student $record) {
-                            $user = Auth::user();
-                            return $user->can('student_delete');
-                        })
-                        ->action(function ($record) {
-                            // Kiểm tra dữ liệu tài chính
-                            $hasFinancialData = Payment::where('student_id', $record->id)->exists() || 
-                                              Commission::where('student_id', $record->id)->exists();
-
-                            if ($hasFinancialData) {
-                                // Nếu có dữ liệu tài chính -> Chỉ vô hiệu hóa
-                                $record->update(['is_active' => false]);
-                                
-                                Notification::make()
-                                    ->title('Đã chuyển sang Ngừng hoạt động')
-                                    ->body("Học viên {$record->full_name} đã có dữ liệu tài chính nên không thể xóa vĩnh viễn. Hệ thống đã tự động chuyển trạng thái.")
-                                    ->warning()
-                                    ->send();
-                            } else {
-                                // Nếu không có dữ liệu -> Xóa cứng
-                                $record->delete();
-                                
-                                Notification::make()
-                                    ->title('Đã xóa vĩnh viễn')
-                                    ->success()
-                                    ->send();
-                            }
-                        }),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Hồ sơ sẽ được chuyển vào Thùng rác và có thể khôi phục sau.')
+                        ->visible(fn(Student $record) => Auth::user()->can('student_delete') && !$record->trashed()),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
                     ->color('gray')
                     ->button()
                     ->size('sm')
-                    ->tooltip('Các hành động khả dụng')
             ])
             ->toolbarActions([
                 Action::make('export_excel')
@@ -1150,43 +1094,18 @@ class StudentsTable {
                     ->color('success')
                     ->visible(fn() => Auth::user()->can('student_export'))
                     ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
-                        // Lấy query đã áp dụng filter và search từ bảng hiện tại thay vì lấy full
                         $query = $livewire->getFilteredTableQuery();
                         $query->with(['payment']);
-
                         $filename = 'danh_sach_hoc_vien_' . date('Y-m-d_His') . '.xlsx';
                         return Excel::download(new StudentsExcelExport($query), $filename);
                     }),
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa học viên đã chọn')
-                        ->modalDescription('Các học viên đã có dữ liệu tài chính sẽ được tự động chuyển sang trạng thái Ngừng hoạt động thay vì xóa vĩnh viễn.')
-                        ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->visible(fn() => Auth::user()->can('student_delete'))
-                        ->action(function ($records) {
-                            $deletedCount = 0;
-                            $deactivatedCount = 0;
-
-                            foreach ($records as $record) {
-                                $hasFinancialData = Payment::where('student_id', $record->id)->exists() || 
-                                                  Commission::where('student_id', $record->id)->exists();
-
-                                if ($hasFinancialData) {
-                                    $record->update(['is_active' => false]);
-                                    $deactivatedCount++;
-                                } else {
-                                    $record->delete();
-                                    $deletedCount++;
-                                }
-                            }
-
-                            Notification::make()
-                                ->title('Xử lý hoàn tất')
-                                ->body("Đã xóa vĩnh viễn $deletedCount mục và chuyển Ngừng hoạt động $deactivatedCount mục có dữ liệu tài chính.")
-                                ->success()
-                                ->send();
-                        }),
+                        ->label('Xóa đã chọn'),
+                    RestoreBulkAction::make()
+                        ->label('Khôi phục đã chọn'),
+                    ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn đã chọn'),
                 ]),
             ])
             ->emptyStateHeading('Không có học viên')

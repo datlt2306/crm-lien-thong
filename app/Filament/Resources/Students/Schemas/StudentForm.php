@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Students\Schemas;
 use App\Models\Intake;
 use App\Models\Student;
 use App\Models\Payment;
-use App\Models\StudentUpdateLog;
 use App\Models\Collaborator;
 use App\Services\StudentFeeService;
 use Illuminate\Support\HtmlString;
@@ -22,9 +21,9 @@ use Illuminate\Support\Facades\Auth;
 class StudentForm {
     private static function getProgramLabel(?string $programCode): string {
         return match (strtoupper((string) $programCode)) {
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+            'regular' => 'Chính quy',
+            'part_time' => 'Vừa học vừa làm',
+            'distance' => 'Đào tạo từ xa',
             default => $programCode ?: 'Chưa xác định',
         };
     }
@@ -626,10 +625,6 @@ class StudentForm {
                                 \Filament\Forms\Components\Placeholder::make('update_history')
                                     ->label('Lịch sử chỉnh sửa')
                                     ->content(function (?Student $record, $get) {
-                                        if (!SchemaFacade::hasTable('student_update_logs')) {
-                                            return 'Chưa có bảng log (chạy migrate để kích hoạt).';
-                                        }
-
                                         if (!$record) {
                                             return 'Chưa có dữ liệu.';
                                         }
@@ -768,7 +763,7 @@ class StudentForm {
 
                                             // Format program_type
                                             if ($field === 'program_type') {
-                                                return $str === 'REGULAR' ? 'Chính quy' : ($str === 'PART_TIME' ? 'Vừa học vừa làm' : $str);
+                                                return $str === 'regular' ? 'Chính quy' : ($str === 'part_time' ? 'Vừa học vừa làm' : $str);
                                             }
 
                                             // Format intake_id: hiển thị tên đợt tuyển

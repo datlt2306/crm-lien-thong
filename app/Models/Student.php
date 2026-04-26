@@ -11,10 +11,15 @@ use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Illuminate\Support\Str;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Student extends Model {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
     use \App\Traits\HasAuditLog;
+
+    public const PROGRAM_REGULAR = 'regular';
+    public const PROGRAM_PART_TIME = 'part_time';
+    public const PROGRAM_DISTANCE = 'distance';
 
     public function uniqueIds(): array {
         return ['uuid'];
@@ -113,14 +118,15 @@ class Student extends Model {
 
     public static function getProgramTypeOptions(): array {
         return [
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+            self::PROGRAM_REGULAR => 'Chính quy',
+            self::PROGRAM_PART_TIME => 'Vừa học vừa làm',
+            self::PROGRAM_DISTANCE => 'Đào tạo từ xa',
         ];
     }
 
     public function getProgramTypeLabelAttribute(): string {
-        return self::getProgramTypeOptions()[strtoupper((string) $this->program_type)] ?? ($this->program_type ?: 'Chưa xác định');
+        $status = strtolower((string) $this->program_type);
+        return self::getProgramTypeOptions()[$status] ?? ($this->program_type ?: 'Chưa xác định');
     }
 
     // Enum StudentStatus - Pipeline quản lý hành trình nhập học
@@ -214,57 +220,8 @@ class Student extends Model {
         return $this->hasMany(AuditLog::class)->latest();
     }
 
-    protected static function booted(): void {
-        static::created(function (Student $student) {
-            if (!empty($student->profile_code)) {
-                return;
-            }
+    // Logic đã chuyển sang StudentObserver
 
-            $year = $student->created_at?->format('Y') ?? now()->format('Y');
-            // Định dạng mới: HS + Năm + 4 ký tự ngẫu nhiên + 3 số cuối của ID (giảm khả năng dự đoán)
-            $randomPart = strtoupper(Str::random(4));
-            $idPart = sprintf('%03d', $student->id % 1000);
-            $student->profile_code = "HS{$year}{$randomPart}{$idPart}";
-            $student->saveQuietly();
-            
-            // Refresh cache version
-            \Illuminate\Support\Facades\Cache::increment('crm-cache-dash:version');
-        });
-
-        static::saved(function (Student $student) {
-            \Illuminate\Support\Facades\Cache::increment('crm-cache-dash:version');
-        });
-
-        static::deleted(function (Student $student) {
-            \Illuminate\Support\Facades\Cache::increment('crm-cache-dash:version');
-        });
-
-        static::saving(function (Student $student) {
-            // Nếu học viên "đến trực tiếp" (văn phòng tuyển sinh) thì không được gán CTV giới thiệu
-            // (kể cả khi client/UI gửi lên collaborator_id).
-            if (($student->source ?? null) === 'walkin') {
-                $student->collaborator_id = null;
-            }
-
-            if (array_key_exists('intake_id', $student->getDirty())) {
-                if ($student->intake_id) {
-                    $intake = Intake::find($student->intake_id);
-                    $student->intake_month = $intake?->start_date?->format('n');
-                } else {
-                    $student->intake_month = null;
-                }
-            }
-
-            if (array_key_exists('quota_id', $student->getDirty()) && $student->quota_id) {
-                $quota = \App\Models\Quota::find($student->quota_id);
-                if ($quota) {
-                    $student->major = $quota->major_name ?? $quota->name;
-                    $student->program_type = $quota->program_name;
-                }
-            }
-        });
-
-    }
 
     /**
      * Validation rules cho model
@@ -281,7 +238,7 @@ class Student extends Model {
             'major' => 'nullable|string|max:255',
             'intake_id' => 'nullable|exists:intakes,id',
             'intake_month' => 'nullable|integer|between:1,12',
-            'program_type' => ['nullable', Rule::in(['REGULAR', 'PART_TIME', 'DISTANCE'])],
+            'program_type' => ['nullable', Rule::in([self::PROGRAM_REGULAR, self::PROGRAM_PART_TIME, self::PROGRAM_DISTANCE])],
             'source' => ['required', Rule::in(['form', 'ref', 'facebook', 'zalo', 'tiktok', 'hotline', 'event', 'school', 'walkin', 'other'])],
             'status' => ['required', Rule::in([
                 self::STATUS_NEW,

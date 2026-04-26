@@ -23,7 +23,7 @@ class CommissionResource extends Resource {
     protected static string|\UnitEnum|null $navigationGroup = 'Tài chính';
     protected static ?string $navigationLabel = 'Hoa hồng & Đối soát';
     protected static ?int $navigationSort = 2;
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
+    protected static string|\BackedEnum|null $navigationIcon = null;
 
     public static function shouldRegisterNavigation(): bool {
         $user = Auth::user();
@@ -98,16 +98,16 @@ class CommissionResource extends Resource {
                                 $record->student?->program_type;
                     })
                     ->formatStateUsing(fn($state) => match (strtoupper((string)$state)) {
-                        'REGULAR' => '🎓 Chính quy',
-                        'PART_TIME' => '⏰ Vừa học vừa làm',
-                        'DISTANCE' => '💻 Đào tạo từ xa',
+                        'regular' => '🎓 Chính quy',
+                        'part_time' => '⏰ Vừa học vừa làm',
+                        'distance' => '💻 Đào tạo từ xa',
                         default => '—'
                     })
                     ->badge()
                     ->color(fn($state) => match ($state) {
-                        'REGULAR' => 'success',
-                        'PART_TIME' => 'info',
-                        'DISTANCE' => 'warning',
+                        'regular' => 'success',
+                        'part_time' => 'info',
+                        'distance' => 'warning',
                         default => 'gray'
                     }),
 
@@ -386,7 +386,7 @@ class CommissionResource extends Resource {
                                     ->label('Mã số phiếu thu')
                                     ->maxLength(255)
                                     ->default($payment ? $payment->receipt_number : '')
-                                    ->helperText('Nhập mã số phiếu thu từ Helen'),
+                                    ->helperText('Nhập mã số phiếu thu'),
 
                                 \Filament\Forms\Components\FileUpload::make('receipt')
                                     ->label($hasReceipt ? 'File phiếu thu mới (để trống nếu không thay đổi)' : 'File phiếu thu')
@@ -404,9 +404,9 @@ class CommissionResource extends Resource {
                                         $ext = $file->getClientOriginalExtension();
                                         
                                         $systemCode = match (strtoupper((string)$student->program_type)) {
-                                            'REGULAR', 'CHÍNH QUY' => 'CQ',
-                                            'PART_TIME', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                            'DISTANCE', 'TỪ XA' => 'TX',
+                                            'regular', 'CHÍNH QUY' => 'CQ',
+                                            'part_time', 'VỪA HỌC VỪA LÀM' => 'VHVL',
+                                            'distance', 'TỪ XA' => 'TX',
                                             default => $student->program_type
                                         };
 
@@ -691,34 +691,6 @@ class CommissionResource extends Resource {
     }
 
 
-    public static function getNavigationBadge(): ?string {
-        try {
-            $user = Auth::user();
-            if (!$user) return null;
-
-            if ($user->can('commission_view_any')) {
-                $query = Commission::query();
-                
-                if ($user->role === 'collaborator') {
-                    $collaborator = \App\Models\Collaborator::where('email', $user->email)->first();
-                    if (!$collaborator) return '0';
-                    $query->whereHas('items', function ($q) use ($collaborator) {
-                        $q->where('recipient_collaborator_id', $collaborator->id);
-                    });
-                }
-
-                return (string) $query->count();
-            }
-
-            return null;
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string {
-        return 'Tổng số bộ hoa hồng';
-    }
 
     public static function getWidgets(): array {
         return [

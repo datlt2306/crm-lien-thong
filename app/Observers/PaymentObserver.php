@@ -44,7 +44,7 @@ class PaymentObserver {
                     $ctvUser = \App\Models\User::where('email', $payment->student->collaborator->email)->first();
                     if ($ctvUser) {
                         try {
-                            $ctvUser->notify(new \App\Notifications\PaymentStatusUpdatedNotification($payment, 'VERIFIED'));
+                            $ctvUser->notify(new \App\Notifications\PaymentStatusUpdatedNotification($payment, 'verified'));
                         } catch (\Exception $e) {
                             \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Payment Verified): ' . $e->getMessage());
                         }
@@ -85,7 +85,7 @@ class PaymentObserver {
                     $ctvUser = \App\Models\User::where('email', $payment->student->collaborator->email)->first();
                     if ($ctvUser) {
                         try {
-                            $ctvUser->notify(new \App\Notifications\PaymentStatusUpdatedNotification($payment, 'REJECTED'));
+                            $ctvUser->notify(new \App\Notifications\PaymentStatusUpdatedNotification($payment, 'rejected'));
                         } catch (\Exception $e) {
                             \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Payment Rejected): ' . $e->getMessage());
                         }

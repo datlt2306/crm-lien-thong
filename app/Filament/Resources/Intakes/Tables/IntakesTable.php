@@ -20,9 +20,9 @@ use Illuminate\Support\Facades\DB;
 class IntakesTable {
     private static function getProgramLabel(?string $programCode): string {
         return match (strtoupper((string) $programCode)) {
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+            'regular' => 'Chính quy',
+            'part_time' => 'Vừa học vừa làm',
+            'distance' => 'Đào tạo từ xa',
             default => $programCode ?: 'Chưa xác định',
         };
     }
@@ -195,29 +195,27 @@ class IntakesTable {
                         ->label('Chỉnh sửa')
                         ->url(fn($record) => self::getEditUrlForQuota($record))
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_update')),
-                    DeleteAction::make()
-                        ->label('Xóa')
-                        ->modalHeading('Xóa chỉ tiêu tuyển sinh')
-                        ->modalDescription('Nếu chỉ tiêu này đã có học viên đăng ký, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
-                        ->modalSubmitActionLabel('Xóa/Tạm dừng')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_delete'))
+                    \Filament\Actions\Action::make('toggle_active')
+                        ->label(fn($record) => ($record->intake_status ?: $record->intake?->status) === Intake::STATUS_ACTIVE ? 'Đóng tuyển sinh' : 'Mở tuyển sinh')
+                        ->icon(fn($record) => ($record->intake_status ?: $record->intake?->status) === Intake::STATUS_ACTIVE ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
+                        ->color(fn($record) => ($record->intake_status ?: $record->intake?->status) === Intake::STATUS_ACTIVE ? 'danger' : 'success')
                         ->action(function ($record) {
-                            $hasStudents = Student::where('quota_id', $record->id)->exists();
-
-                            if ($hasStudents) {
-                                $record->update(['status' => Quota::STATUS_INACTIVE]);
-                                Notification::make()
-                                    ->title('Đã chuyển sang Tạm dừng')
-                                    ->body("Chỉ tiêu này đã có học viên đăng ký nên không thể xóa. Trạng thái đã được cập nhật thành Tạm dừng.")
-                                    ->warning()
-                                    ->send();
-                            } else {
-                                $record->delete();
-                                Notification::make()
-                                    ->title('Đã xóa vĩnh viễn')
-                                    ->success() ->send();
+                            $intake = $record->intake;
+                            if ($intake) {
+                                $newStatus = $intake->status === Intake::STATUS_ACTIVE ? Intake::STATUS_CLOSED : Intake::STATUS_ACTIVE;
+                                $intake->update(['status' => $newStatus]);
                             }
-                        }),
+                        })
+                        ->requiresConfirmation(),
+                    \Filament\Actions\DeleteAction::make()
+                        ->label('Xóa')
+                        ->modalHeading('Xóa đợt tuyển sinh')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa đợt tuyển sinh này? Hồ sơ sẽ được chuyển vào Thùng rác.')
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_delete')),
+                    \Filament\Actions\RestoreAction::make()
+                        ->label('Khôi phục'),
+                    \Filament\Actions\ForceDeleteAction::make()
+                        ->label('Xóa vĩnh viễn'),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -228,34 +226,14 @@ class IntakesTable {
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    \Filament\Actions\DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa các chỉ tiêu đã chọn')
-                        ->modalDescription('Các chỉ tiêu đã có học viên sẽ được tự động chuyển sang trạng thái Tạm dừng.')
-                        ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete'))
-                        ->action(function ($records) {
-                            $deleted = 0;
-                            $deactivated = 0;
-
-                            foreach ($records as $record) {
-                                $hasStudents = Student::where('quota_id', $record->id)->exists();
-
-                                if ($hasStudents) {
-                                    $record->update(['status' => Quota::STATUS_INACTIVE]);
-                                    $deactivated++;
-                                } else {
-                                    $record->delete();
-                                    $deleted++;
-                                }
-                            }
-
-                            Notification::make()
-                                ->title('Xử lý hoàn tất')
-                                ->body("Đã xóa $deleted chỉ tiêu và chuyển Tạm dừng $deactivated chỉ tiêu có học viên.")
-                                ->success()
-                                ->send();
-                        }),
+                        ->modalHeading('Xóa các đợt tuyển sinh đã chọn')
+                        ->modalDescription('Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục đã chọn'),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn đã chọn'),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

@@ -17,7 +17,7 @@ use Filament\Tables\Table;
 class CollaboratorRegistrationResource extends Resource {
     protected static ?string $model = CollaboratorRegistration::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserPlus;
+    protected static string|BackedEnum|null $navigationIcon = null;
 
     protected static ?string $navigationLabel = 'Mời/Đăng ký CTV';
     protected static string|\UnitEnum|null $navigationGroup = 'Cộng tác viên';
@@ -71,19 +71,4 @@ class CollaboratorRegistrationResource extends Resource {
         ];
     }
 
-    public static function getNavigationBadge(): ?string {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) return null;
-
-        $count = 0;
-        if ($user->role === 'super_admin') {
-            $count = CollaboratorRegistration::where('status', 'pending')->count();
-        }
-
-        return $count > 0 ? (string)$count : null;
-    }
-
-    public static function getNavigationBadgeColor(): string|array|null {
-        return 'warning';
-    }
 }

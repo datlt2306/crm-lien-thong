@@ -35,7 +35,7 @@ class AuditLogResource extends Resource
 
     protected static ?string $model = AuditLog::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static string|BackedEnum|null $navigationIcon = null;
 
     protected static string|UnitEnum|null $navigationGroup = 'Hệ thống';
 
@@ -305,7 +305,7 @@ class AuditLogResource extends Resource
                         }
                     } else {
                         $displayVal = match($mVal) {
-                            'REGULAR' => 'Chính quy',
+                            'regular' => 'Chính quy',
                             'NON_REGULAR' => 'Vừa học vừa làm',
                             default => is_array($mVal) ? json_encode($mVal, JSON_UNESCAPED_UNICODE) : $mVal,
                         };

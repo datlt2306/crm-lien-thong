@@ -9,16 +9,18 @@ use Filament\Resources\Pages\ListRecords;
 class ListIntakes extends ListRecords {
     protected static string $resource = IntakeResource::class;
 
-    protected function getHeaderActions(): array {
-        $actions = [];
-
-        $user = \Illuminate\Support\Facades\Auth::user();
-
-        // Chỉ super_admin và organization_owner mới có thể create
-        if ($user && in_array($user->role, ['super_admin', ])) {
-            $actions[] = CreateAction::make();
-        }
-
-        return $actions;
+    public function getTabs(): array
+    {
+        return [
+            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Đợt tuyển sinh')
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->badge(fn() => \App\Models\Intake::whereNull('deleted_at')->count())
+                ->badgeColor('success'),
+            'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')
+                ->icon('heroicon-o-trash')
+                ->modifyQueryUsing(fn ($query) => $query->onlyTrashed())
+                ->badge(fn() => \App\Models\Intake::onlyTrashed()->count())
+                ->badgeColor('danger'),
+        ];
     }
 }

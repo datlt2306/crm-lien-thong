@@ -22,7 +22,7 @@ class CommissionPolicyResource extends Resource {
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?string $navigationLabel = 'Chính sách hoa hồng';
     protected static ?int $navigationSort = 3;
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
+    protected static string|\BackedEnum|null $navigationIcon = null;
 
     public static function canAccess(array $parameters = []): bool {
         $user = \Illuminate\Support\Facades\Auth::user();

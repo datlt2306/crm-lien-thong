@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\HasAuditLog;
 
 class CommissionItem extends Model {
-    use HasAuditLog;
+    use HasAuditLog, SoftDeletes;
     protected $fillable = [
         'commission_id',
         'recipient_collaborator_id',

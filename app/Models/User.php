@@ -18,9 +18,11 @@ use Filament\Panel;
 
 use Illuminate\Support\Facades\Storage;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class User extends Authenticatable implements FilamentUser, HasAvatar, HasName {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasAuditLog;
+    use HasFactory, Notifiable, HasRoles, HasAuditLog, SoftDeletes;
 
     public function canAccessPanel(Panel $panel): bool
     {

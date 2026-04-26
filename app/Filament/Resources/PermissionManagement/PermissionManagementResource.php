@@ -16,7 +16,7 @@ use Filament\Tables\Table;
 class PermissionManagementResource extends Resource {
     protected static ?string $model = \Spatie\Permission\Models\Role::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
+    protected static string|BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Phân quyền';
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?int $navigationSort = 2;

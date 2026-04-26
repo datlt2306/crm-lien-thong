@@ -28,18 +28,16 @@ class ListStudents extends ListRecords {
     // Tiêm CSS để đẩy tab sang phải
     public function getTabs(): array
     {
-        // Chỉ hiển thị tab nếu có ít nhất 1 học viên ngừng hoạt động trong danh sách mà user được thấy
-        $hasDisabled = StudentResource::getEloquentQuery()->where('is_active', false)->exists();
-
-        if (!$hasDisabled) {
-            return [];
-        }
-
         return [
-            'active' => Tab::make('Đang hoạt động')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true)),
-            'disabled' => Tab::make('Ngừng hoạt động')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false)),
+            'active' => Tab::make('Học viên')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('students.deleted_at'))
+                ->badge(fn() => \App\Models\Student::whereNull('deleted_at')->count())
+                ->badgeColor('success'),
+            'trash' => Tab::make('Thùng rác')
+                ->icon('heroicon-o-trash')
+                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                ->badge(fn() => \App\Models\Student::onlyTrashed()->count())
+                ->badgeColor('danger'),
         ];
     }
 

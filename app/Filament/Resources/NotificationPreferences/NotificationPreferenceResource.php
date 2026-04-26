@@ -17,7 +17,7 @@ use Filament\Tables\Table;
 class NotificationPreferenceResource extends Resource {
     protected static ?string $model = NotificationPreference::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBell;
+    protected static string|BackedEnum|null $navigationIcon = null;
 
     protected static ?string $navigationLabel = 'Cài đặt thông báo';
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';

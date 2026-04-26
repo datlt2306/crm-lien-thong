@@ -22,34 +22,30 @@ class ProgramsTable
             ->columns([
                 TextColumn::make('name')->label('Hệ đào tạo')->searchable()->sortable(),
                 TextColumn::make('code')->label('Mã hệ')->searchable(),
-                IconColumn::make('is_active')->label('Hoạt động')->boolean(),
+                TextColumn::make('is_active')
+                    ->label('Trạng thái')
+                    ->badge()
+                    ->color(fn($state) => $state ? 'success' : 'danger')
+                    ->formatStateUsing(fn($state) => $state ? 'Hoạt động' : 'Ngừng hoạt động'),
                 TextColumn::make('updated_at')->label('Cập nhật')->since(),
             ])
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make()->label('Chỉnh sửa'),
-                    DeleteAction::make()
+                    \Filament\Actions\Action::make('toggle_active')
+                        ->label(fn($record) => $record->is_active ? 'Vô hiệu hóa' : 'Kích hoạt')
+                        ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
+                        ->color(fn($record) => $record->is_active ? 'danger' : 'success')
+                        ->action(fn($record) => $record->update(['is_active' => !$record->is_active]))
+                        ->requiresConfirmation(),
+                    \Filament\Actions\DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa hệ đào tạo')
-                        ->modalDescription('Nếu hệ đào tạo này đã có học viên đăng ký, hệ thống sẽ tự động chuyển sang trạng thái Ngừng hoạt động thay vì xóa vĩnh viễn.')
-                        ->modalSubmitActionLabel('Xóa/Vô hiệu hóa')
-                        ->action(function ($record) {
-                            $hasStudents = Student::where('program_type', $record->name)->exists();
-
-                            if ($hasStudents) {
-                                $record->update(['is_active' => false]);
-                                Notification::make()
-                                    ->title('Đã chuyển sang Ngừng hoạt động')
-                                    ->body("Hệ đào tạo {$record->name} đã có học viên đăng ký nên không thể xóa. Trạng thái đã được cập nhật.")
-                                    ->warning()
-                                    ->send();
-                            } else {
-                                $record->delete();
-                                Notification::make()
-                                    ->title('Đã xóa vĩnh viễn')
-                                    ->success() ->send();
-                            }
-                        }),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa hệ đào tạo này? Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                    \Filament\Actions\RestoreAction::make()
+                        ->label('Khôi phục'),
+                    \Filament\Actions\ForceDeleteAction::make()
+                        ->label('Xóa vĩnh viễn'),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -60,33 +56,14 @@ class ProgramsTable
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    \Filament\Actions\DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa các hệ đào tạo đã chọn')
-                        ->modalDescription('Các hệ đào tạo đã có học viên sẽ được tự động chuyển sang trạng thái Ngừng hoạt động.')
-                        ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->action(function ($records) {
-                            $deleted = 0;
-                            $deactivated = 0;
-
-                            foreach ($records as $record) {
-                                $hasStudents = Student::where('program_type', $record->name)->exists();
-
-                                if ($hasStudents) {
-                                    $record->update(['is_active' => false]);
-                                    $deactivated++;
-                                } else {
-                                    $record->delete();
-                                    $deleted++;
-                                }
-                            }
-
-                            Notification::make()
-                                ->title('Xử lý hoàn tất')
-                                ->body("Đã xóa $deleted hệ đào tạo và chuyển Ngừng hoạt động $deactivated hệ đào tạo có học viên.")
-                                ->success()
-                                ->send();
-                        }),
+                        ->modalDescription('Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục đã chọn'),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn đã chọn'),
                 ]),
             ])
             ->defaultSort('id', 'desc');

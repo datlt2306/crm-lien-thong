@@ -31,7 +31,9 @@ class DashboardCacheService {
     }
 
     public static function remember(string $prefix, array $filters, int $ttlSeconds, Closure $callback) {
-        // Tạm thời tắt cache để tránh timeout
-        return $callback();
+        $version = self::getVersion();
+        $key = $prefix . ':v' . $version . ':' . md5(serialize($filters));
+
+        return Cache::remember($key, $ttlSeconds, $callback);
     }
 }

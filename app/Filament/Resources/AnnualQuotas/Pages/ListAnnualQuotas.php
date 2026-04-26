@@ -9,11 +9,18 @@ use Filament\Resources\Pages\ListRecords;
 class ListAnnualQuotas extends ListRecords {
     protected static string $resource = AnnualQuotaResource::class;
 
-    protected function getHeaderActions(): array {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if ($user && in_array($user->role, ['super_admin', ])) {
-            return [CreateAction::make()->label('Thêm chỉ tiêu năm')];
-        }
-        return [];
+    public function getTabs(): array
+    {
+        return [
+            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Chỉ tiêu năm')
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->badge(fn() => \App\Models\AnnualQuota::whereNull('deleted_at')->count())
+                ->badgeColor('success'),
+            'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')
+                ->icon('heroicon-o-trash')
+                ->modifyQueryUsing(fn ($query) => $query->onlyTrashed())
+                ->badge(fn() => \App\Models\AnnualQuota::onlyTrashed()->count())
+                ->badgeColor('danger'),
+        ];
     }
 }

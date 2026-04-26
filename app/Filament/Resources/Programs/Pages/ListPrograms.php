@@ -10,10 +10,18 @@ class ListPrograms extends ListRecords
 {
     protected static string $resource = ProgramResource::class;
 
-    protected function getHeaderActions(): array
+    public function getTabs(): array
     {
         return [
-            CreateAction::make(),
+            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Chương trình')
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->badge(fn() => \App\Models\Program::whereNull('deleted_at')->count())
+                ->badgeColor('success'),
+            'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')
+                ->icon('heroicon-o-trash')
+                ->modifyQueryUsing(fn ($query) => $query->onlyTrashed())
+                ->badge(fn() => \App\Models\Program::onlyTrashed()->count())
+                ->badgeColor('danger'),
         ];
     }
 }

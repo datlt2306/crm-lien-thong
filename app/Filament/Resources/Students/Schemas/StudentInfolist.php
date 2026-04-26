@@ -30,8 +30,8 @@ class StudentInfolist {
                 TextEntry::make('program_type')
                     ->label('Hệ liên thông')
                     ->formatStateUsing(fn($state) => match ($state) {
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'Vừa học vừa làm',
+                        'regular' => 'Chính quy',
+                        'part_time' => 'Vừa học vừa làm',
                         default => 'Chưa chọn'
                     }),
                 TextEntry::make('intake.name')

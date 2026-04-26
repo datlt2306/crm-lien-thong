@@ -48,10 +48,6 @@ class AdminPanelProvider extends PanelProvider {
                 fn(): string => view('components.user-name-display')->render() . view('components.referral-link')->render() . view('components.notification-bell')->render()
             )
             ->renderHook(
-                'panels::sidebar.footer',
-                fn(): string => view('components.sidebar-footer')->render()
-            )
-            ->renderHook(
                 'panels::head.end',
                 fn(): string => view('filament.theme.styles')->render()
             )
@@ -79,6 +75,20 @@ class AdminPanelProvider extends PanelProvider {
                     ->icon('heroicon-o-user-circle')
                     ->url('/admin/profile-page')
                     ->sort(1),
+            ])
+            ->navigationGroups([
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Tuyển sinh')
+                     ->icon('heroicon-o-user-group'),
+                \Filament\Navigation\NavigationGroup::make()
+                    ->label('Cộng tác viên')
+                    ->icon('heroicon-o-users'),
+                \Filament\Navigation\NavigationGroup::make()
+                    ->label('Tài chính')
+                    ->icon('heroicon-o-banknotes'),
+                \Filament\Navigation\NavigationGroup::make()
+                    ->label('Hệ thống')
+                    ->icon('heroicon-o-cog-6-tooth'),
             ]);
     }
 }

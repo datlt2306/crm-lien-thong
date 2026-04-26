@@ -29,7 +29,7 @@ class CollaboratorResource extends Resource {
     protected static ?string $navigationLabel = 'Cộng tác viên';
     protected static ?int $navigationSort = 1;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = null;
 
     public static function shouldRegisterNavigation(): bool {
         return Gate::allows('viewAny', Collaborator::class);
@@ -78,34 +78,4 @@ class CollaboratorResource extends Resource {
         return $query->whereNull('id');
     }
 
-    public static function getNavigationBadge(): ?string {
-        try {
-            $user = Auth::user();
-            if (!$user) return null;
-
-            if ($user->can('collaborator_view_any')) {
-                return (string) Collaborator::count();
-            }
-
-            return null;
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string {
-        $user = Auth::user();
-        if (!$user) return null;
-
-        if ($user->role === 'super_admin') {
-            return 'Tổng số cộng tác viên';
-        }
-
-
-        if ($user->role === 'collaborator') {
-            return null; // CTV không thấy menu nên không cần tooltip
-        }
-
-        return null;
-    }
 }

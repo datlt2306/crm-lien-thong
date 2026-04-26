@@ -18,10 +18,10 @@ class MajorResource extends Resource
 {
     protected static ?string $model = Major::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
-    protected static ?string $navigationLabel = 'Ngành';
+    protected static string|BackedEnum|null $navigationIcon = null;
+    protected static ?string $navigationLabel = 'Ngành đào tạo';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     public static function shouldRegisterNavigation(): bool
     {

@@ -14,9 +14,9 @@ use Filament\Schemas\Components\Section;
 class IntakeForm {
     private static function getProgramLabel(?string $programCode): string {
         return match (strtoupper((string) $programCode)) {
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+            'regular' => 'Chính quy',
+            'part_time' => 'Vừa học vừa làm',
+            'distance' => 'Đào tạo từ xa',
             default => $programCode ?: 'Chưa xác định',
         };
     }

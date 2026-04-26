@@ -26,7 +26,7 @@ class UserResource extends Resource {
     protected static ?string $navigationLabel = 'Người dùng';
     protected static ?int $navigationSort = 1;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = null;
 
     public static function form(Schema $schema): Schema {
         return UserForm::configure($schema);
@@ -79,22 +79,4 @@ class UserResource extends Resource {
         return $query->whereNull('id');
     }
 
-    public static function getNavigationBadge(): ?string {
-        try {
-            $user = Auth::user();
-            if (!$user) return null;
-
-            if ($user->can('user_view_any')) {
-                return (string) User::count();
-            }
-
-            return null;
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string {
-        return 'The number of users';
-    }
 }

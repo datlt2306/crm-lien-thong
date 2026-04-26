@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * Chỉ tiêu năm: (tổ chức, ngành, hệ, năm). Chia linh hoạt cho nhiều đợt trong năm.
  * Khi đợt 1 đủ target → hết; nếu chưa đủ → phần còn lại chuyển sang đợt sau.
  */
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class AnnualQuota extends Model {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'annual_quotas';
 

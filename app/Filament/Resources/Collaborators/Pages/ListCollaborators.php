@@ -18,11 +18,15 @@ class ListCollaborators extends ListRecords {
     public function getTabs(): array
     {
         return [
-            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Đang hoạt động')
-                ->modifyQueryUsing(fn ($query) => $query->where('is_active', true)),
-            'disabled' => \Filament\Schemas\Components\Tabs\Tab::make('Ngừng hoạt động')
-                ->modifyQueryUsing(fn ($query) => $query->where('is_active', false))
-                ->icon('heroicon-m-no-symbol'),
+            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Cộng tác viên')
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('collaborators.deleted_at'))
+                ->badge(fn() => \App\Models\Collaborator::whereNull('deleted_at')->count())
+                ->badgeColor('success'),
+            'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')
+                ->icon('heroicon-o-trash')
+                ->modifyQueryUsing(fn ($query) => $query->onlyTrashed())
+                ->badge(fn() => \App\Models\Collaborator::onlyTrashed()->count())
+                ->badgeColor('danger'),
         ];
     }
 

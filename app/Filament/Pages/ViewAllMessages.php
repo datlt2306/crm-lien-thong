@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\DatabaseNotification;
 
 class ViewAllMessages extends Page {
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
+    protected static string|\BackedEnum|null $navigationIcon = null;
     protected string $view = 'filament.pages.view-all-messages';
     protected static ?string $title = 'Tất cả tin nhắn';
     protected static ?string $navigationLabel = 'Tin nhắn';

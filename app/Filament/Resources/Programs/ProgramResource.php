@@ -18,10 +18,10 @@ class ProgramResource extends Resource
 {
     protected static ?string $model = Program::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleGroup;
+    protected static string|BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Hệ đào tạo';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     public static function shouldRegisterNavigation(): bool
     {

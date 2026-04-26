@@ -13,7 +13,7 @@ use Filament\Support\Icons\Heroicon;
 class StudentEventResource extends Resource {
     protected static ?string $model = Student::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
+    protected static string|\BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Sự kiện / Notes';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 3;

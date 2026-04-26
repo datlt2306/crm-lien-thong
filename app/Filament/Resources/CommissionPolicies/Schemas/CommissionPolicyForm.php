@@ -36,9 +36,9 @@ class CommissionPolicyForm {
                                     ->label('Hệ đào tạo (Nhóm)')
                                     ->multiple()
                                     ->options([
-                                        'REGULAR' => 'Chính quy',
-                                        'PART_TIME' => 'Vừa học vừa làm',
-                                        'DISTANCE' => 'Từ xa',
+                                        'regular' => 'Chính quy',
+                                        'part_time' => 'Vừa học vừa làm',
+                                        'distance' => 'Từ xa',
                                     ])
                                     ->reactive()
                                     ->afterStateUpdated(fn ($set) => $set('target_program_id', null))
@@ -65,9 +65,9 @@ class CommissionPolicyForm {
                             ->tabs(function ($get) {
                                 $selectedTypes = $get('program_type') ?: [];
                                 $options = [
-                                    'REGULAR' => '🎯 Chính quy',
-                                    'PART_TIME' => '🕒 Vừa học vừa làm',
-                                    'DISTANCE' => '🌐 Từ xa',
+                                    'regular' => '🎯 Chính quy',
+                                    'part_time' => '🕒 Vừa học vừa làm',
+                                    'distance' => '🌐 Từ xa',
                                 ];
 
                                 if (empty($selectedTypes)) {

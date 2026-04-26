@@ -86,6 +86,11 @@ class CollaboratorsTable {
                         'inactive' => 'Vô hiệu',
                         default => $state
                     }),
+                TextColumn::make('is_active')
+                    ->label('Truy cập')
+                    ->badge()
+                    ->color(fn($state) => $state ? 'success' : 'danger')
+                    ->formatStateUsing(fn($state) => $state ? 'Hoạt động' : 'Bị khóa'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')
@@ -177,41 +182,8 @@ class CollaboratorsTable {
                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa cộng tác viên')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa cộng tác viên này? Nếu họ đã có dữ liệu học viên hoặc tài chính, hệ thống sẽ tự động chuyển sang trạng thái Ngừng hoạt động.')
-                        ->modalSubmitActionLabel('Xóa/Vô hiệu hóa')
-                        ->visible(fn($record) => Gate::allows('delete', $record))
-                        ->action(function ($record) {
-                            // Kiểm tra dữ liệu liên quan
-                            $hasStudents = Student::where('collaborator_id', $record->id)->exists();
-                            $hasPayments = Payment::where('primary_collaborator_id', $record->id)->exists();
-                            $hasCommissions = CommissionItem::where('recipient_collaborator_id', $record->id)->exists();
-
-                            if ($hasStudents || $hasPayments || $hasCommissions) {
-                                // Nếu có dữ liệu liên quan -> Chỉ vô hiệu hóa CTV và User
-                                $record->update(['is_active' => false]);
-                                if ($record->email) {
-                                    User::where('email', $record->email)->update(['is_active' => false]);
-                                }
-                                
-                                Notification::make()
-                                    ->title('Đã chuyển sang Ngừng hoạt động')
-                                    ->body("CTV {$record->full_name} đã có dữ liệu (học viên/tài chính) nên không thể xóa vĩnh viễn. Hệ thống đã tự động khóa CTV và tài khoản User liên kết.")
-                                    ->warning()
-                                    ->send();
-                            } else {
-                                // Nếu không có dữ liệu -> Xóa cứng CTV và User
-                                if ($record->email) {
-                                    User::where('email', $record->email)->delete();
-                                }
-                                $record->delete();
-                                
-                                Notification::make()
-                                    ->title('Đã xóa vĩnh viễn')
-                                    ->body("Đã xóa CTV {$record->full_name} và tài khoản User liên kết.")
-                                    ->success()
-                                    ->send();
-                            }
-                        }),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa cộng tác viên này? Hồ sơ sẽ được chuyển vào Thùng rác.')
+                        ->visible(fn($record) => Gate::allows('delete', $record)),
                     Action::make('toggle_active')
                         ->label(fn($record) => $record->is_active ? 'Vô hiệu hóa' : 'Kích hoạt')
                         ->icon(fn($record) => $record->is_active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
@@ -219,9 +191,9 @@ class CollaboratorsTable {
                         ->action(function ($record) {
                             $record->update(['is_active' => !$record->is_active]);
                             
-                            // Nếu disable CTV thì cũng disable user account tương ứng
+                            // Đồng bộ với tài khoản user
                             if ($record->email) {
-                                $user = User::where('email', $record->email)->first();
+                                $user = \App\Models\User::where('email', $record->email)->first();
                                 if ($user) {
                                     $user->update(['is_active' => $record->is_active]);
                                 }
@@ -316,42 +288,8 @@ class CollaboratorsTable {
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa cộng tác viên đã chọn')
-                        ->modalDescription('Các cộng tác viên đã có dữ liệu học viên hoặc tài chính sẽ được tự động chuyển sang trạng thái Ngừng hoạt động thay vì xóa vĩnh viễn.')
-                        ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->visible(fn() => Gate::allows('viewAny', Collaborator::class))
-                        ->action(function ($records) {
-                            $deletedCount = 0;
-                            $deactivatedCount = 0;
-
-                            foreach ($records as $record) {
-                                // Kiểm tra dữ liệu liên quan
-                                $hasStudents = Student::where('collaborator_id', $record->id)->exists();
-                                $hasPayments = Payment::where('primary_collaborator_id', $record->id)->exists();
-                                $hasCommissions = CommissionItem::where('recipient_collaborator_id', $record->id)->exists();
-
-                                if ($hasStudents || $hasPayments || $hasCommissions) {
-                                    // Vô hiệu hóa
-                                    $record->update(['is_active' => false]);
-                                    if ($record->email) {
-                                        User::where('email', $record->email)->update(['is_active' => false]);
-                                    }
-                                    $deactivatedCount++;
-                                } else {
-                                    // Xóa cứng
-                                    if ($record->email) {
-                                        User::where('email', $record->email)->delete();
-                                    }
-                                    $record->delete();
-                                    $deletedCount++;
-                                }
-                            }
-
-                            Notification::make()
-                                ->title('Xử lý hoàn tất')
-                                ->body("Đã xóa vĩnh viễn $deletedCount CTV và chuyển Ngừng hoạt động $deactivatedCount CTV có dữ liệu liên quan.")
-                                ->success()
-                                ->send();
-                        }),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các cộng tác viên đã chọn? Hồ sơ sẽ được chuyển vào Thùng rác.')
+                        ->visible(fn() => Gate::allows('viewAny', Collaborator::class)),
                 ]),
             ])
             ->defaultSort('id', 'desc');

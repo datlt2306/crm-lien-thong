@@ -53,24 +53,23 @@ class UsersTable {
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('role')
                     ->label('Vai trò')
-                    ->formatStateUsing(function ($state) {
-                        return match ($state) {
-                            'super_admin' => 'Super Admin',
-
-                            'collaborator' => 'Cộng tác viên',
-                            default => $state
-                        };
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'super_admin' => 'Super Admin',
+                        'collaborator' => 'Cộng tác viên',
+                        default => $state
                     })
                     ->badge()
-                    ->color(function ($state) {
-                        return match ($state) {
-                            'super_admin' => 'danger',
-
-                            'collaborator' => 'info',
-                            default => 'gray'
-                        };
+                    ->color(fn($state) => match ($state) {
+                        'super_admin' => 'danger',
+                        'collaborator' => 'info',
+                        default => 'gray'
                     })
                     ->searchable(),
+                TextColumn::make('is_active')
+                    ->label('Trạng thái')
+                    ->badge()
+                    ->color(fn($state) => $state ? 'success' : 'danger')
+                    ->formatStateUsing(fn($state) => $state ? 'Hoạt động' : 'Bị khóa'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i:s')
@@ -109,16 +108,9 @@ class UsersTable {
                         ->requiresConfirmation(),
                     DeleteAction::make()
                         ->label('Xóa')
+                        ->modalHeading('Xóa người dùng')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa người dùng này? Tài khoản sẽ được chuyển vào Thùng rác.')
                         ->visible(fn($record) => Gate::allows('delete', $record)),
-                    Action::make('force_delete_inactive')
-                        ->label('Xóa vĩnh viễn')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->modalHeading('Xóa vĩnh viễn người dùng')
-                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu người dùng khỏi hệ thống và không thể khôi phục. Bạn chắc chắn chứ?')
-                        ->action(fn($record) => $record->forceDelete())
-                        ->visible(fn($record) => !$record->is_active && Gate::allows('delete', $record)),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -132,18 +124,8 @@ class UsersTable {
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa người dùng đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các người dùng đã chọn? Hành động này không thể hoàn tác.')
-                        ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Gate::allows('viewAny', \App\Models\User::class))
-                        ->before(function ($records) {
-                            // Kiểm tra quyền cho từng record
-                            foreach ($records as $record) {
-                                if (!Gate::allows('delete', $record)) {
-                                    throw new \Exception('Bạn không có quyền xóa người dùng này.');
-                                }
-                            }
-                        }),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các người dùng đã chọn? Tài khoản sẽ được chuyển vào Thùng rác.')
+                        ->visible(fn() => Gate::allows('viewAny', \App\Models\User::class)),
                 ]),
             ])
             ->defaultSort('id', 'desc');

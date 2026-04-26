@@ -170,9 +170,10 @@ class PublicStudentController extends Controller {
 
                 // Map program_type for Payment
                 $programTypeMap = match (strtolower($quota->program_name ?? '')) {
-                    'chính quy', 'hệ chính quy' => 'REGULAR',
-                    'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
-                    default => 'REGULAR'
+                    'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
+                    'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
+                    'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
+                    default => Student::PROGRAM_REGULAR
                 };
 
                 \App\Models\Payment::create([
@@ -251,9 +252,10 @@ class PublicStudentController extends Controller {
 
         // Map program_type từ tên tiếng Việt sang mã enum
         $validated['program_type'] = match (strtolower($validated['program_type'])) {
-            'chính quy', 'hệ chính quy' => 'REGULAR',
-            'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
-            default => 'REGULAR' // Default fallback
+            'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
+            'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
+            'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
+            default => Student::PROGRAM_REGULAR // Default fallback
         };
 
         // Tìm student theo số điện thoại và collaborator hiện tại
@@ -361,10 +363,10 @@ class PublicStudentController extends Controller {
             return 'Chưa cập nhật';
         }
 
-        return match (strtoupper(trim($program))) {
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+        return match (strtolower(trim($program))) {
+            Student::PROGRAM_REGULAR => 'Chính quy',
+            Student::PROGRAM_PART_TIME => 'Vừa học vừa làm',
+            Student::PROGRAM_DISTANCE => 'Đào tạo từ xa',
             default => $program,
         };
     }

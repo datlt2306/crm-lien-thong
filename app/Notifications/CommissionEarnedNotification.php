@@ -123,9 +123,9 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
      * Get role label in Vietnamese.
      */
     private function getRoleLabel(string $role): string {
-        return match ($role) {
-            'PRIMARY' => 'CTV chính',
-            'SUB' => 'CTV phụ',
+        return match (strtolower($role)) {
+            'primary' => 'CTV chính',
+            'sub' => 'CTV phụ',
             default => $role,
         };
     }
@@ -134,11 +134,13 @@ class CommissionEarnedNotification extends Notification implements ShouldQueue {
      * Get status label in Vietnamese.
      */
     private function getStatusLabel(string $status): string {
-        return match ($status) {
-            'PENDING' => 'Đang chờ',
-            'PAYABLE' => 'Có thể thanh toán',
-            'PAYMENT_CONFIRMED' => 'Đã xác nhận thanh toán',
-            'COMPLETED' => 'Hoàn thành',
+        return match (strtolower($status)) {
+            'pending' => 'Đang chờ',
+            'payable' => 'Có thể thanh toán',
+            'payment_confirmed' => 'Đã xác nhận thanh toán',
+            'paid' => 'Đã thanh toán',
+            'cancelled' => 'Đã huỷ',
+            'received_confirmed' => 'CTV đã nhận tiền',
             default => $status,
         };
     }

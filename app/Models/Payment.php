@@ -6,12 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\HasAuditLog;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Payment extends Model {
-    use HasFactory, HasAuditLog, HasUuids;
+    use HasFactory, HasAuditLog, HasUuids, SoftDeletes;
 
     public function uniqueIds(): array {
         return ['uuid'];
@@ -116,10 +117,10 @@ class Payment extends Model {
         $fullName = $student->full_name;
         $major = $student->major;
         
-        $systemCode = match (strtoupper((string)$this->program_type)) {
-            'REGULAR' => 'CQ',
-            'PART_TIME' => 'VHVL',
-            'DISTANCE' => 'TX',
+        $systemCode = match (strtolower((string)$this->program_type)) {
+            'regular' => 'CQ',
+            'part_time' => 'VHVL',
+            'distance' => 'TX',
             default => $this->program_type
         };
 
@@ -136,10 +137,10 @@ class Payment extends Model {
         $fullName = $student->full_name;
         $major = $student->major;
         
-        $systemCode = match (strtoupper((string)$this->program_type)) {
-            'REGULAR' => 'CQ',
-            'PART_TIME' => 'VHVL',
-            'DISTANCE' => 'TX',
+        $systemCode = match (strtolower((string)$this->program_type)) {
+            'regular' => 'CQ',
+            'part_time' => 'VHVL',
+            'distance' => 'TX',
             default => $this->program_type
         };
 
@@ -157,10 +158,10 @@ class Payment extends Model {
         $fullName = $student->full_name;
         $major = $student->major;
         
-        $systemCode = match (strtoupper((string)$this->program_type)) {
-            'REGULAR' => 'CQ',
-            'PART_TIME' => 'VHVL',
-            'DISTANCE' => 'TX',
+        $systemCode = match (strtolower((string)$this->program_type)) {
+            'regular' => 'CQ',
+            'part_time' => 'VHVL',
+            'distance' => 'TX',
             default => $this->program_type
         };
 

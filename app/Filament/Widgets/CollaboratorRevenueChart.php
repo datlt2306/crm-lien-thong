@@ -30,27 +30,27 @@ class CollaboratorRevenueChart extends ChartWidget {
 
     protected function buildSeries(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
-        $tz = DashboardCacheService::getTimezone();
 
-        // Tổng doanh thu thực tế từ học viên (Payment) được gán cho CTV
+        // Sử dụng Query Builder aggregation để tính toán trực tiếp từ DB
         $payments = Payment::query()
-            ->with(['primaryCollaborator'])
-            ->where('status', Payment::STATUS_VERIFIED)
-            ->whereNotNull('verified_at')
-            ->whereNotNull('primary_collaborator_id')
+            ->join('collaborators', 'payments.primary_collaborator_id', '=', 'collaborators.id')
+            ->where('payments.status', Payment::STATUS_VERIFIED)
+            ->whereNotNull('payments.verified_at')
+            ->whereBetween('payments.verified_at', [$from, $to]) // Sửa lỗi thiếu lọc thời gian
             ->when(!empty($filters['program_type']), function ($q) use ($filters) {
-                $q->where('program_type', $filters['program_type']);
+                $q->where('payments.program_type', strtolower($filters['program_type']));
             })
-            ->get(['primary_collaborator_id', 'amount']);
+            ->selectRaw('collaborators.full_name, SUM(payments.amount) as total_amount')
+            ->groupBy('collaborators.id', 'collaborators.full_name')
+            ->orderByDesc('total_amount')
+            ->get();
 
         $sumByCollaborator = [];
         foreach ($payments as $p) {
-            $name = $p->primaryCollaborator->full_name ?? 'Khác';
-            $sumByCollaborator[$name] = ($sumByCollaborator[$name] ?? 0) + (float) $p->amount;
+            $sumByCollaborator[$p->full_name] = (float) $p->total_amount;
         }
 
-        // Sắp xếp giảm dần và lấy top 10, gộp phần còn lại thành "Khác" nếu cần
-        arsort($sumByCollaborator);
+        // Lấy top 10 và gộp phần còn lại
         $top = array_slice($sumByCollaborator, 0, 10, true);
         if (count($sumByCollaborator) > 10) {
             $others = array_sum(array_slice($sumByCollaborator, 10, null, true));

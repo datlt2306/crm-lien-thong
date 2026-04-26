@@ -24,7 +24,7 @@ class PaymentResource extends Resource {
     protected static string|\UnitEnum|null $navigationGroup = 'Tài chính';
     protected static ?string $navigationLabel = 'Thanh toán';
     protected static ?int $navigationSort = 1;
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
+    protected static string|\BackedEnum|null $navigationIcon = null;
 
     public static function shouldRegisterNavigation(): bool {
         // Ẩn Payments khỏi navigation - chỉ giữ backend logic
@@ -80,13 +80,13 @@ class PaymentResource extends Resource {
                     ->label('Hệ đào tạo')
                     ->badge()
                     ->color(fn(string $state): string => match (strtoupper($state)) {
-                        'REGULAR' => 'success',
-                        'PART_TIME' => 'warning',
+                        'regular' => 'success',
+                        'part_time' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'VHVLV',
+                        'regular' => 'Chính quy',
+                        'part_time' => 'VHVLV',
                         default => $state,
                     }),
 
@@ -128,9 +128,9 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Filters\SelectFilter::make('program_type')
                     ->label('Loại chương trình')
                     ->options([
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'VHVLV',
-                        'DISTANCE' => 'Đào tạo từ xa',
+                        'regular' => 'Chính quy',
+                        'part_time' => 'VHVLV',
+                        'distance' => 'Đào tạo từ xa',
                     ]),
             ])
             ->actions([
@@ -157,8 +157,8 @@ class PaymentResource extends Resource {
                         \Filament\Forms\Components\Select::make('program_type')
                             ->label('Hệ liên thông')
                             ->options([
-                                'REGULAR' => 'Chính quy',
-                                'PART_TIME' => 'Vừa học vừa làm',
+                                'regular' => 'Chính quy',
+                                'part_time' => 'Vừa học vừa làm',
                             ])
                             ->required()
                             ->helperText('Chọn hệ liên thông của sinh viên'),
@@ -219,8 +219,8 @@ class PaymentResource extends Resource {
                         \Filament\Forms\Components\Select::make('program_type')
                             ->label('Hệ liên thông')
                             ->options([
-                                'REGULAR' => 'Chính quy',
-                                'PART_TIME' => 'Vừa học vừa làm',
+                                'regular' => 'Chính quy',
+                                'part_time' => 'Vừa học vừa làm',
                             ])
                             ->required()
                             ->helperText('Chọn hệ liên thông của sinh viên'),
@@ -291,7 +291,7 @@ class PaymentResource extends Resource {
                         \Filament\Forms\Components\TextInput::make('receipt_number')
                             ->label('Số phiếu thu')
                             ->required()
-                            ->helperText('Nhập số phiếu thu từ Helen'),
+                            ->helperText('Nhập số phiếu thu'),
                         \Filament\Forms\Components\FileUpload::make('receipt')
                             ->label('File phiếu thu')
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
@@ -301,7 +301,7 @@ class PaymentResource extends Resource {
                                 return $record->generateStandardReceiptPath($file->getClientOriginalExtension());
                             })
                             ->required()
-                            ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
+                            ->helperText('Upload phiếu thu (JPG, PNG, PDF, tối đa 5MB)'),
                     ])
                     ->visible(function (Payment $record) {
                         return $record->status === Payment::STATUS_VERIFIED 
@@ -329,7 +329,7 @@ class PaymentResource extends Resource {
                         \Filament\Forms\Components\TextInput::make('receipt_number')
                             ->label('Số phiếu thu')
                             ->required()
-                            ->helperText('Nhập số phiếu thu từ Helen'),
+                            ->helperText('Nhập số phiếu thu'),
                         \Filament\Forms\Components\FileUpload::make('receipt')
                             ->label('File phiếu thu')
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
@@ -339,7 +339,7 @@ class PaymentResource extends Resource {
                                 return $record->generateStandardReceiptPath($file->getClientOriginalExtension());
                             })
                             ->required()
-                            ->helperText('Upload phiếu thu từ Helen (JPG, PNG, PDF, tối đa 5MB)'),
+                            ->helperText('Upload phiếu thu (JPG, PNG, PDF, tối đa 5MB)'),
                     ])
                     ->visible(
                         fn(Payment $record): bool =>
@@ -405,7 +405,7 @@ class PaymentResource extends Resource {
                     ->label('Xem Phiếu Thu')
                     ->icon('heroicon-o-document-check')
                     ->color('success')
-                    ->modalHeading('Phiếu thu từ Helen')
+                    ->modalHeading('Phiếu thu')
                     ->modalContent(function (Payment $record) {
                         if (!$record->receipt_path) {
                             return view('components.no-content', [
@@ -447,17 +447,6 @@ class PaymentResource extends Resource {
         ];
     }
 
-    public static function getNavigationBadge(): ?string {
-        try {
-            return (string) Payment::count();
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string {
-        return 'Tổng số thanh toán';
-    }
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery();

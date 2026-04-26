@@ -212,23 +212,27 @@ class TelegramBotService
         $report = "📋 *BÁO CÁO HỒ SƠ* [{$refCode->name}]\n";
         $report .= "----------------------------\n";
 
-        $counts = ['REGULAR' => 0, 'PART_TIME' => 0, 'DISTANCE' => 0];
+        $counts = [
+            Student::PROGRAM_REGULAR => 0, 
+            Student::PROGRAM_PART_TIME => 0, 
+            Student::PROGRAM_DISTANCE => 0
+        ];
 
         foreach ($students as $student) {
-            $type = strtoupper($student->program_type);
+            $type = strtolower((string)$student->program_type);
             if (isset($counts[$type])) {
                 $counts[$type]++;
             }
         }
 
         $report .= "🔵 *HỆ CHÍNH QUY:*\n";
-        $report .= "   + Số lượng: *{$counts['REGULAR']} hồ sơ*\n\n";
+        $report .= "   + Số lượng: *{$counts[Student::PROGRAM_REGULAR]} hồ sơ*\n\n";
 
         $report .= "🟠 *HỆ VỪA HỌC VỪA LÀM:*\n";
-        $report .= "   + Số lượng: *{$counts['PART_TIME']} hồ sơ*\n\n";
+        $report .= "   + Số lượng: *{$counts[Student::PROGRAM_PART_TIME]} hồ sơ*\n\n";
 
         $report .= "🟢 *HỆ ĐÀO TẠO TỪ XA:*\n";
-        $report .= "   + Số lượng: *{$counts['DISTANCE']} hồ sơ*\n";
+        $report .= "   + Số lượng: *{$counts[Student::PROGRAM_DISTANCE]} hồ sơ*\n";
         $report .= "----------------------------\n";
         
         $total = array_sum($counts);

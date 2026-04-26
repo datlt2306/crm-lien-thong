@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\DatabaseNotification;
 
 class ViewAllNotifications extends Page {
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bell';
+    protected static string|\BackedEnum|null $navigationIcon = null;
     protected string $view = 'filament.pages.view-all-notifications';
     protected static ?string $title = 'Tất cả thông báo';
     protected static ?string $navigationLabel = 'Thông báo';

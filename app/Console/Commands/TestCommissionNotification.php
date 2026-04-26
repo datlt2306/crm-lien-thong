@@ -33,8 +33,8 @@ class TestCommissionNotification extends Command {
 
         $item = new CommissionItem();
         $item->amount = 1500000;
-        $item->role = 'PRIMARY';
-        $item->status = 'PENDING';
+        $item->role = 'primary';
+        $item->status = 'pending';
         $item->setRelation('commission', $commission);
 
         try {

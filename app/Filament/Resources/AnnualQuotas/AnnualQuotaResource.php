@@ -19,10 +19,10 @@ class AnnualQuotaResource extends Resource {
 
     protected static ?string $slug = 'annual-quotas';
 
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
+    protected static string|\BackedEnum|null $navigationIcon = null;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Chỉ tiêu năm';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     public static function shouldRegisterNavigation(): bool {
         return static::canViewAny();

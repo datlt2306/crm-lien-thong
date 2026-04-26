@@ -15,7 +15,7 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
 
     public function __construct(
         public Payment $payment,
-        public string $status // VERIFIED or REJECTED
+        public string $status // verified or rejected
     ) {
     }
 
@@ -38,19 +38,19 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
 
         // Map tên hệ đào tạo và phí mặc định
         $programLabels = [
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+            Student::PROGRAM_REGULAR => 'Chính quy',
+            Student::PROGRAM_PART_TIME => 'Vừa học vừa làm',
+            Student::PROGRAM_DISTANCE => 'Đào tạo từ xa',
         ];
         
         // Phí mặc định từ StudentFeeService (Dùng fallback nếu service không gọi được)
         $defaultFees = [
-            'REGULAR' => 1750000,
-            'PART_TIME' => 750000,
-            'DISTANCE' => 750000,
+            Student::PROGRAM_REGULAR => 1750000,
+            Student::PROGRAM_PART_TIME => 750000,
+            Student::PROGRAM_DISTANCE => 750000,
         ];
 
-        $pType = strtoupper((string)$this->payment->program_type);
+        $pType = strtolower((string)$this->payment->program_type);
         $programLabel = $programLabels[$pType] ?? $pType;
         
         // Ưu tiên lấy số tiền đã nộp (nếu > 0), nếu không thì lấy phí mặc định của hệ
@@ -60,7 +60,7 @@ class PaymentStatusUpdatedNotification extends Notification implements ShouldQue
 
         $amountLabel = number_format($displayAmount, 0, ',', '.') . ' VNĐ';
 
-        if ($this->status === 'VERIFIED') {
+        if (strtolower($this->status) === 'verified') {
             $title = "✅ *HÓA ĐƠN ĐÃ ĐƯỢC DUYỆT*";
             $message = "Chúc mừng! Hóa đơn của sinh viên *{$student?->full_name}* đã được kế toán xác nhận.";
         } else {

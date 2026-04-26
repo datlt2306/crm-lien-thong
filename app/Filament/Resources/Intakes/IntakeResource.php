@@ -17,10 +17,10 @@ use Filament\Tables\Table;
 class IntakeResource extends Resource {
     protected static ?string $model = Intake::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
+    protected static string|BackedEnum|null $navigationIcon = null;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Đợt tuyển sinh';
-    protected static ?int $navigationSort = 3; // Trước "Đợt tuyển & Chỉ tiêu" (4): tạo đợt (tên + khoảng thời gian) trước, gán chỉ tiêu sau
+    protected static ?int $navigationSort = 4;
 
     public static function shouldRegisterNavigation(): bool {
         return static::canViewAny();

@@ -38,9 +38,9 @@ class CommissionStatsWidget extends BaseWidget {
         $programStats = $uniqueCommissionsQuery->clone()
             ->selectRaw("
                 CASE 
-                    WHEN UPPER(COALESCE(commission_items.meta->>'program_type', '')) = 'REGULAR' THEN 'Chính quy'
-                    WHEN UPPER(COALESCE(commission_items.meta->>'program_type', '')) = 'PART_TIME' THEN 'VHVL'
-                    WHEN UPPER(COALESCE(commission_items.meta->>'program_type', '')) = 'DISTANCE' THEN 'Từ xa'
+                    WHEN LOWER(COALESCE(commission_items.meta->>'program_type', '')) = 'regular' THEN 'Chính quy'
+                    WHEN LOWER(COALESCE(commission_items.meta->>'program_type', '')) = 'part_time' THEN 'VHVL'
+                    WHEN LOWER(COALESCE(commission_items.meta->>'program_type', '')) = 'distance' THEN 'Từ xa'
                     ELSE 'Khác'
                 END as label,
                 count(DISTINCT commissions.student_id) as count

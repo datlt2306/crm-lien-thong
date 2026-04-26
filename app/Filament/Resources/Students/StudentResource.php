@@ -28,7 +28,7 @@ class StudentResource extends Resource {
     protected static ?string $navigationLabel = 'Học viên';
     protected static ?int $navigationSort = 1;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = null;
 
     public static function form(Schema $schema): Schema {
         return StudentForm::configure($schema);
@@ -57,50 +57,12 @@ class StudentResource extends Resource {
         ];
     }
 
-    public static function getNavigationBadge(): ?string {
-        try {
-            $user = Auth::user();
-            if (!$user) {
-                return null;
-            }
-
-            $version = \Illuminate\Support\Facades\Cache::get('crm-cache-dash:version', 1);
-            $cacheKey = sprintf('students_navigation_badge:%s:%s:%s', $version, $user->id, $user->role);
-
-            return (string) Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user) {
-                $query = Student::query();
-
-                // Nhóm Admin & Super Admin đếm tất cả (cả active và inactive)
-                if (in_array($user->role, ['super_admin', 'admin'])) {
-                    return $query->count();
-                }
-
-                // Nhóm Cán bộ văn phòng (Kế toán, Hồ sơ, Tuyển sinh): Chỉ đếm học viên ĐANG HOẠT ĐỘNG
-                if (in_array($user->role, ['organization_owner', 'admissions', 'document', 'accountant']) || 
-                    (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['organization_owner', 'admissions', 'document', 'accountant']))) {
-                    return $query->where('is_active', true)->count();
-                }
-
-                // CTV đếm học viên của mình
-                if ($user->role === 'collaborator') {
-                    return $query->whereRelation('collaborator', 'email', $user->email)->count();
-                }
-
-                return 0;
-            });
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string {
-        return 'Số lượng học viên';
-    }
 
     public static function getEloquentQuery(): Builder {
         $user = Auth::user();
         
         $query = static::getModel()::query()
+            ->withTrashed() // Cho phép truy vấn cả bản ghi đã xóa (cần thiết cho Tab Thùng rác)
             ->with(['payment', 'collaborator', 'intake']);
 
         if (!$user) {
@@ -112,12 +74,12 @@ class StudentResource extends Resource {
             return $query;
         }
 
-        // 2. CTV: Chỉ thấy sinh viên của mình (bao gồm cả Inactive)
+        // 2. CTV: Chỉ thấy sinh viên của mình (bao gồm cả Inactive và Trashed)
         if ($user->role === 'collaborator') {
             return $query->whereRelation('collaborator', 'email', $user->email);
         }
 
-        // 3. Nhân sự văn phòng: Nếu có quyền xem danh sách thì thấy tất cả (vì đã có Tab lọc Active/Inactive)
+        // 3. Nhân sự văn phòng: Nếu có quyền xem danh sách thì thấy tất cả (vì đã có Tab lọc Active/Inactive/Trash)
         if ($user->can('student_view_any')) {
             return $query;
         }

@@ -30,15 +30,15 @@ class CommissionPoliciesTable {
                     ->color(fn($state) => 'info') // Since it can be multiple, just use info color
                     ->formatStateUsing(fn($state) => is_array($state) 
                         ? collect($state)->map(fn($s) => match ($s) {
-                            'REGULAR' => 'Chính quy',
-                            'PART_TIME' => 'VHVLV',
-                            'DISTANCE' => 'Từ xa',
+                            'regular' => 'Chính quy',
+                            'part_time' => 'VHVLV',
+                            'distance' => 'Từ xa',
                             default => $s,
                         })->join(', ')
                         : match ($state) {
-                            'REGULAR' => 'Chính quy',
-                            'PART_TIME' => 'VHVLV',
-                            'DISTANCE' => 'Từ xa',
+                            'regular' => 'Chính quy',
+                            'part_time' => 'VHVLV',
+                            'distance' => 'Từ xa',
                             default => 'Tất cả',
                         }),
                 TextColumn::make('payout_rules')
@@ -55,9 +55,9 @@ class CommissionPoliciesTable {
                             if ($isNested) {
                                 foreach ($payoutRules as $type => $rules) {
                                     $typeLabel = match ($type) {
-                                        'REGULAR' => '🎓 Chính quy',
-                                        'PART_TIME' => '🕒 VHVLV',
-                                        'DISTANCE' => '🌐 Từ xa',
+                                        'regular' => '🎓 Chính quy',
+                                        'part_time' => '🕒 VHVLV',
+                                        'distance' => '🌐 Từ xa',
                                         'default' => '⚙️ Mặc định',
                                         default => $type
                                     };
@@ -106,8 +106,8 @@ class CommissionPoliciesTable {
                 SelectFilter::make('program_type')
                     ->label('Chương trình')
                     ->options([
-                        'REGULAR' => 'Chính quy',
-                        'PART_TIME' => 'Bán thời gian',
+                        'regular' => 'Chính quy',
+                        'part_time' => 'Bán thời gian',
                     ]),
                 SelectFilter::make('role')
                     ->label('Vai trò')
@@ -132,6 +132,20 @@ class CommissionPoliciesTable {
                 ActionGroup::make([
                     EditAction::make()
                         ->label('Chỉnh sửa'),
+                    \Filament\Actions\Action::make('toggle_active')
+                        ->label(fn($record) => $record->active ? 'Vô hiệu hóa' : 'Kích hoạt')
+                        ->icon(fn($record) => $record->active ? 'heroicon-m-no-symbol' : 'heroicon-m-check-circle')
+                        ->color(fn($record) => $record->active ? 'danger' : 'success')
+                        ->action(fn($record) => $record->update(['active' => !$record->active]))
+                        ->requiresConfirmation(),
+                    \Filament\Actions\DeleteAction::make()
+                        ->label('Xóa')
+                        ->modalHeading('Xóa chính sách hoa hồng')
+                        ->modalDescription('Bạn có chắc chắn muốn xóa chính sách này? Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                    \Filament\Actions\RestoreAction::make()
+                        ->label('Khôi phục'),
+                    \Filament\Actions\ForceDeleteAction::make()
+                        ->label('Xóa vĩnh viễn'),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -142,12 +156,14 @@ class CommissionPoliciesTable {
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    \Filament\Actions\DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa chính sách hoa hồng đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các chính sách hoa hồng đã chọn? Hành động này không thể hoàn tác.')
-                        ->modalSubmitActionLabel('Xóa')
-                        ->modalCancelActionLabel('Hủy'),
+                        ->modalHeading('Xóa các chính sách đã chọn')
+                        ->modalDescription('Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục đã chọn'),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn đã chọn'),
                 ]),
             ])
             ->defaultSort('id', 'desc');

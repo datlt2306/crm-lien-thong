@@ -67,9 +67,9 @@ class QuotaForm {
                             ->label('Hệ đào tạo')
                             ->options(function () {
                                 $base = [
-                                    'REGULAR' => 'Chính quy',
-                                    'PART_TIME' => 'Vừa học vừa làm',
-                                    'DISTANCE' => 'Đào tạo từ xa',
+                                    'regular' => 'Chính quy',
+                                    'part_time' => 'Vừa học vừa làm',
+                                    'distance' => 'Đào tạo từ xa',
                                     'Chính quy' => 'Chính quy',
                                     'Vừa học vừa làm' => 'Vừa học vừa làm',
                                     'Đào tạo từ xa' => 'Đào tạo từ xa',

@@ -19,18 +19,18 @@ class AnnualQuotaForm {
         }
 
         return match (mb_strtolower($normalized)) {
-            'regular', 'chính quy', 'he chinh quy', 'hệ chính quy' => 'REGULAR',
-            'part_time', 'part-time', 'vừa học vừa làm', 'he vua hoc vua lam', 'hệ vừa học vừa làm', 'bán thời gian' => 'PART_TIME',
-            'distance', 'đào tạo từ xa', 'he dao tao tu xa', 'hệ đào tạo từ xa' => 'DISTANCE',
+            'regular', 'chính quy', 'he chinh quy', 'hệ chính quy' => 'regular',
+            'part_time', 'part-time', 'vừa học vừa làm', 'he vua hoc vua lam', 'hệ vừa học vừa làm', 'bán thời gian' => 'part_time',
+            'distance', 'đào tạo từ xa', 'he dao tao tu xa', 'hệ đào tạo từ xa' => 'distance',
             default => strtoupper($normalized),
         };
     }
 
     private static function getProgramLabel(?string $value): string {
         return match (self::normalizeProgramValue($value)) {
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
-            'DISTANCE' => 'Đào tạo từ xa',
+            'regular' => 'Chính quy',
+            'part_time' => 'Vừa học vừa làm',
+            'distance' => 'Đào tạo từ xa',
             default => (string) $value,
         };
     }
@@ -59,9 +59,9 @@ class AnnualQuotaForm {
                             ->label('Hệ đào tạo')
                             ->options(function () {
                                 $base = [
-                                    'REGULAR' => 'Chính quy',
-                                    'PART_TIME' => 'Vừa học vừa làm',
-                                    'DISTANCE' => 'Đào tạo từ xa',
+                                    'regular' => 'Chính quy',
+                                    'part_time' => 'Vừa học vừa làm',
+                                    'distance' => 'Đào tạo từ xa',
                                 ];
 
                                 if (!SchemaFacade::hasTable('programs')) {

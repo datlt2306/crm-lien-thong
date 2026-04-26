@@ -8,8 +8,10 @@ use App\Traits\HasAuditLog;
 
 use Illuminate\Notifications\Notifiable;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Collaborator extends Model {
-    use HasFactory, HasAuditLog, Notifiable;
+    use HasFactory, HasAuditLog, Notifiable, SoftDeletes;
 
     /**
      * Kiểm tra xem CTV có muốn nhận loại thông báo này qua kênh này không
