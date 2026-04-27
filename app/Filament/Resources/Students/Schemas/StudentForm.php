@@ -237,7 +237,7 @@ class StudentForm {
                                     ->helperText('Nhập địa chỉ của sinh viên'),
                                 \Filament\Forms\Components\Placeholder::make('fee_display')
                                     ->label('Lệ phí (VNĐ)')
-                                    ->content(function (?Student $record) {
+                                    ->content(function (?Student $record, $get) {
                                         $amount = 0;
                                         
                                         if ($record?->payment && $record->payment->amount > 0) {
@@ -245,7 +245,24 @@ class StudentForm {
                                         } else {
                                             // Fallback: Lấy số tiền dự kiến từ StudentFeeService
                                             $feeService = app(\App\Services\StudentFeeService::class);
-                                            $amount = $feeService->getExpectedFeeForStudent($record) ?? 0;
+                                            
+                                            if ($record) {
+                                                $amount = $feeService->getExpectedFeeForStudent($record) ?? 0;
+                                            } else {
+                                                // Trường hợp tạo mới: Tính dựa trên form state
+                                                $quotaId = $get('quota_id');
+                                                if ($quotaId) {
+                                                    $amount = \App\Models\Quota::where('id', $quotaId)->value('tuition_fee') ?? 0;
+                                                } else {
+                                                    $programType = $get('program_type');
+                                                    $defaultFees = [
+                                                        'regular' => 1750000,
+                                                        'part_time' => 750000,
+                                                        'distance' => 200000,
+                                                    ];
+                                                    $amount = $defaultFees[strtolower((string)$programType)] ?? 0;
+                                                }
+                                            }
                                         }
 
                                         $amountFormatted = $amount > 0 ? number_format((int) round($amount), 0, '', '.') . ' VNĐ' : 'Chưa có thông tin';

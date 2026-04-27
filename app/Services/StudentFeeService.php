@@ -14,7 +14,10 @@ class StudentFeeService {
      *
      * Hiện tại cấu hình số tiền đang nằm ở `quotas.tuition_fee`.
      */
-    public function getExpectedFeeForStudent(Student $student): ?float {
+    public function getExpectedFeeForStudent(?Student $student): ?float {
+        if (!$student) {
+            return null;
+        }
         // Mặc định theo yêu cầu
         $programType = strtolower((string) ($student->program_type ?? ''));
         
@@ -65,7 +68,10 @@ class StudentFeeService {
         return $feeFloat;
     }
 
-    private function resolveIntakeId(Student $student): ?int {
+    private function resolveIntakeId(?Student $student): ?int {
+        if (!$student) {
+            return null;
+        }
         if (!empty($student->intake_id)) {
             return (int) $student->intake_id;
         }

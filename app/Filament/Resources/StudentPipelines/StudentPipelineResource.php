@@ -14,7 +14,7 @@ class StudentPipelineResource extends Resource {
     protected static ?string $model = Student::class;
 
     protected static string|\BackedEnum|null $navigationIcon = null;
-    protected static ?string $navigationLabel = 'Học viên';
+    protected static ?string $navigationLabel = 'Học viên đăng ký';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 1;
 
