@@ -4,7 +4,39 @@ $unreadCount = $user ? $user->unreadNotifications()->count() : 0;
 $totalNotifications = $user ? $user->notifications()->count() : 0;
 @endphp
 
-<div class="relative" x-data="{ open: false }">
+<div class="relative" x-data="{ 
+    open: false,
+    markAsRead(notificationId) {
+        fetch('/admin/notifications/' + notificationId + '/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').content
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    },
+    markAllAsRead() {
+        fetch('/admin/notifications/mark-all-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').content
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+}">
     <button
         @click="open = !open"
         class="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full">
@@ -30,13 +62,13 @@ $totalNotifications = $user ? $user->notifications()->count() : 0;
         x-transition:leave-start="transform opacity-100 scale-100"
         x-transition:leave-end="transform opacity-0 scale-95"
         class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 border"
-        style="display: none;">
+        x-cloak>
         <div class="p-4 border-b">
             <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">Thông báo</h3>
                 @if($unreadCount > 0)
                 <button
-                    onclick="markAllAsRead()"
+                    @click="markAllAsRead()"
                     class="text-sm text-blue-600 hover:text-blue-800">
                     Đánh dấu tất cả đã đọc
                 </button>
@@ -62,7 +94,7 @@ $totalNotifications = $user ? $user->notifications()->count() : 0;
                     </div>
                     @if(!$notification->read_at)
                     <button
-                        onclick="markAsRead('{{ $notification->id }}')"
+                        @click="markAsRead('{{ $notification->id }}')"
                         class="ml-2 text-blue-600 hover:text-blue-800 text-xs">
                         Đánh dấu đã đọc
                     </button>
@@ -90,37 +122,3 @@ $totalNotifications = $user ? $user->notifications()->count() : 0;
         </div>
     </div>
 </div>
-
-<script>
-    function markAsRead(notificationId) {
-        fetch('/admin/notifications/' + notificationId + '/mark-read', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
-    }
-
-    function markAllAsRead() {
-        fetch('/admin/notifications/mark-all-read', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
-    }
-</script>

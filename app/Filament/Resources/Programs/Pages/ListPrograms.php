@@ -14,7 +14,7 @@ class ListPrograms extends ListRecords
     {
         return [
             'active' => \Filament\Schemas\Components\Tabs\Tab::make('Chương trình')
-                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('programs.deleted_at'))
                 ->badge(fn() => \App\Models\Program::whereNull('deleted_at')->count())
                 ->badgeColor('success'),
             'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')

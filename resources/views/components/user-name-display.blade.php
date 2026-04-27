@@ -22,7 +22,7 @@
     <div class="flex items-center gap-2">
         <span class="text-sm font-bold text-black dark:text-white whitespace-nowrap">{{ $userName }}</span>
         <span class="text-gray-300 dark:text-gray-600">-</span>
-        <span class="px-2 py-1 font-semibold rounded-full border {{ $badgeColors }} whitespace-nowrap" style="font-size: 10px !important; line-height: 1 !important;">
+        <span class="px-2 py-1 font-semibold rounded-full border {{ $badgeColors }} whitespace-nowrap text-[10px] leading-none">
             {{ $label }}
         </span>
     </div>

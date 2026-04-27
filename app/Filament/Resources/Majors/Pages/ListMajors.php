@@ -14,7 +14,7 @@ class ListMajors extends ListRecords
     {
         return [
             'active' => \Filament\Schemas\Components\Tabs\Tab::make('Ngành học')
-                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('majors.deleted_at'))
                 ->badge(fn() => \App\Models\Major::whereNull('deleted_at')->count())
                 ->badgeColor('success'),
             'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')

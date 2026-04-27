@@ -44,7 +44,7 @@ x-on:form-submitted.window="localStorage.removeItem(storageKey); hasDraft = fals
 class="w-full mb-4"
 x-show="hasDraft"
 x-transition
-style="display: none;">
+x-cloak>
     <div class="p-4 rounded-xl border border-primary-500 bg-primary-50 dark:bg-primary-950/20 flex items-center justify-between gap-3 shadow-sm">
         <div class="flex items-center gap-3">
             <div class="p-2 bg-primary-500 rounded-lg text-white">

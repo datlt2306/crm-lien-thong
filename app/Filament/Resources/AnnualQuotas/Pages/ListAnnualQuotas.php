@@ -13,7 +13,7 @@ class ListAnnualQuotas extends ListRecords {
     {
         return [
             'active' => \Filament\Schemas\Components\Tabs\Tab::make('Chỉ tiêu năm')
-                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('annual_quotas.deleted_at'))
                 ->badge(fn() => \App\Models\AnnualQuota::whereNull('deleted_at')->count())
                 ->badgeColor('success'),
             'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')

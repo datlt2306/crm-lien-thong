@@ -12,7 +12,7 @@
 </head>
 
 <body class="bg-gray-900 text-white min-h-screen">
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 py-8 max-w-[1200px]">
         <h1 class="text-3xl font-bold mb-8">Notification Bell Demo</h1>
 
         <div class="flex justify-between items-center mb-8">
@@ -56,12 +56,6 @@
         </div>
     </div>
 
-    <style>
-        /* Custom styles for demo */
-        .container {
-            max-width: 1200px;
-        }
-    </style>
 </body>
 
 </html>

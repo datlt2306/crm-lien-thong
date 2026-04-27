@@ -1,4 +1,7 @@
 <x-filament-panels::page>
+    @push('styles')
+        <link rel="stylesheet" href="{{ asset('css/audit-timeline.css') }}">
+    @endpush
     <div class="space-y-6">
         {{-- Header Filters --}}
         <div class="flex flex-wrap gap-4 p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-white/20 shadow-xl">
@@ -45,7 +48,7 @@
 
                         {{-- Content Card (Desktop Right) --}}
                         <div class="mt-4 md:mt-0 md:w-5/12 pl-0 md:pl-10">
-                            <div class="p-5 rounded-2xl border border-white/10 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 backdrop-blur-xl bg-white/70 dark:bg-gray-800/70">
+                            <div class="timeline-content p-5 rounded-2xl border border-white/10 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 backdrop-blur-xl bg-white/70 dark:bg-gray-800/70">
                                 <div class="flex justify-between items-start mb-3">
                                     <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100 italic">
                                         {{ $log->event_type }}
@@ -151,16 +154,4 @@
         </div>
     </div>
 
-    <style>
-        .timeline-content::after {
-            content: '';
-            position: absolute;
-            left: -8px;
-            top: 20px;
-            width: 16px;
-            height: 16px;
-            background: inherit;
-            @apply border-l border-t border-white/20 rotate-45 hidden md:block;
-        }
-    </style>
 </x-filament-panels::page>

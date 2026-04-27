@@ -25,7 +25,7 @@ class ListCommissionPolicies extends ListRecords {
     {
         return [
             'active' => \Filament\Schemas\Components\Tabs\Tab::make('Chính sách hoa hồng')
-                ->modifyQueryUsing(fn ($query) => $query->whereNull('deleted_at'))
+                ->modifyQueryUsing(fn ($query) => $query->whereNull('commission_policies.deleted_at'))
                 ->badge(fn() => \App\Models\CommissionPolicy::whereNull('deleted_at')->count())
                 ->badgeColor('success'),
             'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')

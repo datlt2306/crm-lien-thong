@@ -6,10 +6,7 @@
     <title>Thông báo nộp lệ phí - {{ config('app.name') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/ref-payment-disabled.css') }}">
 </head>
 <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
     <div class="max-w-md w-full glass p-8 rounded-2xl shadow-xl text-center border border-white">
