@@ -19,7 +19,6 @@ class Dashboard extends BaseDashboard {
     protected function getHeaderWidgets(): array {
         return [
             DashboardWelcomeWidget::class,
-            \App\Filament\Widgets\DashboardFiltersWidget::class,
         ];
     }
 

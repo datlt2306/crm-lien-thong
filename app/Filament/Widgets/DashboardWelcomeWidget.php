@@ -41,7 +41,7 @@ class DashboardWelcomeWidget extends Widget {
 
         if ($user?->can('report_view_all') || $user?->can('report_view_finance')) {
             $stats[] = [
-                'label' => 'Payments hôm nay',
+                'label' => 'Giao dịch hôm nay',
                 'value' => \App\Models\Payment::whereDate('created_at', today())->count(),
                 'icon' => 'heroicon-o-credit-card',
                 'color' => 'amber',

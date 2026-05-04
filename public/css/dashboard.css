@@ -123,11 +123,61 @@
 
 /* ── Filters Widget ── */
 .dashboard-filters-widget {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: center;
-    padding: 0.5rem 0;
+    display: inline-flex !important;
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 999px !important;
+    padding: 0.4rem 1.25rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+    align-items: center !important;
+    width: auto !important;
+    transition: all 0.3s ease;
+}
+
+.dark .dashboard-filters-widget {
+    background: rgba(30, 41, 59, 0.8) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dashboard-filters-widget:hover {
+    border-color: var(--primary-400) !important;
+    box-shadow: 0 4px 15px rgba(var(--primary-500), 0.1) !important;
+}
+
+/* Minimalist Input inside Pill */
+.fi-input-compact {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 1.5rem 0 0.25rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    color: var(--dashboard-text-primary) !important;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none !important;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'%3E%3C/path%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right center !important;
+    background-size: 0.8rem !important;
+}
+
+.fi-input-compact:focus {
+    color: var(--primary-600) !important;
+}
+
+.dark .fi-input-compact:focus {
+    color: var(--primary-400) !important;
+}
+
+/* Remove old orange label */
+.dashboard-filters-widget::before {
+    display: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -135,29 +185,31 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .dashboard-welcome-banner {
-    /* Hardcode amber gradient để luôn hiển thị tốt bất kể theme */
-    background: linear-gradient(135deg, #b45309 0%, #d97706 40%, #f59e0b 100%);
+    /* Indigo/Blue gradient for a more professional and premium feel */
+    background: linear-gradient(135deg, #3730a3 0%, #4338ca 40%, #6366f1 100%);
     border-radius: var(--dashboard-radius);
-    padding: 1.75rem 2rem;
+    padding: 1.5rem 2rem;
     color: #ffffff;
     position: relative;
     overflow: hidden;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Dark mode: dùng amber đậm hơn để nổi bật trên nền tối */
+/* Dark mode: deeper indigo */
 .dark .dashboard-welcome-banner {
-    background: linear-gradient(135deg, #92400e 0%, #b45309 40%, #d97706 100%);
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #3730a3 100%);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
 .dashboard-welcome-banner::after {
     content: "";
     position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: rgba(255, 255, 255, 0.06);
+    top: -40%;
+    right: -5%;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
 }
@@ -165,10 +217,39 @@
 .dashboard-welcome-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 1.5rem;
     position: relative;
     z-index: 1;
+}
+
+/* Integrated Banner Filters Styling */
+.dashboard-banner-filters {
+    flex: 0 1 auto;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-banner-filters .dashboard-filters-widget {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0.4rem 1.1rem !important;
+}
+
+.dashboard-banner-filters .fi-input-compact {
+    color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'%3E%3C/path%3E%3C/svg%3E") !important;
+}
+
+.dashboard-banner-filters .text-primary-600 {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.dashboard-banner-filters .text-gray-400 {
+    color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .dashboard-welcome-greeting {
@@ -199,31 +280,36 @@
 }
 
 .dashboard-welcome-role {
-    background: rgba(255, 255, 255, 0.25);
-    padding: 0.15rem 0.6rem;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    padding: 0.2rem 0.75rem;
     border-radius: 999px;
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .dashboard-welcome-illustration {
     flex-shrink: 0;
-    width: 140px;
-    opacity: 0.9;
+    width: 120px;
+    opacity: 0.8;
 }
 
 .dashboard-welcome-svg {
     width: 100%;
     height: auto;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* ── Welcome Quick Stats ── */
 .dashboard-welcome-stats {
     display: flex;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
+    gap: 1rem;
+    margin-top: 1.5rem;
     position: relative;
     z-index: 1;
     flex-wrap: wrap;
@@ -232,38 +318,40 @@
 .dashboard-welcome-stat {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    gap: 0.85rem;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--dashboard-radius-sm);
-    padding: 0.75rem 1.1rem;
+    padding: 0.85rem 1.25rem;
     transition: all var(--dashboard-transition);
     flex: 1;
-    min-width: 160px;
+    min-width: 180px;
 }
 
 .dashboard-welcome-stat:hover {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(255, 255, 255, 0.35);
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .dashboard-welcome-stat-icon {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     flex-shrink: 0;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 .dashboard-welcome-stat-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     color: #ffffff;
 }
 
@@ -356,8 +444,8 @@ canvas {
    ═══════════════════════════════════════════════════════════════════ */
 
 html:not(.dark) .dashboard-welcome-banner {
-    /* Light mode: amber đậm hơn để text trắng nổi bật */
-    background: linear-gradient(135deg, #b45309 0%, #d97706 40%, #f59e0b 100%);
+    /* Light mode: Indigo gradient consistent with dark mode */
+    background: linear-gradient(135deg, #4338ca 0%, #4f46e5 40%, #6366f1 100%);
 }
 
 html:not(.dark) .dashboard-welcome-stat-label {
@@ -387,7 +475,7 @@ html:not(.dark) .fi-stats-overview-stat {
    ═══════════════════════════════════════════════════════════════════ */
 
 .dark .dashboard-welcome-banner {
-    background: linear-gradient(135deg, #92400e 0%, #b45309 40%, #d97706 100%);
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #3730a3 100%);
 }
 
 .dark .dashboard-welcome-stat-label {

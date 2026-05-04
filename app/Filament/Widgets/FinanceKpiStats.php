@@ -15,6 +15,7 @@ class FinanceKpiStats extends BaseWidget {
 
     protected ?string $pollingInterval = '60s';
     protected int|string|array $columnSpan = 'full';
+    protected int|array|null $columns = 4;
 
     protected function getCards(): array {
         $filters = $this->filters;
@@ -69,6 +70,11 @@ class FinanceKpiStats extends BaseWidget {
         $totalApplications = $this->applyFilters(Student::query(), $filters)->count();
         $unpaidRate = $totalApplications > 0 ? round(($unpaidFeesCount / $totalApplications) * 100, 1) : 0;
 
+        // 8. Tổng lệ phí thực thu
+        $totalRevenue = $this->applyFilters(Payment::query(), $filters)
+            ->where('status', Payment::STATUS_VERIFIED)
+            ->sum('amount');
+
         return [
             Stat::make('Hồ sơ đã nộp', (string) $submittedStudents)
                 ->description('Trạng thái chờ xác minh trở lên')
@@ -104,6 +110,11 @@ class FinanceKpiStats extends BaseWidget {
                 ->description('Số SV chưa nộp tiền / Tổng hồ sơ')
                 ->icon('heroicon-o-chart-pie')
                 ->color('primary'),
+
+            Stat::make('Lệ phí thực thu', number_format($totalRevenue) . ' ₫')
+                ->description('Tổng tiền đã xác nhận')
+                ->icon('heroicon-o-currency-dollar')
+                ->color('success'),
         ];
     }
 }
