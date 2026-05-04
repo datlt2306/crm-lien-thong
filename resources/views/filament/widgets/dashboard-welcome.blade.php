@@ -31,7 +31,7 @@
 
     <!-- Quick Stats Grid (8 cards) -->
     @if (!empty($this->getQuickStats()))
-    <div class="dashboard-welcome-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+    <div class="dashboard-welcome-stats grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         @foreach ($this->getQuickStats() as $stat)
         <div class="dashboard-welcome-stat">
             <div class="dashboard-welcome-stat-icon">
