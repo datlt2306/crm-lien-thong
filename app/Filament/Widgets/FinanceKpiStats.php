@@ -15,7 +15,11 @@ class FinanceKpiStats extends BaseWidget {
 
     protected ?string $pollingInterval = '60s';
     protected int|string|array $columnSpan = 'full';
-    protected int|array|null $columns = 4;
+    protected int|array|null $columns = [
+        'default' => 2,
+        'sm' => 2,
+        'lg' => 4,
+    ];
 
     protected function getCards(): array {
         $filters = $this->filters;

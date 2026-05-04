@@ -307,12 +307,11 @@
 
 /* ── Welcome Quick Stats ── */
 .dashboard-welcome-stats {
-    display: flex;
+    display: grid;
     gap: 1rem;
     margin-top: 1.5rem;
     position: relative;
     z-index: 1;
-    flex-wrap: wrap;
 }
 
 .dashboard-welcome-stat {
@@ -326,8 +325,6 @@
     border-radius: var(--dashboard-radius-sm);
     padding: 0.85rem 1.25rem;
     transition: all var(--dashboard-transition);
-    flex: 1;
-    min-width: 180px;
 }
 
 .dashboard-welcome-stat:hover {
@@ -347,6 +344,12 @@
     border-radius: 12px;
     flex-shrink: 0;
     box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 576px) {
+    .dashboard-welcome-stat-icon {
+        display: none;
+    }
 }
 
 .dashboard-welcome-stat-icon svg {
@@ -419,11 +422,11 @@ canvas {
     }
 
     .dashboard-welcome-stats {
-        flex-direction: column;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .dashboard-welcome-stat {
-        min-width: 100%;
+        min-width: 0;
     }
 
     .fi-wi-header {
@@ -434,8 +437,16 @@ canvas {
         padding: 1rem !important;
     }
 
-    .fi-stats-overview-stat {
+    .fi-wi-stats-overview-stat{
         padding: 1rem !important;
+    }
+
+    .fi-wi-stats-overview-stat .fi-wi-stats-overview-stat-value {
+        font-size: 1.25rem !important;
+    }
+
+    .dashboard-welcome-stat-value {
+        font-size: 1rem;
     }
 }
 
