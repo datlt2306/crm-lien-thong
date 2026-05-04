@@ -19,6 +19,7 @@ class CollaboratorRevenueChart extends ChartWidget {
         'default' => 'full',
         'lg' => 2,
     ];
+    protected ?string $maxHeight = '300px';
 
     protected function getType(): string {
         return 'bar';

@@ -12,6 +12,7 @@ class SimpleRevenueChart extends ChartWidget {
     use WithDashboardFilters;
     protected ?string $heading = 'Doanh thu theo ngày (Simple)';
     protected ?string $pollingInterval = '120s';
+    protected ?string $maxHeight = '300px';
 
     protected function getData(): array {
         $filters = $this->filters;

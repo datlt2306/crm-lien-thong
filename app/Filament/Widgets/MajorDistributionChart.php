@@ -17,6 +17,7 @@ class MajorDistributionChart extends ChartWidget {
         'xl' => 2,
     ];
     protected ?string $pollingInterval = '120s';
+    protected ?string $maxHeight = '250px';
 
     protected function getType(): string {
         return 'bar';
