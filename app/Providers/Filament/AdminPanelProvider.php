@@ -27,10 +27,18 @@ class AdminPanelProvider extends PanelProvider {
             ->id('admin')
             ->path('admin')
             ->brandName('CRM GTVT')
+            ->font('Inter')
             ->login(\App\Filament\Pages\Auth\Login::class)
             ->colors([
                 'primary' => Color::Amber,
+                'gray' => Color::Slate,
+                'info' => Color::Blue,
+                'success' => Color::Emerald,
+                'warning' => Color::Orange,
+                'danger' => Color::Rose,
             ])
+            ->sidebarCollapsibleOnDesktop()
+            ->sidebarWidth('16rem')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -43,6 +51,7 @@ class AdminPanelProvider extends PanelProvider {
                 \App\Filament\Resources\Commissions\Widgets\CommissionSummary::class,
             ])
             ->maxContentWidth('full')
+            ->topNavigation(false)
             ->renderHook(
                 'panels::topbar.end',
                 fn(): string => view('components.user-name-display')->render() . view('components.referral-link')->render() . view('components.notification-bell')->render()
@@ -78,8 +87,8 @@ class AdminPanelProvider extends PanelProvider {
             ])
             ->navigationGroups([
                 \Filament\Navigation\NavigationGroup::make()
-                     ->label('Tuyển sinh')
-                     ->icon('heroicon-o-user-group'),
+                    ->label('Tuyển sinh')
+                    ->icon('heroicon-o-user-group'),
                 \Filament\Navigation\NavigationGroup::make()
                     ->label('Cộng tác viên')
                     ->icon('heroicon-o-users'),

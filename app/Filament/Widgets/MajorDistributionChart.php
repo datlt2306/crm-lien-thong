@@ -11,6 +11,11 @@ class MajorDistributionChart extends ChartWidget {
     use WithDashboardFilters;
 
     protected ?string $heading = 'Thống kê hồ sơ theo Ngành';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'lg' => 1,
+        'xl' => 2,
+    ];
     protected ?string $pollingInterval = '120s';
 
     protected function getType(): string {
@@ -48,8 +53,16 @@ class MajorDistributionChart extends ChartWidget {
                     'label' => 'Số lượng hồ sơ',
                     'data' => $counts,
                     'backgroundColor' => [
-                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-                        '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'
+                        '#3b82f6',
+                        '#10b981',
+                        '#f59e0b',
+                        '#ef4444',
+                        '#8b5cf6',
+                        '#ec4899',
+                        '#06b6d4',
+                        '#f97316',
+                        '#14b8a6',
+                        '#6366f1'
                     ],
                 ]
             ],

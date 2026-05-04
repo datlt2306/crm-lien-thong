@@ -15,6 +15,10 @@ class CollaboratorRevenueChart extends ChartWidget {
 
     protected ?string $heading = 'Doanh thu theo CTV';
     protected ?string $pollingInterval = '60s';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'lg' => 2,
+    ];
 
     protected function getType(): string {
         return 'bar';

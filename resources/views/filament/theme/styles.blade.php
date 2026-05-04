@@ -2,3 +2,4 @@
 
 <link rel="stylesheet" href="{{ asset('css/filament-theme.css') }}">
 <link rel="stylesheet" href="{{ asset('css/filament-custom.css') }}">
+<link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">

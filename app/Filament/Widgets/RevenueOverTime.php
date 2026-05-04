@@ -12,7 +12,10 @@ class RevenueOverTime extends ChartWidget {
     use WithDashboardFilters;
     protected ?string $heading = 'Doanh thu theo ngày';
     protected ?string $pollingInterval = '60s';
-    // protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'lg' => 2,
+    ];
 
     protected function getData(): array {
         $filters = $this->filters;

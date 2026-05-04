@@ -3,35 +3,35 @@
 namespace App\Filament\Pages;
 
 use Filament\Pages\Dashboard as BaseDashboard;
-use App\Filament\Widgets\AdminKpiStats;
+use App\Filament\Widgets\DashboardWelcomeWidget;
 use App\Filament\Widgets\RevenueOverTime;
 use App\Filament\Widgets\RecentPayments;
 use App\Filament\Widgets\CollaboratorRevenueChart;
 use App\Filament\Widgets\CtvUnifiedStats;
-use App\Filament\Widgets\AccountantPendingReceipts;
-use App\Filament\Widgets\AccountantCashFlow;
-use App\Filament\Widgets\AccountantFinancialSummary;
-use App\Filament\Widgets\SimpleAccountantStats;
 use App\Filament\Widgets\SimplePaymentsTable;
-use App\Filament\Widgets\KpiComparisonWidget;
-use App\Filament\Widgets\OptimizedDashboardLoader;
-use App\Filament\Widgets\SimpleRevenueChart;
-use App\Filament\Widgets\SimpleCollaboratorChart;
-use App\Filament\Widgets\CollaboratorStatsWidget;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard {
-
-
-
-
     public function getTitle(): string {
-        return 'Dashboard';
+        return 'Tổng quan';
     }
 
     protected function getHeaderWidgets(): array {
         return [
+            DashboardWelcomeWidget::class,
             \App\Filament\Widgets\DashboardFiltersWidget::class,
+        ];
+    }
+
+    /**
+     * @return int|array<string, int>
+     */
+    public function getColumns(): int|array {
+        return [
+            'default' => 1,
+            'sm' => 2,
+            'lg' => 3,
+            'xl' => 4,
         ];
     }
 
@@ -42,6 +42,7 @@ class Dashboard extends BaseDashboard {
         if ($user->can('report_view_all')) {
             return [
                 \App\Filament\Widgets\FinanceKpiStats::class,
+                \App\Filament\Widgets\ProgramTypeDistributionChart::class,
                 \App\Filament\Widgets\MajorDistributionChart::class,
                 RevenueOverTime::class,
                 CollaboratorRevenueChart::class,
@@ -60,6 +61,7 @@ class Dashboard extends BaseDashboard {
         if ($user->can('report_view_finance')) {
             return [
                 \App\Filament\Widgets\FinanceKpiStats::class,
+                \App\Filament\Widgets\ProgramTypeDistributionChart::class,
                 \App\Filament\Widgets\MajorDistributionChart::class,
                 RevenueOverTime::class,
                 SimplePaymentsTable::class,

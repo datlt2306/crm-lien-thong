@@ -14,20 +14,10 @@ class DashboardFiltersWidget extends Widget {
         'range' => 'last_30_days',
         'from' => null,
         'to' => null,
-        'program_type' => null,
-        'major' => null,
-        'group' => 'day',
     ];
 
     protected function getViewData(): array {
-        $majors = \Illuminate\Support\Facades\DB::table('quotas')
-            ->select('major_name as id', 'major_name as name')
-            ->whereNotNull('major_name')
-            ->distinct()
-            ->orderBy('major_name')
-            ->get();
-
-        return compact('majors');
+        return [];
     }
 
     public function updated($name, $value): void {
