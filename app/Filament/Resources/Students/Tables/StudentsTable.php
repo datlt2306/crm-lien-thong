@@ -329,48 +329,20 @@ class StudentsTable {
                         if (!isset($data['value']) || $data['value'] === '') {
                             return $query;
                         }
-                        
-                        $value = $data['value'];
-
-                        return $query->where(function (Builder $q) use ($value) {
-                            // 1. Nếu có giá trị trong DB thì dùng trực tiếp
-                            $q->where('application_status', $value);
-
-                            // 2. Nếu DB NULL, áp dụng fallback logic
-                            $q->orWhere(function (Builder $subQ) use ($value) {
-                                $subQ->whereNull('application_status');
-                                
-                                switch ($value) {
-                                    case 'draft':
-                                        $subQ->whereIn('status', [Student::STATUS_NEW, Student::STATUS_CONTACTED]);
-                                        break;
-                                    case 'pending_documents':
-                                        // Thiếu giấy tờ: status đã nộp/duyệt nhưng checklist chưa đủ
-                                        $subQ->whereIn('status', [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED, Student::STATUS_ENROLLED])
-                                             ->where(function($qq) {
-                                                 $qq->whereNull('document_checklist')
-                                                    ->orWhereJsonLength('document_checklist', '<', 8);
-                                             });
-                                        break;
-                                    case 'submitted':
-                                        $subQ->whereIn('status', [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED, Student::STATUS_ENROLLED])
-                                             ->whereJsonLength('document_checklist', '>=', 8);
-                                        break;
-                                    case 'ineligible':
-                                        $subQ->where('status', Student::STATUS_REJECTED);
-                                        break;
-                                }
-                            });
-                        });
+                        return $query->where('application_status', $data['value']);
                     }),
 
-                \Filament\Tables\Filters\SelectFilter::make('payment_status')
-                    ->label('Lệ Phí (Thanh toán)')
-                    ->options([
-                        Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
-                        Payment::STATUS_SUBMITTED => 'Chờ xác minh',
-                        Payment::STATUS_VERIFIED => 'Đã xác nhận',
-                        Payment::STATUS_REVERTED => 'Đã hoàn trả',
+                \Filament\Tables\Filters\Filter::make('payment_status')
+                    ->label('Trạng thái thanh toán')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('value')
+                            ->label('Chọn trạng thái')
+                            ->options([
+                                Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
+                                Payment::STATUS_SUBMITTED => 'Chờ xác minh',
+                                Payment::STATUS_VERIFIED => 'Đã xác nhận',
+                                Payment::STATUS_REVERTED => 'Đã hoàn trả',
+                            ]),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         if (!isset($data['value']) || $data['value'] === '') {
@@ -380,7 +352,10 @@ class StudentsTable {
                         if ($data['value'] === Payment::STATUS_NOT_PAID) {
                             return $query->where(function (Builder $q) {
                                 $q->whereDoesntHave('payment')
-                                  ->orWhereHas('payment', fn (Builder $pq) => $pq->where('status', Payment::STATUS_NOT_PAID));
+                                  ->orWhereHas('payment', fn (Builder $pq) => $pq->whereIn('status', [
+                                      Payment::STATUS_NOT_PAID,
+                                      Payment::STATUS_SUBMITTED,
+                                  ]));
                             });
                         }
 
@@ -452,10 +427,14 @@ class StudentsTable {
 
 
                 \Filament\Tables\Filters\SelectFilter::make('status')
-                    ->label('Trạng thái (Tuyển sinh)')
+                    ->label('Trạng thái')
                     ->options(Student::getStatusOptions())
-                    ->multiple(),
-
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!isset($data['value']) || $data['value'] === '') {
+                            return $query;
+                        }
+                        return $query->where('status', $data['value']);
+                    }),
 
                 \Filament\Tables\Filters\TernaryFilter::make('awaiting_refund')
                     ->label('Chờ hoàn tiền thừa')
@@ -482,25 +461,13 @@ class StudentsTable {
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['created_from'] ?? null,
+                                $data['created_from'],
                                 fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
-                                $data['created_until'] ?? null,
+                                $data['created_until'],
                                 fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
-                    })
-                    ->indicateUsing(function (array $data): array {
-                        $indicators = [];
-                        if ($data['created_from'] ?? null) {
-                            $indicators[] = \Filament\Tables\Filters\Indicator::make('Từ ngày: ' . \Carbon\Carbon::parse($data['created_from'])->format('d/m/Y'))
-                                ->removeField('created_from');
-                        }
-                        if ($data['created_until'] ?? null) {
-                            $indicators[] = \Filament\Tables\Filters\Indicator::make('Đến ngày: ' . \Carbon\Carbon::parse($data['created_until'])->format('d/m/Y'))
-                                ->removeField('created_until');
-                        }
-                        return $indicators;
                     })
 
 

@@ -44,7 +44,7 @@ class FinanceKpiStats extends BaseWidget {
             ->where(function ($query) {
                 $query->whereDoesntHave('payment')
                     ->orWhereHas('payment', function ($q) {
-                        $q->where('status', Payment::STATUS_NOT_PAID);
+                        $q->whereIn('status', [Payment::STATUS_NOT_PAID, Payment::STATUS_SUBMITTED]);
                     });
             })->count();
 
@@ -72,14 +72,12 @@ class FinanceKpiStats extends BaseWidget {
             ->where('status', Payment::STATUS_VERIFIED)
             ->sum('amount');
 
-        [$from, $to] = $this->getRangeBounds($filters);
-        
         $urlParams = [];
-        if ($from) {
-            $urlParams['tableFilters[created_at][created_from]'] = $from->toDateString();
+        if (!empty($filters['startDate'])) {
+            $urlParams['tableFilters[created_at][created_from]'] = $filters['startDate'];
         }
-        if ($to) {
-            $urlParams['tableFilters[created_at][created_until]'] = $to->toDateString();
+        if (!empty($filters['endDate'])) {
+            $urlParams['tableFilters[created_at][created_until]'] = $filters['endDate'];
         }
         if (!empty($filters['major'])) {
             $urlParams['tableFilters[major][value]'] = $filters['major'];
@@ -93,11 +91,7 @@ class FinanceKpiStats extends BaseWidget {
                 ->description('Trạng thái chờ xác minh trở lên')
                 ->descriptionIcon('heroicon-m-document-text')
                 ->color('info')
-                ->url(route('filament.admin.resources.students.index', array_merge($urlParams, [
-                    'tableFilters[status][values][0]' => Student::STATUS_SUBMITTED,
-                    'tableFilters[status][values][1]' => Student::STATUS_APPROVED,
-                    'tableFilters[status][values][2]' => Student::STATUS_ENROLLED,
-                ]))),
+                ->url(route('filament.admin.resources.students.index', array_merge($urlParams, ['tableFilters[status][value]' => Student::STATUS_SUBMITTED]))),
 
             Stat::make('Hủy / Hoàn tiền', number_format($rejectedCount))
                 ->description('SV bỏ học hoặc hoàn phí')

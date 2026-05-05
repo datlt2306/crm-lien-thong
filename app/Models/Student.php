@@ -142,7 +142,7 @@ class Student extends Model {
         return [
             self::STATUS_NEW => 'Mới',
             self::STATUS_CONTACTED => 'Đã liên hệ',
-            self::STATUS_SUBMITTED => 'Đã nộp hồ sơ',
+            self::STATUS_SUBMITTED => 'Chờ xác minh',
             self::STATUS_APPROVED => 'Đã duyệt',
             self::STATUS_ENROLLED => 'Đã nhập học',
             self::STATUS_REJECTED => 'Từ chối',
