@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Auth;
 class AdminKpiStats extends BaseWidget {
     use WithDashboardFilters;
     protected ?string $pollingInterval = '60s';
+    protected int|string|array $columnSpan = 'full';
+    protected int|array|null $columns = [
+        'default' => 2,
+        'sm' => 2,
+        'lg' => 4,
+    ];
 
     protected function getCards(): array {
         $filters = $this->filters;
@@ -22,10 +28,21 @@ class AdminKpiStats extends BaseWidget {
         });
 
         return [
-            Stat::make('Tổng doanh thu', $stats['total_revenue'])->description('VND')->color('success'),
-            Stat::make('Doanh thu trong khoảng', $stats['range_revenue'])->description($stats['range_label'])->color('success'),
-            Stat::make('Payments đã xác minh', (string) $stats['verified_count'])->description($stats['range_label'])->color('info'),
-            Stat::make('Tỉ lệ xác minh', $stats['verified_rate'])->description($stats['range_label'])->color('warning'),
+            Stat::make('Tổng doanh thu', $stats['total_revenue'])
+                ->description('VND')
+                ->color('success')
+                ->url(route('filament.admin.resources.payments.index')),
+            Stat::make('Doanh thu trong khoảng', $stats['range_revenue'])
+                ->description($stats['range_label'])
+                ->color('success')
+                ->url(route('filament.admin.resources.payments.index')),
+            Stat::make('Payments đã xác minh', (string) $stats['verified_count'])
+                ->description($stats['range_label'])
+                ->color('info')
+                ->url(route('filament.admin.resources.payments.index', ['tableFilters[status][value]' => 'verified'])),
+            Stat::make('Tỉ lệ xác minh', $stats['verified_rate'])
+                ->description($stats['range_label'])
+                ->color('warning'),
         ];
     }
 

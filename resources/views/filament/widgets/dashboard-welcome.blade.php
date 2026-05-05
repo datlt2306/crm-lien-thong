@@ -29,4 +29,20 @@
         </div>
     </div>
 
+    <!-- Quick Stats Grid (8 cards) -->
+    @if (!empty($this->getQuickStats()))
+    <div class="dashboard-welcome-stats grid grid-cols-2 gap-4 mt-6">
+       @foreach($this->getQuickStats() as $stat)
+            <a href="{{ $stat['url'] ?? '#' }}" class="dashboard-welcome-stat group">
+                <div class="dashboard-welcome-stat-icon">
+                    @svg($stat['icon'])
+                </div>
+                <div class="dashboard-welcome-stat-info">
+                    <span class="dashboard-welcome-stat-value">{{ $stat['value'] }}</span>
+                    <span class="dashboard-welcome-stat-label">{{ $stat['label'] }}</span>
+                </div>
+            </a>
+        @endforeach
+    </div>
+    @endif
 </div>

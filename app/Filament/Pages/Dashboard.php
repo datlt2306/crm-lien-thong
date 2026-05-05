@@ -41,8 +41,8 @@ class Dashboard extends BaseDashboard {
         if ($user->can('report_view_all')) {
             return [
                 \App\Filament\Widgets\FinanceKpiStats::class,
-                \App\Filament\Widgets\ProgramTypeDistributionChart::class,
-                \App\Filament\Widgets\MajorDistributionChart::class,
+                \App\Filament\Widgets\StudentDemographicsChart::class,
+                \App\Filament\Widgets\IntakeRecruitmentChart::class,
                 RevenueOverTime::class,
                 CollaboratorRevenueChart::class,
                 RecentPayments::class,
@@ -60,8 +60,8 @@ class Dashboard extends BaseDashboard {
         if ($user->can('report_view_finance')) {
             return [
                 \App\Filament\Widgets\FinanceKpiStats::class,
-                \App\Filament\Widgets\ProgramTypeDistributionChart::class,
-                \App\Filament\Widgets\MajorDistributionChart::class,
+                \App\Filament\Widgets\StudentDemographicsChart::class,
+                \App\Filament\Widgets\IntakeRecruitmentChart::class,
                 RevenueOverTime::class,
                 SimplePaymentsTable::class,
             ];

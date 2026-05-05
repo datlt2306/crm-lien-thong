@@ -329,11 +329,43 @@ class StudentsTable {
                         if (!isset($data['value']) || $data['value'] === '') {
                             return $query;
                         }
-                        return $query->where('application_status', $data['value']);
+                        
+                        $value = $data['value'];
+
+                        return $query->where(function (Builder $q) use ($value) {
+                            // 1. Nếu có giá trị trong DB thì dùng trực tiếp
+                            $q->where('application_status', $value);
+
+                            // 2. Nếu DB NULL, áp dụng fallback logic
+                            $q->orWhere(function (Builder $subQ) use ($value) {
+                                $subQ->whereNull('application_status');
+                                
+                                switch ($value) {
+                                    case 'draft':
+                                        $subQ->whereIn('status', [Student::STATUS_NEW, Student::STATUS_CONTACTED]);
+                                        break;
+                                    case 'pending_documents':
+                                        // Thiếu giấy tờ: status đã nộp/duyệt nhưng checklist chưa đủ
+                                        $subQ->whereIn('status', [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED, Student::STATUS_ENROLLED])
+                                             ->where(function($qq) {
+                                                 $qq->whereNull('document_checklist')
+                                                    ->orWhereJsonLength('document_checklist', '<', 8);
+                                             });
+                                        break;
+                                    case 'submitted':
+                                        $subQ->whereIn('status', [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED, Student::STATUS_ENROLLED])
+                                             ->whereJsonLength('document_checklist', '>=', 8);
+                                        break;
+                                    case 'ineligible':
+                                        $subQ->where('status', Student::STATUS_REJECTED);
+                                        break;
+                                }
+                            });
+                        });
                     }),
 
                 \Filament\Tables\Filters\SelectFilter::make('payment_status')
-                    ->label('Trạng thái thanh toán')
+                    ->label('Lệ Phí (Thanh toán)')
                     ->options([
                         Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
                         Payment::STATUS_SUBMITTED => 'Chờ xác minh',
@@ -420,14 +452,10 @@ class StudentsTable {
 
 
                 \Filament\Tables\Filters\SelectFilter::make('status')
-                    ->label('Trạng thái')
+                    ->label('Trạng thái (Tuyển sinh)')
                     ->options(Student::getStatusOptions())
-                    ->query(function (Builder $query, array $data): Builder {
-                        if (!isset($data['value']) || $data['value'] === '') {
-                            return $query;
-                        }
-                        return $query->where('status', $data['value']);
-                    }),
+                    ->multiple(),
+
 
                 \Filament\Tables\Filters\TernaryFilter::make('awaiting_refund')
                     ->label('Chờ hoàn tiền thừa')
@@ -443,6 +471,37 @@ class StudentsTable {
                         }
                         return $query;
                     }),
+
+                \Filament\Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('created_from')
+                            ->label('Từ ngày'),
+                        \Filament\Forms\Components\DatePicker::make('created_until')
+                            ->label('Đến ngày'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'] ?? null,
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'] ?? null,
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['created_from'] ?? null) {
+                            $indicators[] = \Filament\Tables\Filters\Indicator::make('Từ ngày: ' . \Carbon\Carbon::parse($data['created_from'])->format('d/m/Y'))
+                                ->removeField('created_from');
+                        }
+                        if ($data['created_until'] ?? null) {
+                            $indicators[] = \Filament\Tables\Filters\Indicator::make('Đến ngày: ' . \Carbon\Carbon::parse($data['created_until'])->format('d/m/Y'))
+                                ->removeField('created_until');
+                        }
+                        return $indicators;
+                    })
 
 
             ])

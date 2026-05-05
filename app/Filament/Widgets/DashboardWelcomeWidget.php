@@ -45,12 +45,14 @@ class DashboardWelcomeWidget extends Widget {
                 'value' => \App\Models\Payment::whereDate('created_at', today())->count(),
                 'icon' => 'heroicon-o-credit-card',
                 'color' => 'amber',
+                'url' => route('filament.admin.resources.payments.index'),
             ];
             $stats[] = [
                 'label' => 'Hồ sơ mới',
                 'value' => \App\Models\Student::whereDate('created_at', today())->count(),
                 'icon' => 'heroicon-o-academic-cap',
                 'color' => 'blue',
+                'url' => route('filament.admin.resources.students.index'),
             ];
         }
 
@@ -60,18 +62,20 @@ class DashboardWelcomeWidget extends Widget {
                 $stats[] = [
                     'label' => 'Hoa hồng tháng này',
                     'value' => number_format(
-                        \App\Models\CommissionItem::where('collaborator_id', $collaborator->id)
+                        \App\Models\CommissionItem::where('recipient_collaborator_id', $collaborator->id)
                             ->whereMonth('created_at', now()->month)
                             ->sum('amount')
                     ) . ' ₫',
                     'icon' => 'heroicon-o-banknotes',
                     'color' => 'green',
+                    'url' => route('filament.admin.resources.commissions.index'),
                 ];
                 $stats[] = [
                     'label' => 'Hồ sơ của tôi',
                     'value' => \App\Models\Student::where('collaborator_id', $collaborator->id)->count(),
                     'icon' => 'heroicon-o-user-group',
                     'color' => 'purple',
+                    'url' => route('filament.admin.resources.students.index'),
                 ];
             }
         }

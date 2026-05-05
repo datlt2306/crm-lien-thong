@@ -23,102 +23,123 @@ class FinanceKpiStats extends BaseWidget {
 
     protected function getCards(): array {
         $filters = $this->filters;
-        [$from, $to] = $this->getRangeBounds($filters);
 
-        // 1. Số sinh viên đã nộp hồ sơ (Submitted status and above)
-        $submittedStudents = $this->applyFilters(Student::query(), $filters)
+        // 1. Hồ sơ đã nộp
+        $submittedCount = $this->applyFilters(Student::query(), $filters)
             ->whereIn('status', [Student::STATUS_SUBMITTED, Student::STATUS_APPROVED, Student::STATUS_ENROLLED])
             ->count();
-
-        // 2. Số sinh viên hủy/hoàn tiền (Rejected/Dropped or Reverted Payment)
-        $cancelledStudents = $this->applyFilters(Student::query(), $filters)
-            ->whereIn('status', [Student::STATUS_REJECTED, Student::STATUS_DROPPED])
+        
+        // 2. Hủy / Hoàn tiền
+        $rejectedCount = $this->applyFilters(Student::query(), $filters)
+            ->where('status', Student::STATUS_REJECTED)
             ->count();
 
-        $revertedPayments = $this->applyFilters(Payment::query(), $filters)
-            ->where('status', Payment::STATUS_REVERTED)
-            ->count();
-
-        // 3. Số sv đã nộp lệ phí (Verified payments)
-        $paidFeesCount = $this->applyFilters(Payment::query(), $filters)
+        // 3. Đã nộp lệ phí
+        $paidCount = $this->applyFilters(Payment::query(), $filters)
             ->where('status', Payment::STATUS_VERIFIED)
             ->count();
 
-        // 4. Số sv chưa nộp lệ phí (Not paid or pending)
-        $unpaidFeesCount = $this->applyFilters(Student::query(), $filters)
-            ->where(function ($q) {
-                $q->whereDoesntHave('payment')
-                    ->orWhereHas('payment', fn($p) => $p->where('status', Payment::STATUS_NOT_PAID));
-            })
-            ->count();
+        // 4. Chưa nộp lệ phí
+        $unpaidCount = $this->applyFilters(Student::query(), $filters)
+            ->where(function ($query) {
+                $query->whereDoesntHave('payment')
+                    ->orWhereHas('payment', function ($q) {
+                        $q->where('status', Payment::STATUS_NOT_PAID);
+                    });
+            })->count();
 
-        // 5. Hoa hồng đã chi trả
-        $paidCommission = $this->applyFilters(CommissionItem::query(), $filters)
+        // 5. Hoa hồng đã chi
+        $paidCommissions = $this->applyFilters(CommissionItem::query(), $filters)
             ->whereIn('status', [
                 CommissionItem::STATUS_PAID,
                 CommissionItem::STATUS_PAYMENT_CONFIRMED,
                 CommissionItem::STATUS_RECEIVED_CONFIRMED
-            ])
-            ->whereBetween('updated_at', [$from, $to])
-            ->sum('amount');
+            ])->sum('amount');
 
-        // 6. Hoa hồng chưa chi trả
-        $pendingCommission = $this->applyFilters(CommissionItem::query(), $filters)
+        // 6. Hoa hồng chờ chi
+        $pendingCommissions = $this->applyFilters(CommissionItem::query(), $filters)
             ->whereIn('status', [
                 CommissionItem::STATUS_PENDING,
                 CommissionItem::STATUS_PAYABLE
-            ])
-            ->sum('amount');
+            ])->sum('amount');
 
-        // 7. Tỉ lệ Hồ sơ chưa nộp lệ phí
-        $totalApplications = $this->applyFilters(Student::query(), $filters)->count();
-        $unpaidRate = $totalApplications > 0 ? round(($unpaidFeesCount / $totalApplications) * 100, 1) : 0;
+        // 7. Tỉ lệ hồ sơ nộp phí
+        $totalStudents = $this->applyFilters(Student::query(), $filters)->count();
+        $conversionRate = $totalStudents > 0 ? round(($paidCount / $totalStudents) * 100, 1) : 0;
 
-        // 8. Tổng lệ phí thực thu
-        $totalRevenue = $this->applyFilters(Payment::query(), $filters)
+        // 8. Lệ phí thực thu
+        $actualRevenue = $this->applyFilters(Payment::query(), $filters)
             ->where('status', Payment::STATUS_VERIFIED)
             ->sum('amount');
 
+        [$from, $to] = $this->getRangeBounds($filters);
+        
+        $urlParams = [];
+        if ($from) {
+            $urlParams['tableFilters[created_at][created_from]'] = $from->toDateString();
+        }
+        if ($to) {
+            $urlParams['tableFilters[created_at][created_until]'] = $to->toDateString();
+        }
+        if (!empty($filters['major'])) {
+            $urlParams['tableFilters[major][value]'] = $filters['major'];
+        }
+        if (!empty($filters['program_type'])) {
+            $urlParams['tableFilters[program_type][value]'] = $filters['program_type'];
+        }
+
         return [
-            Stat::make('Hồ sơ đã nộp', (string) $submittedStudents)
+            Stat::make('Hồ sơ đã nộp', number_format($submittedCount))
                 ->description('Trạng thái chờ xác minh trở lên')
-                ->icon('heroicon-o-document-check')
-                ->color('info'),
+                ->descriptionIcon('heroicon-m-document-text')
+                ->color('info')
+                ->url(route('filament.admin.resources.students.index', array_merge($urlParams, [
+                    'tableFilters[status][values][0]' => Student::STATUS_SUBMITTED,
+                    'tableFilters[status][values][1]' => Student::STATUS_APPROVED,
+                    'tableFilters[status][values][2]' => Student::STATUS_ENROLLED,
+                ]))),
 
-            Stat::make('Hủy / Hoàn tiền', (string) ($cancelledStudents + $revertedPayments))
+            Stat::make('Hủy / Hoàn tiền', number_format($rejectedCount))
                 ->description('SV bỏ học hoặc hoàn phí')
-                ->icon('heroicon-o-x-circle')
-                ->color('danger'),
+                ->descriptionIcon('heroicon-m-x-circle')
+                ->color('danger')
+                ->url(route('filament.admin.resources.students.index', array_merge($urlParams, ['tableFilters[status][value]' => Student::STATUS_REJECTED]))),
 
-            Stat::make('Đã nộp lệ phí', (string) $paidFeesCount)
+            Stat::make('Đã nộp lệ phí', number_format($paidCount))
                 ->description('Thanh toán đã xác nhận')
-                ->icon('heroicon-o-banknotes')
-                ->color('success'),
+                ->descriptionIcon('heroicon-m-banknotes')
+                ->color('success')
+                ->url(route('filament.admin.resources.students.index', array_merge($urlParams, ['tableFilters[payment_status][value]' => Payment::STATUS_VERIFIED]))),
 
-            Stat::make('Chưa nộp lệ phí', (string) $unpaidFeesCount)
+            Stat::make('Chưa nộp lệ phí', number_format($unpaidCount))
                 ->description('Chưa có dữ liệu nộp tiền')
-                ->icon('heroicon-o-exclamation-circle')
-                ->color('warning'),
+                ->descriptionIcon('heroicon-m-credit-card')
+                ->color('warning')
+                ->url(route('filament.admin.resources.students.index', array_merge($urlParams, ['tableFilters[payment_status][value]' => Payment::STATUS_NOT_PAID]))),
 
-            Stat::make('Hoa hồng đã chi', number_format($paidCommission) . ' ₫')
+            Stat::make('Hoa hồng đã chi', number_format($paidCommissions) . ' đ')
                 ->description('Đã xác nhận thanh toán')
-                ->icon('heroicon-o-arrow-trending-up')
-                ->color('success'),
+                ->descriptionIcon('heroicon-m-check-badge')
+                ->color('success')
+                ->url(route('filament.admin.resources.commissions.index', ['tableFilters[status][value]' => 'payment_confirmed'])),
 
-            Stat::make('Hoa hồng chờ chi', number_format($pendingCommission) . ' ₫')
+            Stat::make('Hoa hồng chờ chi', number_format($pendingCommissions) . ' đ')
                 ->description('Chờ nhập học/đến hạn')
-                ->icon('heroicon-o-clock')
-                ->color('warning'),
+                ->descriptionIcon('heroicon-m-clock')
+                ->color('warning')
+                ->url(route('filament.admin.resources.commissions.index', ['tableFilters[status][value]' => 'pending'])),
 
-            Stat::make('Tỉ lệ Hồ sơ/Lệ phí', $unpaidRate . '%')
+            Stat::make('Tỉ lệ Hồ sơ/Lệ phí', $conversionRate . '%')
                 ->description('Số SV chưa nộp tiền / Tổng hồ sơ')
-                ->icon('heroicon-o-chart-pie')
-                ->color('primary'),
+                ->descriptionIcon('heroicon-m-presentation-chart-line')
+                ->color('info')
+                ->url(route('filament.admin.resources.students.index')),
 
-            Stat::make('Lệ phí thực thu', number_format($totalRevenue) . ' ₫')
+            Stat::make('Lệ phí thực thu', number_format($actualRevenue) . ' đ')
                 ->description('Tổng tiền đã xác nhận')
-                ->icon('heroicon-o-currency-dollar')
-                ->color('success'),
+                ->descriptionIcon('heroicon-m-currency-dollar')
+                ->color('success')
+                ->url(route('filament.admin.resources.payments.index')),
         ];
     }
 }

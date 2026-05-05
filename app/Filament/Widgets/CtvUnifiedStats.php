@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\Auth;
 class CtvUnifiedStats extends BaseWidget {
     use WithDashboardFilters;
     protected ?string $pollingInterval = '120s';
+    protected int|string|array $columnSpan = 'full';
+    protected int|array|null $columns = [
+        'default' => 2,
+        'sm' => 2,
+        'lg' => 4,
+    ];
 
     protected function getCards(): array {
         $filters = $this->filters;
@@ -35,22 +41,26 @@ class CtvUnifiedStats extends BaseWidget {
             Stat::make('Hoa hồng chờ', $stats['pending_commission'])
                 ->description('Chờ xác nhận/nhập học')
                 ->descriptionIcon('heroicon-m-clock')
-                ->color('warning'),
+                ->color('warning')
+                ->url(route('filament.admin.resources.commissions.index')),
 
             Stat::make('Học viên đã nộp học phí', (string) $stats['paid_students'])
                 ->description('HV của bạn đã xác thực')
                 ->descriptionIcon('heroicon-m-check-badge')
-                ->color('info'),
+                ->color('info')
+                ->url(route('filament.admin.resources.students.index', ['tableFilters[payment_status][value]' => 'verified'])),
 
             Stat::make('Tổng học viên', (string) $stats['total_students'])
                 ->description('Toàn bộ HV của bạn')
                 ->descriptionIcon('heroicon-m-users')
-                ->color('gray'),
+                ->color('gray')
+                ->url(route('filament.admin.resources.students.index')),
 
             Stat::make('Học viên mới', (string) $stats['new_students'])
                 ->description('HV của bạn (30 ngày)')
                 ->descriptionIcon('heroicon-m-user-plus')
-                ->color('primary'),
+                ->color('primary')
+                ->url(route('filament.admin.resources.students.index')),
 
             Stat::make('Tỷ lệ chuyển đổi', $stats['conversion_rate'])
                 ->description('Xác thực / Tổng số HV')
