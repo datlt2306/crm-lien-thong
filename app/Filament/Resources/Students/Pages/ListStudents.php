@@ -13,12 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 class ListStudents extends ListRecords {
     protected static string $resource = StudentResource::class;
 
-    protected function getHeaderWidgets(): array
-    {
-        return [
-            \App\Filament\Resources\Students\Widgets\StudentStatsWidget::class,
-        ];
-    }
+
 
     public function getContentTabPosition(): \Filament\Resources\Pages\ListRecords\TabPosition
     {
