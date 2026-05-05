@@ -36,49 +36,75 @@ class CollaboratorRevenueChart extends ChartWidget {
     protected function buildSeries(array $filters): array {
         [$from, $to] = $this->getRangeBounds($filters);
 
-        // Sử dụng Query Builder aggregation để tính toán trực tiếp từ DB
+        // Lấy dữ liệu gộp theo cộng tác viên và trạng thái thanh toán
         $payments = Payment::query()
             ->join('collaborators', 'payments.primary_collaborator_id', '=', 'collaborators.id')
-            ->where('payments.status', Payment::STATUS_VERIFIED)
-            ->whereNotNull('payments.verified_at')
-            ->whereBetween('payments.verified_at', [$from, $to]) // Sửa lỗi thiếu lọc thời gian
+            ->whereIn('payments.status', [Payment::STATUS_SUBMITTED, Payment::STATUS_VERIFIED])
+            ->whereBetween('payments.created_at', [$from, $to])
             ->when(!empty($filters['program_type']), function ($q) use ($filters) {
                 $q->where('payments.program_type', strtolower($filters['program_type']));
             })
-            ->selectRaw('collaborators.full_name, SUM(payments.amount) as total_amount')
+            ->selectRaw('
+                collaborators.full_name, 
+                SUM(CASE WHEN payments.status = \'' . Payment::STATUS_VERIFIED . '\' THEN payments.amount ELSE 0 END) as verified_amount,
+                SUM(payments.amount) as total_amount
+            ')
             ->groupBy('collaborators.id', 'collaborators.full_name')
             ->orderByDesc('total_amount')
             ->get();
 
-        $sumByCollaborator = [];
+        $verifiedByCollaborator = [];
+        $totalByCollaborator = [];
+        
         foreach ($payments as $p) {
-            $sumByCollaborator[$p->full_name] = (float) $p->total_amount;
+            $verifiedByCollaborator[$p->full_name] = (float) $p->verified_amount;
+            $totalByCollaborator[$p->full_name] = (float) $p->total_amount;
         }
 
-        // Lấy top 10 và gộp phần còn lại
-        $top = array_slice($sumByCollaborator, 0, 10, true);
-        if (count($sumByCollaborator) > 10) {
-            $others = array_sum(array_slice($sumByCollaborator, 10, null, true));
-            $top['Khác'] = ($top['Khác'] ?? 0) + $others;
+        // Lấy top 10 theo tổng doanh thu
+        $topLabels = array_slice(array_keys($totalByCollaborator), 0, 10);
+        
+        $finalLabels = [];
+        $verifiedData = [];
+        $totalData = [];
+
+        foreach ($topLabels as $label) {
+            $finalLabels[] = $label;
+            $verifiedData[] = $verifiedByCollaborator[$label];
+            $totalData[] = $totalByCollaborator[$label];
         }
 
-        $labels = array_keys($top);
-        $data = array_values($top);
+        if (count($totalByCollaborator) > 10) {
+            $othersTotal = array_sum(array_slice($totalByCollaborator, 10));
+            $othersVerified = array_sum(array_slice($verifiedByCollaborator, 10));
+            $finalLabels[] = 'Khác';
+            $totalData[] = $othersTotal;
+            $verifiedData[] = $othersVerified;
+        }
 
-        // Nếu vẫn trống, cung cấp dữ liệu 0 để tránh lỗi render
-        if (empty($labels)) {
-            $labels = ['—'];
-            $data = [0];
+        // Nếu vẫn trống
+        if (empty($finalLabels)) {
+            $finalLabels = ['—'];
+            $verifiedData = [0];
+            $totalData = [0];
         }
 
         return [
-            'labels' => $labels,
-            'datasets' => [[
-                'label' => 'Doanh thu (₫) theo CTV',
-                'data' => $data,
-                'backgroundColor' => '#60a5fa',
-                'borderColor' => '#3b82f6',
-            ]],
+            'labels' => $finalLabels,
+            'datasets' => [
+                [
+                    'label' => 'Thực nhận (Đã xác minh)',
+                    'data' => $verifiedData,
+                    'backgroundColor' => '#10b981', // Green-500
+                    'borderColor' => '#059669',
+                ],
+                [
+                    'label' => 'Tổng doanh thu (Dự kiến)',
+                    'data' => $totalData,
+                    'backgroundColor' => '#6366f1', // Indigo-500
+                    'borderColor' => '#4f46e5',
+                ],
+            ],
         ];
     }
 }

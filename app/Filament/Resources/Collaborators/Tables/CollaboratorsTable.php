@@ -110,6 +110,52 @@ class CollaboratorsTable {
                         'pending' => 'Chờ duyệt',
                         'inactive' => 'Vô hiệu',
                     ]),
+
+                \Filament\Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('range')
+                            ->label('Khoảng thời gian')
+                            ->options([
+                                'today' => 'Hôm nay',
+                                '7_days' => '1 tuần',
+                                '30_days' => '1 tháng',
+                                'this_month' => 'Tháng này',
+                                'custom' => 'Tùy chọn...',
+                            ])
+                            ->default('custom')
+                            ->live(),
+                        \Filament\Forms\Components\DatePicker::make('created_from')
+                            ->label('Từ ngày')
+                            ->visible(fn ($get) => $get('range') === 'custom' || !$get('range')),
+                        \Filament\Forms\Components\DatePicker::make('created_until')
+                            ->label('Đến ngày')
+                            ->visible(fn ($get) => $get('range') === 'custom' || !$get('range')),
+                    ])
+                    ->query(function (\Illuminate\Database\Eloquent\Builder $query, array $data): \Illuminate\Database\Eloquent\Builder {
+                        $from = $data['created_from'];
+                        $until = $data['created_until'];
+
+                        if ($data['range'] && $data['range'] !== 'custom') {
+                            $until = now()->endOfDay();
+                            $from = match ($data['range']) {
+                                'today' => now()->startOfDay(),
+                                '7_days' => now()->subDays(7)->startOfDay(),
+                                '30_days' => now()->subDays(30)->startOfDay(),
+                                'this_month' => now()->startOfMonth()->startOfDay(),
+                                default => null,
+                            };
+                        }
+
+                        return $query
+                            ->when(
+                                $from,
+                                fn (\Illuminate\Database\Eloquent\Builder $query, $date): \Illuminate\Database\Eloquent\Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $until,
+                                fn (\Illuminate\Database\Eloquent\Builder $query, $date): \Illuminate\Database\Eloquent\Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
             ])
             ->recordActions([
                 ActionGroup::make([

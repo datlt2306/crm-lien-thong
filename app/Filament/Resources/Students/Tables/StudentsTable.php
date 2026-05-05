@@ -332,35 +332,34 @@ class StudentsTable {
                         return $query->where('application_status', $data['value']);
                     }),
 
-                \Filament\Tables\Filters\Filter::make('payment_status')
+                \Filament\Tables\Filters\Filter::make('p_status')
                     ->label('Trạng thái thanh toán')
                     ->form([
-                        \Filament\Forms\Components\Select::make('value')
-                            ->label('Chọn trạng thái')
+                        \Filament\Forms\Components\Select::make('s')
+                            ->label('Trạng thái')
                             ->options([
-                                Payment::STATUS_NOT_PAID => 'Chưa nộp tiền',
+                                'not_paid' => 'Chưa nộp tiền',
                                 Payment::STATUS_SUBMITTED => 'Chờ xác minh',
                                 Payment::STATUS_VERIFIED => 'Đã xác nhận',
                                 Payment::STATUS_REVERTED => 'Đã hoàn trả',
                             ]),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
-                        if (!isset($data['value']) || $data['value'] === '') {
+                        if (empty($data['s'])) {
                             return $query;
                         }
                         
-                        if ($data['value'] === Payment::STATUS_NOT_PAID) {
+                        $status = $data['s'];
+
+                        if ($status === 'not_paid') {
                             return $query->where(function (Builder $q) {
                                 $q->whereDoesntHave('payment')
-                                  ->orWhereHas('payment', fn (Builder $pq) => $pq->whereIn('status', [
-                                      Payment::STATUS_NOT_PAID,
-                                      Payment::STATUS_SUBMITTED,
-                                  ]));
+                                  ->orWhereHas('payment', fn (Builder $pq) => $pq->where('status', Payment::STATUS_NOT_PAID));
                             });
                         }
 
-                        return $query->whereHas('payment', function (Builder $paymentQuery) use ($data) {
-                            $paymentQuery->where('status', $data['value']);
+                        return $query->whereHas('payment', function (Builder $paymentQuery) use ($status) {
+                            $paymentQuery->where('status', $status);
                         });
                     }),
 
@@ -453,19 +452,46 @@ class StudentsTable {
 
                 \Filament\Tables\Filters\Filter::make('created_at')
                     ->form([
+                        \Filament\Forms\Components\Select::make('range')
+                            ->label('Khoảng thời gian')
+                            ->options([
+                                'today' => 'Hôm nay',
+                                '7_days' => '7 ngày qua',
+                                '30_days' => '30 ngày qua',
+                                'this_month' => 'Tháng này',
+                                'custom' => 'Tùy chọn...',
+                            ])
+                            ->default('custom')
+                            ->live(),
                         \Filament\Forms\Components\DatePicker::make('created_from')
-                            ->label('Từ ngày'),
+                            ->label('Từ ngày')
+                            ->visible(fn ($get) => $get('range') === 'custom' || !$get('range')),
                         \Filament\Forms\Components\DatePicker::make('created_until')
-                            ->label('Đến ngày'),
+                            ->label('Đến ngày')
+                            ->visible(fn ($get) => $get('range') === 'custom' || !$get('range')),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
+                        $from = $data['created_from'];
+                        $until = $data['created_until'];
+
+                        if ($data['range'] && $data['range'] !== 'custom') {
+                            $until = now()->endOfDay();
+                            $from = match ($data['range']) {
+                                'today' => now()->startOfDay(),
+                                '7_days' => now()->subDays(7)->startOfDay(),
+                                '30_days' => now()->subDays(30)->startOfDay(),
+                                'this_month' => now()->startOfMonth()->startOfDay(),
+                                default => null,
+                            };
+                        }
+
                         return $query
                             ->when(
-                                $data['created_from'],
+                                $from,
                                 fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
-                                $data['created_until'],
+                                $until,
                                 fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     })

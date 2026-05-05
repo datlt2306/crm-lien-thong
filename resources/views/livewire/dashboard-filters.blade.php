@@ -10,8 +10,8 @@
         <div class="flex flex-col">
             <select wire:model.live="filters.range" wire:key="filter-range" class="fi-input-compact">
                 <option value="today">Hôm nay</option>
-                <option value="last_7_days">7 ngày</option>
-                <option value="last_30_days">30 ngày</option>
+                <option value="last_7_days">1 tuần</option>
+                <option value="last_30_days">1 tháng</option>
                 <option value="this_month">Tháng này</option>
                 <option value="custom">Tùy chọn...</option>
             </select>
