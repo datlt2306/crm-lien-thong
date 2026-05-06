@@ -23,4 +23,11 @@ class ListAnnualQuotas extends ListRecords {
                 ->badgeColor('danger'),
         ];
     }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            CreateAction::make()->label('Thêm chỉ tiêu năm'),
+        ];
+    }
 }

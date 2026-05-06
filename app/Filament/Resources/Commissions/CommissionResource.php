@@ -206,7 +206,14 @@ class CommissionResource extends Resource {
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
                     ->label('Trạng thái hoa hồng')
-                    ->options(CommissionItem::getStatusOptions()),
+                    ->options(CommissionItem::getStatusOptions())
+                    ->query(function ($query, array $data) {
+                        if (!empty($data['value'])) {
+                            $query->whereHas('items', function ($q) use ($data) {
+                                $q->where('status', $data['value']);
+                            });
+                        }
+                    }),
 
                 \Filament\Tables\Filters\SelectFilter::make('student_status')
                     ->label('Trạng thái SV')

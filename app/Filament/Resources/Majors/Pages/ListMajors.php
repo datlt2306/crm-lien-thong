@@ -24,5 +24,12 @@ class ListMajors extends ListRecords
                 ->badgeColor('danger'),
         ];
     }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            CreateAction::make()->label('Thêm ngành học'),
+        ];
+    }
 }
 

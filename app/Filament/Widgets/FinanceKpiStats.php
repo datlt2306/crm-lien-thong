@@ -48,27 +48,25 @@ class FinanceKpiStats extends BaseWidget {
                     });
             })->count();
 
-        // 5. Hoa hồng đã chi
-        $paidCommissions = $this->applyFilters(CommissionItem::query(), $filters)
+        // 5. Hoa hồng đã chi (Dựa trên ngày xác nhận thanh toán - payment_confirmed_at)
+        $paidCommissions = $this->applyFilters(\App\Models\CommissionItem::query(), $filters, 'payment_confirmed_at')
             ->whereIn('status', [
-                CommissionItem::STATUS_PAID,
-                CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                CommissionItem::STATUS_PAID, 
+                CommissionItem::STATUS_PAYMENT_CONFIRMED, 
                 CommissionItem::STATUS_RECEIVED_CONFIRMED
             ])->sum('amount');
 
-        // 6. Hoa hồng chờ chi
-        $pendingCommissions = $this->applyFilters(CommissionItem::query(), $filters)
+        // 6. Hoa hồng chờ chi (Dựa trên ngày sinh commission - created_at)
+        $pendingCommissions = \App\Models\CommissionItem::query()
             ->whereIn('status', [
                 CommissionItem::STATUS_PENDING,
                 CommissionItem::STATUS_PAYABLE
-            ])->sum('amount');
+            ])
+            ->whereHas('commission', fn($q) => $this->applyFilters($q, $filters))
+            ->sum('amount');
 
-        // 7. Tỉ lệ hồ sơ nộp phí
-        $totalStudents = $this->applyFilters(Student::query(), $filters)->count();
-        $conversionRate = $totalStudents > 0 ? round(($paidCount / $totalStudents) * 100, 1) : 0;
-
-        // 8. Lệ phí thực thu
-        $actualRevenue = $this->applyFilters(Payment::query(), $filters)
+        // 7. Lệ phí thực thu (Dựa trên ngày xác nhận tiền - verified_at)
+        $actualRevenue = $this->applyFilters(Payment::query(), $filters, 'verified_at')
             ->where('status', Payment::STATUS_VERIFIED)
             ->sum('amount');
 
@@ -115,19 +113,13 @@ class FinanceKpiStats extends BaseWidget {
                 ->description('Đã xác nhận thanh toán')
                 ->descriptionIcon('heroicon-m-check-badge')
                 ->color('success')
-                ->url(route('filament.admin.resources.commissions.index', ['filters[status][value]' => 'payment_confirmed'])),
+                ->url(route('filament.admin.resources.commissions.index', array_merge($urlParams, ['filters[status][value]' => 'payment_confirmed']))),
 
             Stat::make('Hoa hồng chờ chi', number_format($pendingCommissions) . ' đ')
                 ->description('Chờ nhập học/đến hạn')
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('warning')
-                ->url(route('filament.admin.resources.commissions.index', ['filters[status][value]' => 'pending'])),
-
-            Stat::make('Tỉ lệ Hồ sơ/Lệ phí', $conversionRate . '%')
-                ->description('Số SV chưa nộp tiền / Tổng hồ sơ')
-                ->descriptionIcon('heroicon-m-presentation-chart-line')
-                ->color('info')
-                ->url(route('filament.admin.resources.students.index')),
+                ->url(route('filament.admin.resources.commissions.index', array_merge($urlParams, ['filters[status][value]' => 'pending']))),
 
             Stat::make('Lệ phí thực thu', number_format($actualRevenue) . ' đ')
                 ->description('Tổng tiền đã xác nhận')

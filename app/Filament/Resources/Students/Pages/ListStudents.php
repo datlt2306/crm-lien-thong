@@ -15,9 +15,7 @@ class ListStudents extends ListRecords {
 
     protected function getHeaderWidgets(): array
     {
-        return [
-            \App\Filament\Resources\Students\Widgets\StudentStatsWidget::class,
-        ];
+        return [];
     }
 
     public function getContentTabPosition(): \Filament\Resources\Pages\ListRecords\TabPosition
