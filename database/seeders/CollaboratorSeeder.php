@@ -22,7 +22,6 @@ class CollaboratorSeeder extends Seeder {
         $dat = Collaborator::updateOrCreate(
             ['email' => 'datletrong2306@gmail.com'],
             [
-                'user_id' => $datUser->id,
                 'full_name' => 'Lê Trọng Đạt',
                 'phone' => '0987654321',
                 'status' => 'active',
