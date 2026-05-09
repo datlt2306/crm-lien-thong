@@ -68,19 +68,19 @@
                 <div class="grid">
                     <div class="field">
                         <label class="label">Họ và tên <span class="req">*</span></label>
-                        <input type="text" name="full_name" value="{{ old('full_name') }}" class="field-input @error('full_name') border-red-500 @enderror" placeholder="VD: Trần Trung Kiên" required>
+                        <input type="text" name="full_name" value="{{ old('full_name') }}" class="field-input @error('full_name') border-red-500 @enderror"  required>
                         @error('full_name') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
                     </div>
 
                     <div class="field">
                         <label class="label">Số điện thoại <span class="req">*</span></label>
-                        <input type="tel" name="phone" value="{{ old('phone') }}" class="field-input @error('phone') border-red-500 @enderror" placeholder="VD: 0934699191" required>
+                        <input type="tel" name="phone" value="{{ old('phone') }}" class="field-input @error('phone') border-red-500 @enderror"  required>
                         @error('phone') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
                     </div>
 
                     <div class="field">
                         <label class="label">Email <span class="req">*</span></label>
-                        <input type="email" name="email" value="{{ old('email') }}" class="field-input @error('email') border-red-500 @enderror" placeholder="VD: kien.tran@gmail.com" required>
+                        <input type="email" name="email" value="{{ old('email') }}" class="field-input @error('email') border-red-500 @enderror"  required>
                         @error('email') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
                     </div>
 
@@ -92,8 +92,8 @@
                 </div>
 
                 <div class="field mt-10">
-                    <label class="label">Địa chỉ <span class="req">*</span></label>
-                    <input type="text" name="address" value="{{ old('address') }}" class="field-input @error('address') border-red-500 @enderror" placeholder="VD: Số 123, Đường ABC, Quận XYZ, TP. Thái Bình" required>
+                    <label class="label">Địa chỉ thường trú <span class="req">*</span></label>
+                    <input type="text" name="address" value="{{ old('address') }}" class="field-input @error('address') border-red-500 @enderror" required>
                     @error('address') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
                 </div>
 
