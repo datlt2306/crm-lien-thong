@@ -188,7 +188,7 @@ class PublicStudentController extends Controller {
                 return $student;
             });
 
-            // Gửi qua Laravel Mailer chuẩn
+            /* Gửi qua Laravel Mailer chuẩn - ĐÃ TẮT THEO YÊU CẦU
             if ($student && !empty($student->email)) {
                 try {
                     \Illuminate\Support\Facades\Mail::to($student->email)
@@ -199,6 +199,7 @@ class PublicStudentController extends Controller {
                     \Illuminate\Support\Facades\Log::error('Mail Queue Error: ' . $e->getMessage());
                 }
             }
+            */
 
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra: ' . $e->getMessage()])->withInput();

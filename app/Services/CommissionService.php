@@ -37,7 +37,7 @@ class CommissionService {
 
             // 3. Tạo các dòng hoa hồng (Items) dựa trên quy tắc chia tiền (Split Rules)
             if ($policy && !empty($policy->payout_rules)) {
-                $programKey = strtoupper($payment->program_type);
+                $programKey = strtolower($payment->program_type);
                 $rules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
                 
                 if (!empty($rules)) {
@@ -159,7 +159,7 @@ class CommissionService {
             })
             ->where(function ($query) use ($programType) {
                 $query->whereNull('program_type')
-                    ->orWhereJsonContains('program_type', strtoupper($programType));
+                    ->orWhereJsonContains('program_type', strtolower($programType));
                 
                 // Thêm kiểm tra mảng trống một cách an toàn cho PostgreSQL
                 if (DB::getDriverName() === 'pgsql') {
@@ -188,7 +188,7 @@ class CommissionService {
         if ($policy) {
             // Nếu có quy tắc chia tiền JSON, ưu tiên lấy dòng 'direct_ctv' trong đó
             if (!empty($policy->payout_rules)) {
-                $programKey = strtoupper($programType);
+                $programKey = strtolower($programType);
                 $rules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
                 
                 $directRule = collect($rules)->firstWhere('recipient_type', 'direct_ctv');
@@ -289,7 +289,7 @@ class CommissionService {
 
             $newRules = [];
             if ($policy && !empty($policy->payout_rules)) {
-                $programKey = strtoupper((string)$payment->program_type);
+                $programKey = strtolower((string)$payment->program_type);
                 $newRules = $policy->payout_rules[$programKey] ?? ($policy->payout_rules['default'] ?? []);
             }
 
