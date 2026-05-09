@@ -93,6 +93,17 @@ class IntakesTable {
                     ->label('Tên đợt tuyển sinh')
                     ->searchable()
                     ->sortable(),
+                BadgeColumn::make('major_name')
+                    ->label('Ngành tuyển sinh')
+                    ->formatStateUsing(fn(?string $state) => $state ?: 'Chưa xác định')
+                    ->color(fn(?string $state) => self::getMajorBadgeColor($state))
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('program_name')
+                    ->label('Hệ tuyển sinh')
+                    ->formatStateUsing(fn($state) => self::getProgramLabel($state))
+                    ->searchable()
+                    ->sortable(),
 
                 BadgeColumn::make('year')
                     ->label('Năm')
@@ -132,18 +143,9 @@ class IntakesTable {
                         return "{$start} - {$end}";
                     }),
 
-                BadgeColumn::make('major_name')
-                    ->label('Ngành tuyển sinh')
-                    ->formatStateUsing(fn(?string $state) => $state ?: 'Chưa xác định')
-                    ->color(fn(?string $state) => self::getMajorBadgeColor($state))
-                    ->searchable()
-                    ->sortable(),
+                
 
-                TextColumn::make('program_name')
-                    ->label('Hệ tuyển sinh')
-                    ->formatStateUsing(fn($state) => self::getProgramLabel($state))
-                    ->searchable()
-                    ->sortable(),
+                
 
                 TextColumn::make('target_quota')
                     ->label('Chỉ tiêu')

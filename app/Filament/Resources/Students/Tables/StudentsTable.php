@@ -57,14 +57,7 @@ class StudentsTable {
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
-                Tables\Columns\IconColumn::make('has_transferred')
-                    ->label('Chuyển hệ')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-arrows-right-left')
-                    ->falseIcon('')
-                    ->trueColor('warning')
-                    ->tooltip(fn($record) => $record->has_transferred ? 'Học viên này đã từng thực hiện chuyển hệ đào tạo' : null)
-                    ->toggleable(),
+
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
                     ->searchable()
@@ -1005,12 +998,21 @@ class StudentsTable {
 
                             $feeDifference = (float)($oldExpectedFee ?? 0) - (float)($newExpectedFee ?? 0);
 
-                            // 2. Cập nhật sinh viên
+                            $programTypeLabels = \App\Models\Student::getProgramTypeOptions();
+                            $oldProgramLabel = $programTypeLabels[$oldProgramType] ?? $oldProgramType;
+                            $newProgramLabel = $programTypeLabels[$data['program_type']] ?? $data['program_type'];
+                            
+                            $transferNote = "[Chuyển hệ " . now()->format('d/m/Y H:i') . "] " .
+                                           "Từ {$oldProgramLabel} ({$oldMajor}) " .
+                                           "sang {$newProgramLabel} ({$newQuota->major_name}). " .
+                                           "Lý do: {$data['reason']}";
+
                             $record->update([
                                 'quota_id' => $newQuota->id,
                                 'program_type' => $data['program_type'],
                                 'intake_id' => $newQuota->intake_id, // Cập nhật đợt mới nếu cần
                                 'has_transferred' => true,
+                                'notes' => ($record->notes ? $record->notes . "\n" : "") . $transferNote,
                             ]);
 
                             // 3. Xử lý Payment & Tiền thừa

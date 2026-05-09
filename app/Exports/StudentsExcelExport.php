@@ -88,7 +88,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 'Phiếu tuyển sinh',
                 'Hình thức tuyển sinh',
                 'Lệ phí',
-                'Chuyển hệ',
+
                 'Hoàn tiền',
                 'Ghi chú',
             ],
@@ -101,7 +101,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 'BS', 'BG',
                 '', '', '',
                 'BS', 'BG',
-                '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
             ],
         ];
     }
@@ -257,7 +257,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
             $admissionForm,
             $student->source ?? '',
             $paymentAmount,
-            $student->has_transferred ? 'Đã chuyển' : 'Không',
+
             $refundStatus,
             $student->notes ?? '',
         ];
@@ -273,7 +273,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
                     'X', 'Y', 'Z',
                     'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ',
-                    'BA', 'BB', 'BC', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI'
+                    'BA', 'BB', 'BC', 'BD', 'BE', 'BF', 'BG', 'BH'
                 ];
                 foreach ($columnsToMergeVertical as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
@@ -287,7 +287,7 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 $sheet->mergeCells('AA1:AB1'); // Giấy khám sức khỏe
 
                 // Style header rows - BI là cột 61
-                $headerRange = 'A1:BI2';
+                $headerRange = 'A1:BH2';
                 $sheet->getStyle($headerRange)->getFont()->setBold(true);
                 $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle($headerRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
