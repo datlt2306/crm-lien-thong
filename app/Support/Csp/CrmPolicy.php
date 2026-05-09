@@ -3,44 +3,53 @@
 namespace App\Support\Csp;
 
 use Spatie\Csp\Directive;
-use Spatie\Csp\Policies\Basic;
+use Spatie\Csp\Keyword;
+use Spatie\Csp\Policies\Policy;
 
-class CrmPolicy extends Basic
+class CrmPolicy extends Policy
 {
     public function configure()
     {
-        parent::configure();
-
         $this
-            ->addDirective(Directive::SCRIPT, [
-                'self',
-                'unsafe-inline',
-                'unsafe-eval',
+            ->addDirective(Directive::BASE, Keyword::SELF)
+            ->addDirective(Directive::CONNECT, [
+                Keyword::SELF,
                 'https://www.google.com',
                 'https://www.gstatic.com',
+                'https://static.cloudflareinsights.com',
             ])
-            ->addDirective(Directive::STYLE, [
-                'self',
-                'unsafe-inline',
-                'https://fonts.googleapis.com',
-            ])
+            ->addDirective(Directive::DEFAULT, Keyword::SELF)
             ->addDirective(Directive::FONT, [
-                'self',
+                Keyword::SELF,
                 'https://fonts.gstatic.com',
-            ])
-            ->addDirective(Directive::IMG, [
-                'self',
                 'data:',
-                'https:',
             ])
             ->addDirective(Directive::FRAME, [
-                'self',
-                'https://www.google.com',
-            ])
-            ->addDirective(Directive::CONNECT, [
-                'self',
+                Keyword::SELF,
                 'https://www.google.com',
                 'https://www.gstatic.com',
+            ])
+            ->addDirective(Directive::IMG, [
+                Keyword::SELF,
+                'https:',
+                'data:',
+            ])
+            ->addDirective(Directive::MEDIA, Keyword::SELF)
+            ->addDirective(Directive::OBJECT, Keyword::NONE)
+            ->addDirective(Directive::SCRIPT, [
+                Keyword::SELF,
+                Keyword::UNSAFE_INLINE,
+                Keyword::UNSAFE_EVAL,
+                'https://www.google.com',
+                'https://www.gstatic.com',
+                'https://unpkg.com',
+                'https://static.cloudflareinsights.com',
+            ])
+            ->addDirective(Directive::STYLE, [
+                Keyword::SELF,
+                Keyword::UNSAFE_INLINE,
+                'https://fonts.googleapis.com',
+                'https://unpkg.com',
             ]);
     }
 }
