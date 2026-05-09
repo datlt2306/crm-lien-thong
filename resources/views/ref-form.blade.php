@@ -103,9 +103,9 @@
                         <option value="">-- Chọn ngành học & hệ đào tạo --</option>
                         @php
                             $typeLabels = [
-                                'REGULAR' => '🎓 HỆ CHÍNH QUY', 
-                                'PART_TIME' => '💼 HỆ VỪA HỌC VỪA LÀM', 
-                                'DISTANCE' => '🌐 HỆ ĐÀO TẠO TỪ XA'
+                                'regular' => '🎓 HỆ CHÍNH QUY', 
+                                'part_time' => '💼 HỆ VỪA HỌC VỪA LÀM', 
+                                'distance' => '🌐 HỆ ĐÀO TẠO TỪ XA'
                             ];
                             $groupedPrograms = collect($programs ?? [])->groupBy('program_name');
                         @endphp

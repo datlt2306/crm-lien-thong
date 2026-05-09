@@ -42,8 +42,9 @@
                 <label class="block font-medium mb-1">Hệ đào tạo *</label>
                 <select name="program_type" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
                     <option value="">-- Chọn hệ --</option>
-                    <option value="REGULAR" {{ old('program_type') == 'REGULAR' ? 'selected' : '' }}>Chính quy</option>
-                    <option value="PART_TIME" {{ old('program_type') == 'PART_TIME' ? 'selected' : '' }}>Vừa học vừa làm</option>
+                    <option value="regular" {{ old('program_type') == 'regular' ? 'selected' : '' }}>Chính quy</option>
+                    <option value="part_time" {{ old('program_type') == 'part_time' ? 'selected' : '' }}>Vừa học vừa làm</option>
+                    <option value="distance" {{ old('program_type') == 'distance' ? 'selected' : '' }}>Đào tạo từ xa</option>
                 </select>
             </div>
             <div class="mb-3">

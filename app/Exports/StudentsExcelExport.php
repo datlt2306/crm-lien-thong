@@ -126,9 +126,10 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
                 : 'Chưa cập nhật';
         }
 
-        $programType = match ($student->program_type) {
-            'REGULAR' => 'Chính quy',
-            'PART_TIME' => 'Vừa học vừa làm',
+        $programType = match (strtolower((string)($student->program_type ?? ''))) {
+            'regular' => 'Chính quy',
+            'part_time' => 'Vừa học vừa làm',
+            'distance' => 'Đào tạo từ xa',
             default => $student->program_type ?? '—',
         };
 

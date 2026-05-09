@@ -170,9 +170,9 @@ class PublicStudentController extends Controller {
 
                 // Map program_type for Payment
                 $programTypeMap = match (strtolower($quota->program_name ?? '')) {
-                    'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
-                    'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
-                    'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
+                    'regular', 'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
+                    'part_time', 'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
+                    'distance', 'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
                     default => Student::PROGRAM_REGULAR
                 };
 
@@ -250,11 +250,11 @@ class PublicStudentController extends Controller {
             'bill' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ]);
 
-        // Map program_type từ tên tiếng Việt sang mã enum
+        // Map program_type từ tên tiếng Việt hoặc mã sang mã enum
         $validated['program_type'] = match (strtolower($validated['program_type'])) {
-            'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
-            'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
-            'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
+            'regular', 'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
+            'part_time', 'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
+            'distance', 'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
             default => Student::PROGRAM_REGULAR // Default fallback
         };
 

@@ -28,7 +28,7 @@
                     <li>Số tiền: <strong>{{ number_format($payment->amount, 0, ',', '.') }} VND</strong></li>
                     <li>Mã số phiếu thu: <strong>{{ $payment->receipt_number }}</strong></li>
                     <li>Ngày xác nhận: <strong>{{ $payment->verified_at->format('d/m/Y H:i') }}</strong></li>
-                    <li>Chương trình: <strong>{{ $student->major }} - {{ $payment->program_type === 'REGULAR' ? 'Chính quy' : 'Vừa học vừa làm' }}</strong></li>
+                    <li>Chương trình: <strong>{{ $student->major }} - {{ strtolower((string)$payment->program_type) === 'regular' ? 'Chính quy' : 'Vừa học vừa làm' }}</strong></li>
                 </ul>
             </div>
 
