@@ -62,9 +62,9 @@ class ChartTestDataSeeder extends Seeder {
             
             // Lấy lệ phí theo hệ đào tạo chuẩn 2026
             $admissionFee = match($student->program_type) {
-                'REGULAR' => 1750000,
-                'PART_TIME' => 750000,
-                'DISTANCE' => 200000,
+                'regular' => 1750000,
+                'part_time' => 750000,
+                'distance' => 200000,
                 default => 750000,
             };
 
@@ -73,7 +73,7 @@ class ChartTestDataSeeder extends Seeder {
                 [
                     'primary_collaborator_id' => $student->collaborator_id,
                     'sub_collaborator_id' => $student->collaborator_id,
-                    'program_type' => $student->program_type ?? 'REGULAR',
+                    'program_type' => $student->program_type ?? 'regular',
                     'amount' => $admissionFee,
                     'status' => 'verified',
                     'verified_at' => $date,

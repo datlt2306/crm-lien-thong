@@ -56,14 +56,14 @@ class IntakeQuotaSeeder extends Seeder {
 
         $quotaData = [
             'Đợt 1/2026' => [
-                'REGULAR' => 30,
-                'PART_TIME' => 58,
-                'DISTANCE' => 49,
+                'regular' => 30,
+                'part_time' => 58,
+                'distance' => 49,
             ],
             'Đợt 2/2026' => [
-                'REGULAR' => 45,
-                'PART_TIME' => 87,
-                'DISTANCE' => 75,
+                'regular' => 45,
+                'part_time' => 87,
+                'distance' => 75,
             ],
         ];
 
@@ -71,7 +71,7 @@ class IntakeQuotaSeeder extends Seeder {
         // Quota::truncate(); 
         // AnnualQuota::truncate();
 
-        foreach (['REGULAR', 'PART_TIME', 'DISTANCE'] as $programType) {
+        foreach (['regular', 'part_time', 'distance'] as $programType) {
             // Tính tổng chỉ tiêu năm
             $annualTarget = ($quotaData['Đợt 1/2026'][$programType] ?? 0) + ($quotaData['Đợt 2/2026'][$programType] ?? 0);
 
@@ -108,9 +108,9 @@ class IntakeQuotaSeeder extends Seeder {
                         'pending_quota' => 0,
                         'reserved_quota' => 0,
                         'tuition_fee' => match($programType) {
-                            'REGULAR' => 1750000, // Khớp với phí trong StudentSeeder
-                            'PART_TIME' => 750000,
-                            'DISTANCE' => 200000,
+                            'regular' => 1750000, // Khớp với phí trong StudentSeeder
+                            'part_time' => 750000,
+                            'distance' => 200000,
                             default => 1000000,
                         },
                         'status' => Quota::STATUS_ACTIVE,
