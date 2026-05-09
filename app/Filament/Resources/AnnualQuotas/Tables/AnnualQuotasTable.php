@@ -16,7 +16,7 @@ use Filament\Actions\BulkActionGroup;
 
 class AnnualQuotasTable {
     private static function getProgramLabel(?string $programCode): string {
-        return match (strtoupper((string) $programCode)) {
+        return match (strtolower((string) $programCode)) {
             'regular' => 'Chính quy',
             'part_time' => 'Vừa học vừa làm',
             'distance' => 'Đào tạo từ xa',

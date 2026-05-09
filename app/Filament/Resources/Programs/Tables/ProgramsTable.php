@@ -21,7 +21,7 @@ class ProgramsTable
         return $table
             ->columns([
                 TextColumn::make('name')->label('Hệ đào tạo')->searchable()->sortable(),
-                TextColumn::make('code')->label('Mã hệ')->searchable(),
+
                 TextColumn::make('is_active')
                     ->label('Trạng thái')
                     ->badge()

@@ -18,7 +18,15 @@ class StudentFeeService {
         if (!$student) {
             return null;
         }
-        // Mặc định theo yêu cầu
+        // Ưu tiên cao nhất: Lấy từ quota_id đã lưu
+        if (!empty($student->quota_id)) {
+            $fee = Quota::where('id', $student->quota_id)->value('tuition_fee');
+            if ($fee > 0) {
+                return $this->formatFee($fee);
+            }
+        }
+
+        // Fallback 1: Lấy theo defaultFees (nếu cấu hình Quota chưa có phí)
         $programType = strtolower((string) ($student->program_type ?? ''));
         
         $defaultFees = [
@@ -29,12 +37,6 @@ class StudentFeeService {
 
         if (isset($defaultFees[$programType])) {
             return (float) $defaultFees[$programType];
-        }
-
-        // Ưu tiên cao nhất: Lấy từ quota_id đã lưu
-        if (!empty($student->quota_id)) {
-            $fee = Quota::where('id', $student->quota_id)->value('tuition_fee');
-            return $this->formatFee($fee);
         }
 
         $majorName = (string) ($student->major ?? '');

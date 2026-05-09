@@ -32,7 +32,7 @@ class EditStudent extends EditRecord {
         return [
             // Action xác nhận đã nộp tiền
             Action::make('confirm_payment')
-                ->label('Xác nhận đã nộp tiền')
+                ->label('Xác nhận nộp tiền')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->requiresConfirmation()
@@ -284,7 +284,7 @@ class EditStudent extends EditRecord {
 
             // Action xác nhận thanh toán (cho kế toán)
             Action::make('verify_payment')
-                ->label('Xác nhận thanh toán')
+                ->label('Xác minh thanh toán')
                 ->icon('heroicon-o-check-badge')
                 ->color('success')
                 ->requiresConfirmation()
@@ -423,7 +423,7 @@ class EditStudent extends EditRecord {
 
             // Action cho cán bộ hồ sơ: Revert payment status từ VERIFIED về REVERTED
             Action::make('revert_payment_status')
-                ->label('Hoàn trả trạng thái thanh toán')
+                ->label('Hủy xác minh nộp tiền')
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->requiresConfirmation()
@@ -486,7 +486,7 @@ class EditStudent extends EditRecord {
                 ->outlined()
                 ->url(fn(): string => $this->getResource()::getUrl('index')),
             DeleteAction::make()
-                ->label('Xóa học viên (BẢN MỚI)')
+                ->label('Xóa học viên')
                 ->modalHeading('Xóa học viên')
                 ->modalDescription('Hệ thống sẽ xóa mềm (chuyển vào Thùng rác).')
                 ->modalSubmitActionLabel('Xóa')

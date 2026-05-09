@@ -79,14 +79,16 @@ class PaymentResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('program_type')
                     ->label('Hệ đào tạo')
                     ->badge()
-                    ->color(fn(string $state): string => match (strtoupper($state)) {
+                    ->color(fn(string $state): string => match (strtolower($state)) {
                         'regular' => 'success',
                         'part_time' => 'warning',
+                        'distance' => 'info',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn(string $state): string => match (strtoupper($state)) {
+                    ->formatStateUsing(fn(string $state): string => match (strtolower($state)) {
                         'regular' => 'Chính quy',
-                        'part_time' => 'VHVLV',
+                        'part_time' => 'Vừa học vừa làm',
+                        'distance' => 'Đào tạo từ xa',
                         default => $state,
                     }),
 
@@ -126,10 +128,10 @@ class PaymentResource extends Resource {
                     ->options(Payment::getStatusOptions()),
 
                 \Filament\Tables\Filters\SelectFilter::make('program_type')
-                    ->label('Loại chương trình')
+                    ->label('Hệ đào tạo')
                     ->options([
                         'regular' => 'Chính quy',
-                        'part_time' => 'VHVLV',
+                        'part_time' => 'Vừa học vừa làm',
                         'distance' => 'Đào tạo từ xa',
                     ]),
             ])
@@ -159,6 +161,7 @@ class PaymentResource extends Resource {
                             ->options([
                                 'regular' => 'Chính quy',
                                 'part_time' => 'Vừa học vừa làm',
+                                'distance' => 'Đào tạo từ xa',
                             ])
                             ->required()
                             ->helperText('Chọn hệ liên thông của sinh viên'),
@@ -221,6 +224,7 @@ class PaymentResource extends Resource {
                             ->options([
                                 'regular' => 'Chính quy',
                                 'part_time' => 'Vừa học vừa làm',
+                                'distance' => 'Đào tạo từ xa',
                             ])
                             ->required()
                             ->helperText('Chọn hệ liên thông của sinh viên'),

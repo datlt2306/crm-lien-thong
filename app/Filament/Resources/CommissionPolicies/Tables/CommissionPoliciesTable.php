@@ -29,16 +29,16 @@ class CommissionPoliciesTable {
                     ->badge()
                     ->color(fn($state) => 'info') // Since it can be multiple, just use info color
                     ->formatStateUsing(fn($state) => is_array($state) 
-                        ? collect($state)->map(fn($s) => match ($s) {
+                        ? collect($state)->map(fn($s) => match (strtolower((string)$s)) {
                             'regular' => 'Chính quy',
-                            'part_time' => 'VHVLV',
-                            'distance' => 'Từ xa',
+                            'part_time' => 'Vừa học vừa làm',
+                            'distance' => 'Đào tạo từ xa',
                             default => $s,
                         })->join(', ')
-                        : match ($state) {
+                        : match (strtolower((string)$state)) {
                             'regular' => 'Chính quy',
-                            'part_time' => 'VHVLV',
-                            'distance' => 'Từ xa',
+                            'part_time' => 'Vừa học vừa làm',
+                            'distance' => 'Đào tạo từ xa',
                             default => 'Tất cả',
                         }),
                 TextColumn::make('payout_rules')
@@ -54,10 +54,10 @@ class CommissionPoliciesTable {
 
                             if ($isNested) {
                                 foreach ($payoutRules as $type => $rules) {
-                                    $typeLabel = match ($type) {
+                                    $typeLabel = match (strtolower((string)$type)) {
                                         'regular' => '🎓 Chính quy',
-                                        'part_time' => '🕒 VHVLV',
-                                        'distance' => '🌐 Từ xa',
+                                        'part_time' => '🕒 Vừa học vừa làm',
+                                        'distance' => '🌐 Đào tạo từ xa',
                                         'default' => '⚙️ Mặc định',
                                         default => $type
                                     };
@@ -104,10 +104,11 @@ class CommissionPoliciesTable {
             ])
             ->filters([
                 SelectFilter::make('program_type')
-                    ->label('Chương trình')
+                    ->label('Hệ đào tạo')
                     ->options([
                         'regular' => 'Chính quy',
-                        'part_time' => 'Bán thời gian',
+                        'part_time' => 'Vừa học vừa làm',
+                        'distance' => 'Đào tạo từ xa',
                     ]),
                 SelectFilter::make('role')
                     ->label('Vai trò')

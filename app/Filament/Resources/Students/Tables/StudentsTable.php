@@ -121,7 +121,7 @@ class StudentsTable {
                     ->toggleable(),
                 TextColumn::make('program_type')
                     ->label('Hệ tuyển sinh')
-                    ->formatStateUsing(fn($state) => match ($state) {
+                    ->formatStateUsing(fn($state) => match (strtolower((string)$state)) {
                         'regular' => '🎓 Chính quy',
                         'part_time' => '⏰ Vừa học vừa làm',
                         'distance' => '💻 Đào tạo từ xa',
@@ -510,7 +510,7 @@ class StudentsTable {
                         }),
 
                     Action::make('confirm_payment')
-                        ->label('Gửi Kế toán')
+                        ->label('Gửi minh chứng nộp tiền')
                         ->icon('heroicon-o-paper-airplane')
                         ->color('warning')
                         ->requiresConfirmation()
@@ -615,7 +615,7 @@ class StudentsTable {
                         }),
 
                     Action::make('mark_enrolled')
-                        ->label('Xác nhận SV nhập học')
+                        ->label('Xác nhận nhập học')
                         ->icon('heroicon-o-academic-cap')
                         ->color('success')
                         ->requiresConfirmation()
@@ -687,7 +687,7 @@ class StudentsTable {
 
                     // Action cho kế toán xác nhận
                     Action::make('verify_payment')
-                        ->label('Xác nhận nộp tiền')
+                        ->label('Xác minh thanh toán')
                         ->icon('heroicon-o-check-badge')
                         ->color('success')
                         ->requiresConfirmation()

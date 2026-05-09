@@ -97,7 +97,7 @@ class CommissionResource extends Resource {
                         return $record->rule['program_type'] ?? 
                                 $record->student?->program_type;
                     })
-                    ->formatStateUsing(fn($state) => match (strtoupper((string)$state)) {
+                    ->formatStateUsing(fn($state) => match (strtolower((string)$state)) {
                         'regular' => '🎓 Chính quy',
                         'part_time' => '⏰ Vừa học vừa làm',
                         'distance' => '💻 Đào tạo từ xa',

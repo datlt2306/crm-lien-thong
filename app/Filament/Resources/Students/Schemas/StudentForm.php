@@ -137,7 +137,8 @@ class StudentForm {
                                             })
                                             ->mapWithKeys(function ($quota) {
                                                 $programLabel = self::getProgramLabel($quota->program_name);
-                                                $label = ($quota->major_name ?: $quota->name) . ' - ' . $programLabel;
+                                                $available = $quota->available_slots;
+                                                $label = ($quota->major_name ?: $quota->name) . " - {$programLabel} (Còn {$available} chỉ tiêu)";
                                                 return [$quota->id => $label];
                                             });
                                     })

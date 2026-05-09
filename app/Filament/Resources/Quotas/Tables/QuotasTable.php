@@ -38,7 +38,12 @@ class QuotasTable {
                     ->label('Tên chương trình')
                     ->searchable()
                     ->sortable()
-                    ->description(fn($record) => trim($record->major_name . ($record->program_name ? ' - ' . $record->program_name : ''))),
+                    ->description(fn($record) => trim($record->major_name . ($record->program_name ? ' - ' . match (strtolower((string)$record->program_name)) {
+                        'regular' => 'Chính quy',
+                        'part_time' => 'Vừa học vừa làm',
+                        'distance' => 'Đào tạo từ xa',
+                        default => $record->program_name,
+                    } : ''))),
 
                 TextColumn::make('major_name')
                     ->label('Ngành đào tạo')
@@ -48,6 +53,12 @@ class QuotasTable {
 
                 TextColumn::make('program_name')
                     ->label('Hệ đào tạo')
+                    ->formatStateUsing(fn($state) => match (strtolower((string)$state)) {
+                        'regular' => 'Chính quy',
+                        'part_time' => 'Vừa học vừa làm',
+                        'distance' => 'Đào tạo từ xa',
+                        default => $state ?: 'Chưa xác định',
+                    })
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
