@@ -21,8 +21,8 @@ class CommissionPolicySeeder extends Seeder {
         CommissionPolicy::create([
             'collaborator_id' => $dat->id,
             'program_type' => ['regular', 'part_time', 'distance'],
-            'role' => 'PRIMARY',
-            'type' => 'FIXED',
+            'role' => 'primary',
+            'type' => 'fixed',
             'payout_rules' => [
                 'regular' => [
                     ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh']
@@ -36,8 +36,8 @@ class CommissionPolicySeeder extends Seeder {
                     ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
                 ]
             ],
-            'trigger' => 'ON_VERIFICATION',
-            'visibility' => 'INTERNAL',
+            'trigger' => 'on_verification',
+            'visibility' => 'internal',
             'priority' => 10,
             'active' => true,
             'meta' => ['description' => 'Chính sách gộp cho Master'],
@@ -46,15 +46,15 @@ class CommissionPolicySeeder extends Seeder {
         // Chính sách mặc định cho các CTV khác (nếu có)
         CommissionPolicy::create([
             'program_type' => ['regular', 'part_time', 'distance'],
-            'role' => 'PRIMARY',
-            'type' => 'FIXED',
+            'role' => 'primary',
+            'type' => 'fixed',
             'payout_rules' => [
                 'regular' => [['recipient_type' => 'direct_ctv', 'amount_vnd' => 1000000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng mặc định']],
                 'part_time' => [['recipient_type' => 'direct_ctv', 'amount_vnd' => 1500000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng mặc định']],
                 'distance' => [['recipient_type' => 'direct_ctv', 'amount_vnd' => 1200000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng mặc định']]
             ],
-            'trigger' => 'ON_VERIFICATION',
-            'visibility' => 'INTERNAL',
+            'trigger' => 'on_verification',
+            'visibility' => 'internal',
             'priority' => 0,
             'active' => true,
         ]);

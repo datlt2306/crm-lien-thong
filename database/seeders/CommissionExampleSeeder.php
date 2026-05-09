@@ -30,10 +30,11 @@ class CommissionExampleSeeder extends Seeder
         // Nhận 1.750.000đ cho mỗi hồ sơ
         CommissionPolicy::create([
             'collaborator_id' => $me->id,
-            'program_type' => 'REGULAR',
+            'program_type' => 'regular',
             'priority' => 10,
             'active' => true,
-            'type' => 'FIXED', // Thêm để tránh lỗi NOT NULL
+            'role' => 'primary',
+            'type' => 'fixed', // Thêm để tránh lỗi NOT NULL
             'payout_rules' => [
                 [
                     'recipient_type' => 'direct_ctv',
@@ -48,10 +49,11 @@ class CommissionExampleSeeder extends Seeder
         // Long nhận 750k, "Tôi" nhận 250k
         CommissionPolicy::create([
             'collaborator_id' => $long->id,
-            'program_type' => 'REGULAR',
+            'program_type' => 'regular',
             'priority' => 10,
             'active' => true,
-            'type' => 'FIXED', // Thêm để tránh lỗi NOT NULL
+            'role' => 'primary',
+            'type' => 'fixed', // Thêm để tránh lỗi NOT NULL
             'payout_rules' => [
                 [
                     'recipient_type' => 'direct_ctv',
@@ -73,10 +75,11 @@ class CommissionExampleSeeder extends Seeder
         // Thầy Sơn nhận 750k, "Tôi" nhận 150k
         CommissionPolicy::create([
             'collaborator_id' => $son->id,
-            'program_type' => 'REGULAR',
+            'program_type' => 'regular',
             'priority' => 10,
             'active' => true,
-            'type' => 'FIXED', // Thêm để tránh lỗi NOT NULL
+            'role' => 'primary',
+            'type' => 'fixed', // Thêm để tránh lỗi NOT NULL
             'payout_rules' => [
                 [
                     'recipient_type' => 'direct_ctv',

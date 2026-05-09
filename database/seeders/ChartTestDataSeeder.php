@@ -103,7 +103,7 @@ class ChartTestDataSeeder extends Seeder {
                     'role' => 'direct',
                     'amount' => $admissionFee, // Commission amount
                     'status' => $this->getRandomStatus(['pending', 'payable', 'paid']),
-                    'trigger' => 'ON_VERIFICATION',
+                    'trigger' => 'on_verification',
                     'meta' => [
                         'program_type' => $student->program_type,
                     ],
