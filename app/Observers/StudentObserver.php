@@ -8,9 +8,11 @@ use App\Services\DashboardCacheService;
 
 class StudentObserver {
     protected CommissionService $commissionService;
+    protected \App\Services\QuotaService $quotaService;
 
-    public function __construct(CommissionService $commissionService) {
+    public function __construct(CommissionService $commissionService, \App\Services\QuotaService $quotaService) {
         $this->commissionService = $commissionService;
+        $this->quotaService = $quotaService;
     }
 
     protected function bust(): void {
@@ -23,6 +25,23 @@ class StudentObserver {
         // Nếu sinh viên chuyển giao đoạn sang 'enrolled' (Đã nhập học)
         if ($student->isDirty('status') && $student->status === 'enrolled') {
             $this->commissionService->unlockCommissionsOnEnrollment($student);
+        }
+
+        // Xử lý chuyển ngành / chuyển đợt (chuyển quota)
+        if ($student->isDirty('quota_id')) {
+            $oldQuotaId = $student->getOriginal('quota_id');
+            $newQuotaId = $student->quota_id;
+            $this->quotaService->handleStudentTransfer($student, $oldQuotaId, $newQuotaId);
+        }
+
+        // Xử lý hủy / từ chối hồ sơ (giải phóng quota)
+        if ($student->isDirty('status') && in_array($student->status, [Student::STATUS_REJECTED, Student::STATUS_DROPPED])) {
+            $this->quotaService->handleStudentCancellation($student);
+        }
+        
+        // Ngược lại, nếu hồ sơ được phục hồi từ trạng thái hủy (nếu logic này cần thiết)
+        if ($student->isDirty('status') && in_array($student->getOriginal('status'), [Student::STATUS_REJECTED, Student::STATUS_DROPPED]) && !in_array($student->status, [Student::STATUS_REJECTED, Student::STATUS_DROPPED])) {
+            $this->quotaService->handleStudentRegistration($student);
         }
     }
 
@@ -76,6 +95,9 @@ class StudentObserver {
     public function created(Student $student): void {
         $this->bust();
 
+        // Xử lý chỉ tiêu khi đăng ký mới
+        $this->quotaService->handleStudentRegistration($student);
+
         // Cập nhật Profile Code chính thức dựa trên ID vừa tạo
         if (str_ends_with($student->profile_code, 'TMP')) {
             $year = $student->created_at?->format('Y') ?? now()->format('Y');
@@ -112,5 +134,10 @@ class StudentObserver {
 
     public function deleted(Student $student): void {
         $this->bust();
+        
+        // Chỉ xử lý hoàn trả chỉ tiêu nếu trước đó hồ sơ vẫn đang chiếm chỗ (không phải bị từ chối/bỏ học trước đó)
+        if (!in_array($student->status, [Student::STATUS_REJECTED, Student::STATUS_DROPPED])) {
+            $this->quotaService->handleStudentCancellation($student);
+        }
     }
 }

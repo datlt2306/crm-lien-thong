@@ -21,6 +21,12 @@ class PaymentObserver {
 
     public function created(Payment $payment): void {
         $this->bust();
+
+        // Nếu payment được tạo với trạng thái VERIFIED (vd: từ seeder)
+        if ($payment->status === Payment::STATUS_VERIFIED) {
+            $this->quotaService->consumeQuotaOnPaymentVerified($payment);
+            $this->commissionService->createCommissionFromPayment($payment);
+        }
     }
 
     public function updated(Payment $payment): void {

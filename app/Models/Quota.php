@@ -78,10 +78,10 @@ class Quota extends Model {
     }
 
     /**
-     * Lấy số slot còn trống
+     * Lấy số slot còn trống (Trừ cả người đã nhập học và người đang chờ)
      */
     public function getAvailableSlotsAttribute(): int {
-        return max(0, $this->target_quota - $this->current_quota);
+        return max(0, $this->target_quota - ($this->current_quota + $this->pending_quota));
     }
 
     /**
@@ -90,18 +90,47 @@ class Quota extends Model {
     public function getUtilizationPercentageAttribute(): float {
         if ($this->target_quota === 0) return 0;
 
-        return round(($this->current_quota / $this->target_quota) * 100, 2);
+        return round((($this->current_quota + $this->pending_quota) / $this->target_quota) * 100, 2);
     }
 
     /**
-     * Cập nhật quota khi student nhập học
+     * Cập nhật quota khi student nhập học (Chuyển từ pending sang current)
      */
     public function incrementCurrentQuota(): void {
         $this->increment('current_quota');
+        
+        // Nếu trước đó có ở pending thì trừ đi (phòng hờ logic service gọi trực tiếp)
+        if ($this->pending_quota > 0) {
+            $this->decrement('pending_quota');
+        }
 
         // Tự động cập nhật status nếu đầy
-        if ($this->current_quota >= $this->target_quota) {
+        if (($this->current_quota + $this->pending_quota) >= $this->target_quota) {
             $this->update(['status' => self::STATUS_FULL]);
+        }
+    }
+
+    /**
+     * Tăng pending quota khi có registration mới
+     */
+    public function incrementPendingQuota(): void {
+        $this->increment('pending_quota');
+
+        if (($this->current_quota + $this->pending_quota) >= $this->target_quota) {
+            $this->update(['status' => self::STATUS_FULL]);
+        }
+    }
+
+    /**
+     * Giảm pending quota
+     */
+    public function decrementPendingQuota(): void {
+        if ($this->pending_quota > 0) {
+            $this->decrement('pending_quota');
+        }
+
+        if (($this->current_quota + $this->pending_quota) < $this->target_quota && $this->status === self::STATUS_FULL) {
+            $this->update(['status' => self::STATUS_ACTIVE]);
         }
     }
 
@@ -109,10 +138,12 @@ class Quota extends Model {
      * Giảm quota khi student rút hồ sơ
      */
     public function decrementCurrentQuota(): void {
-        $this->decrement('current_quota');
+        if ($this->current_quota > 0) {
+            $this->decrement('current_quota');
+        }
 
         // Tự động cập nhật status về active nếu chưa đầy
-        if ($this->current_quota < $this->target_quota && $this->status === self::STATUS_FULL) {
+        if (($this->current_quota + $this->pending_quota) < $this->target_quota && $this->status === self::STATUS_FULL) {
             $this->update(['status' => self::STATUS_ACTIVE]);
         }
     }
