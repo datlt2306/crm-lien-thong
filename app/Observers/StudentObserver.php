@@ -41,7 +41,7 @@ class StudentObserver {
         
         // Ngược lại, nếu hồ sơ được phục hồi từ trạng thái hủy (nếu logic này cần thiết)
         if ($student->isDirty('status') && in_array($student->getOriginal('status'), [Student::STATUS_REJECTED, Student::STATUS_DROPPED]) && !in_array($student->status, [Student::STATUS_REJECTED, Student::STATUS_DROPPED])) {
-            $this->quotaService->handleStudentRegistration($student);
+            // Không làm gì cả, quota sẽ được tính lại dựa trên trạng thái thanh toán
         }
     }
 
@@ -94,9 +94,6 @@ class StudentObserver {
 
     public function created(Student $student): void {
         $this->bust();
-
-        // Xử lý chỉ tiêu khi đăng ký mới
-        $this->quotaService->handleStudentRegistration($student);
 
         // Cập nhật Profile Code chính thức dựa trên ID vừa tạo
         if (str_ends_with($student->profile_code, 'TMP')) {
