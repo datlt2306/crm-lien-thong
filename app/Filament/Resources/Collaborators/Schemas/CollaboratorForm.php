@@ -96,7 +96,7 @@ class CollaboratorForm {
                     ->relationship('refCodes')
                     ->schema([
                         TextInput::make('name')
-                            ->label('Tên gợi nhớ (VD: Nguồn Long)'),
+                            ->label('Họ và tên CTV'),
                         TextInput::make('code')
                             ->label('Mã Ref')
                             ->required()

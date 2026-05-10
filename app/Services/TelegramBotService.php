@@ -147,25 +147,21 @@ class TelegramBotService
     {
         Log::info("Telegram /check command received from ChatID: {$chatId}");
 
-        $refCode = RefCode::where('telegram_chat_id', $chatId)->first();
+        // Kiểm tra xem có phải là Master không
         $master = Collaborator::where('telegram_chat_id', $chatId)->first();
-
-        if (!$refCode && !$master) {
-            $this->sendMessage($chatId, "⚠️ Bạn chưa được cấp quyền đối soát. Hãy gửi ID `{$chatId}` cho Admin nhé.");
-            return;
-        }
-
-        // Nếu là Master, ưu tiên gửi báo cáo tổng hợp
         if ($master) {
             $this->sendMasterReport($master, $chatId);
             return;
         }
 
-        // Nếu chỉ là Proxy
+        // Nếu không phải Master, kiểm tra xem có phải là Proxy không
+        $refCode = RefCode::where('telegram_chat_id', $chatId)->first();
         if ($refCode) {
             $this->sendProxyReport($refCode, $chatId);
             return;
         }
+
+        $this->sendMessage($chatId, "⚠️ Bạn chưa được cấp quyền đối soát. Hãy gửi ID `{$chatId}` cho Admin nhé.");
     }
 
     protected function sendMasterReport($master, $chatId)
@@ -181,30 +177,42 @@ class TelegramBotService
         $proxyBreakdown = "";
 
         foreach ($proxyRefs as $ref) {
-            $studentsCount = Student::where('source_ref', $ref->code)->count();
+            $students = Student::where('source_ref', $ref->code)->get();
+            $studentsCount = $students->count();
             $totalStudents += $studentsCount;
             
-            $studentIds = Student::where('source_ref', $ref->code)->pluck('id');
+            // Đếm theo hệ
+            $cq = $students->where('program_type', Student::PROGRAM_REGULAR)->count();
+            $vhvl = $students->where('program_type', Student::PROGRAM_PART_TIME)->count();
+            $tx = $students->where('program_type', Student::PROGRAM_DISTANCE)->count();
+
+            $studentIds = $students->pluck('id');
             $amount = CommissionItem::whereHas('commission', function($q) use ($studentIds) {
                 $q->whereIn('student_id', $studentIds);
             })->where('role', 'direct')->sum('amount');
 
             $totalAll += $amount;
             if ($studentsCount > 0 || $amount > 0) {
-                $proxyBreakdown .= "📍 Nguồn {$ref->name}: *{$studentsCount} HS* - *" . number_format($amount) . "đ*\n";
+                $proxyBreakdown .= "📍 Nguồn {$ref->name}: *{$studentsCount} HS* ({$cq}CQ, {$vhvl}VHVL, {$tx}TX) - *" . number_format($amount) . "đ*\n";
             }
         }
 
         $masterRefIds = [$master->ref_id, null, ''];
-        $directStudents = Student::where('collaborator_id', $master->id)
+        $directStudentsQuery = Student::where('collaborator_id', $master->id)
             ->where(function($q) use ($masterRefIds) {
                 $q->whereIn('source_ref', $masterRefIds)->orWhereNull('source_ref');
             });
             
+        $directStudents = $directStudentsQuery->get();
         $directCount = $directStudents->count();
         $totalStudents += $directCount;
+
+        // Đếm theo hệ cho Trực tiếp
+        $dcq = $directStudents->where('program_type', Student::PROGRAM_REGULAR)->count();
+        $dvhvl = $directStudents->where('program_type', Student::PROGRAM_PART_TIME)->count();
+        $dtx = $directStudents->where('program_type', Student::PROGRAM_DISTANCE)->count();
+
         $directStudentIds = $directStudents->pluck('id');
-            
         $directAmount = CommissionItem::whereHas('commission', function($q) use ($directStudentIds) {
             $q->whereIn('student_id', $directStudentIds);
         })->where('role', 'direct')->sum('amount');
@@ -214,7 +222,7 @@ class TelegramBotService
         $report .= "👥 TỔNG HỌC VIÊN: *{$totalStudents} hồ sơ*\n";
         $report .= "💰 TỔNG DOANH THU: *" . number_format($totalAll) . "đ*\n";
         $report .= "----------------------------\n";
-        $report .= "💎 Trực tiếp (Đạt): *{$directCount} HS* - *" . number_format($directAmount) . "đ*\n";
+        $report .= "💎 Trực tiếp (Đạt): *{$directCount} HS* ({$dcq}CQ, {$dvhvl}VHVL, {$dtx}TX) - *" . number_format($directAmount) . "đ*\n";
         $report .= $proxyBreakdown;
         $report .= "----------------------------\n";
         $report .= "📝 _Anh dùng số liệu này để báo kế toán chi tổng nhé._";
