@@ -145,19 +145,27 @@ class TelegramBotService
 
     protected function handleCheckCommand($chatId)
     {
+        Log::info("Telegram /check command received from ChatID: {$chatId}");
+
         $refCode = RefCode::where('telegram_chat_id', $chatId)->first();
-        if ($refCode) {
-            $this->sendProxyReport($refCode, $chatId);
+        $master = Collaborator::where('telegram_chat_id', $chatId)->first();
+
+        if (!$refCode && !$master) {
+            $this->sendMessage($chatId, "⚠️ Bạn chưa được cấp quyền đối soát. Hãy gửi ID `{$chatId}` cho Admin nhé.");
             return;
         }
 
-        $master = Collaborator::where('telegram_chat_id', $chatId)->first();
+        // Nếu là Master, ưu tiên gửi báo cáo tổng hợp
         if ($master) {
             $this->sendMasterReport($master, $chatId);
             return;
         }
 
-        $this->sendMessage($chatId, "⚠️ Bạn chưa được cấp quyền đối soát. Hãy gửi ID `{$chatId}` cho Admin nhé.");
+        // Nếu chỉ là Proxy
+        if ($refCode) {
+            $this->sendProxyReport($refCode, $chatId);
+            return;
+        }
     }
 
     protected function sendMasterReport($master, $chatId)
@@ -169,25 +177,33 @@ class TelegramBotService
         $report .= "----------------------------\n";
 
         $totalAll = 0;
+        $totalStudents = 0;
         $proxyBreakdown = "";
 
         foreach ($proxyRefs as $ref) {
+            $studentsCount = Student::where('source_ref', $ref->code)->count();
+            $totalStudents += $studentsCount;
+            
             $studentIds = Student::where('source_ref', $ref->code)->pluck('id');
             $amount = CommissionItem::whereHas('commission', function($q) use ($studentIds) {
                 $q->whereIn('student_id', $studentIds);
             })->where('role', 'direct')->sum('amount');
 
             $totalAll += $amount;
-            if ($amount > 0) {
-                $proxyBreakdown .= "📍 Nguồn {$ref->name}: *" . number_format($amount) . "đ*\n";
+            if ($studentsCount > 0 || $amount > 0) {
+                $proxyBreakdown .= "📍 Nguồn {$ref->name}: *{$studentsCount} HS* - *" . number_format($amount) . "đ*\n";
             }
         }
 
         $masterRefIds = [$master->ref_id, null, ''];
-        $directStudentIds = Student::where('collaborator_id', $master->id)
+        $directStudents = Student::where('collaborator_id', $master->id)
             ->where(function($q) use ($masterRefIds) {
                 $q->whereIn('source_ref', $masterRefIds)->orWhereNull('source_ref');
-            })->pluck('id');
+            });
+            
+        $directCount = $directStudents->count();
+        $totalStudents += $directCount;
+        $directStudentIds = $directStudents->pluck('id');
             
         $directAmount = CommissionItem::whereHas('commission', function($q) use ($directStudentIds) {
             $q->whereIn('student_id', $directStudentIds);
@@ -195,9 +211,10 @@ class TelegramBotService
         
         $totalAll += $directAmount;
 
+        $report .= "👥 TỔNG HỌC VIÊN: *{$totalStudents} hồ sơ*\n";
         $report .= "💰 TỔNG DOANH THU: *" . number_format($totalAll) . "đ*\n";
         $report .= "----------------------------\n";
-        $report .= "💎 Trực tiếp (Đạt): *" . number_format($directAmount) . "đ*\n";
+        $report .= "💎 Trực tiếp (Đạt): *{$directCount} HS* - *" . number_format($directAmount) . "đ*\n";
         $report .= $proxyBreakdown;
         $report .= "----------------------------\n";
         $report .= "📝 _Anh dùng số liệu này để báo kế toán chi tổng nhé._";
@@ -237,6 +254,16 @@ class TelegramBotService
         
         $total = array_sum($counts);
         $report .= "👥 *TỔNG HỌC VIÊN:* *{$total} hồ sơ*\n";
+
+        if ($total > 0) {
+            $report .= "----------------------------\n";
+            $report .= "📝 *Danh sách 5 hồ sơ mới nhất:*\n";
+            foreach ($students->take(5) as $s) {
+                $date = $s->created_at?->format('d/m') ?? '--/--';
+                $report .= "• {$date} - *{$s->full_name}* ({$s->program_type_label})\n";
+            }
+        }
+
         $report .= "----------------------------\n";
         $report .= "💡 _Hồ sơ hệ Chính quy sẽ được quyết toán vào mùng 5 hàng tháng._\n";
         $report .= "💡 _Hồ sơ hệ VHVL & ĐTTX sẽ được quyết toán sau khi sinh viên hoàn tất nhập học._";
