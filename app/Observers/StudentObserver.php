@@ -107,7 +107,6 @@ class StudentObserver {
             $student->saveQuietly();
         }
 
-        /* TẮT THÔNG BÁO ĐĂNG KÝ MỚI THEO YÊU CẦU
         // 1. Notify the individual collaborator
         if ($student->collaborator_id && $student->collaborator) {
             $user = \App\Models\User::where('email', $student->collaborator->email)->first();
@@ -129,7 +128,6 @@ class StudentObserver {
                 \Illuminate\Support\Facades\Log::error('Telegram Notification Error (SuperAdmin): ' . $e->getMessage());
             }
         }
-        */
     }
 
     public function deleted(Student $student): void {

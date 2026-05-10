@@ -38,11 +38,11 @@
 
             <div class="content">
                 <form method="GET" action="{{ route('public.profile.track.form') }}" class="search-box">
-                    <label for="profile_code" class="label">Mã hồ sơ</label>
+                    <label for="code" class="label">Mã hồ sơ</label>
                     <div class="search-row">
                         <input
-                            id="profile_code"
-                            name="profile_code"
+                            id="code"
+                            name="code"
                             value="{{ $profileCode ?? '' }}"
                             placeholder="Ví dụ: HS2026000123"
                             type="text"

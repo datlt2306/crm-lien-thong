@@ -296,7 +296,7 @@ class PublicStudentController extends Controller {
     }
 
     public function showProfileTracking(Request $request, ?string $profile_code = null) {
-        $inputCode = trim((string) ($profile_code ?: $request->query('profile_code', '')));
+        $inputCode = trim((string) ($profile_code ?: $request->query('code', $request->query('profile_code', ''))));
         $normalizedCode = strtoupper($inputCode);
         $student = null;
 
