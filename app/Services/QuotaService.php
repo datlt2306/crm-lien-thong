@@ -9,6 +9,7 @@ use App\Models\AnnualQuota;
 use App\Models\Intake;
 use App\Models\Quota;
 use App\Models\Payment;
+use App\Models\Student;
 
 class QuotaService {
 
