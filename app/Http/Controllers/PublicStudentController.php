@@ -146,8 +146,16 @@ class PublicStudentController extends Controller {
             $notes[] = $validated['notes'];
         }
 
+        // Map program_type for both Student and Payment
+        $programTypeMap = match (strtolower($quota->program_name ?? '')) {
+            'regular', 'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
+            'part_time', 'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
+            'distance', 'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
+            default => strtolower($quota->program_name ?? Student::PROGRAM_REGULAR)
+        };
+
         try {
-            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes, $request, $ref_id) {
+            $student = DB::transaction(function () use ($validated, $collaborator, $quota, $notes, $request, $ref_id, $programTypeMap) {
                 $student = Student::create([
                     'full_name' => $validated['full_name'],
                     'dob' => $validated['dob'],
@@ -160,21 +168,13 @@ class PublicStudentController extends Controller {
 
                     'target_university' => $quota->intake?->name, 
                     'major' => $quota->major_name,
-                    'program_type' => $quota->program_name,
+                    'program_type' => $programTypeMap,
                     'quota_id' => $quota->id,
                     'intake_id' => $validated['intake_id'],
                     'source' => 'ref',
                     'status' => 'new',
                     'notes' => !empty($notes) ? implode("\n", $notes) : null,
                 ]);
-
-                // Map program_type for Payment
-                $programTypeMap = match (strtolower($quota->program_name ?? '')) {
-                    'regular', 'chính quy', 'hệ chính quy' => Student::PROGRAM_REGULAR,
-                    'part_time', 'vừa học vừa làm', 'hệ vừa học vừa làm', 'bán thời gian' => Student::PROGRAM_PART_TIME,
-                    'distance', 'từ xa', 'đào tạo từ xa' => Student::PROGRAM_DISTANCE,
-                    default => Student::PROGRAM_REGULAR
-                };
 
                 \App\Models\Payment::create([
                     'student_id' => $student->id,
@@ -188,21 +188,13 @@ class PublicStudentController extends Controller {
                 return $student;
             });
 
-            /* Gửi qua Laravel Mailer chuẩn - ĐÃ TẮT THEO YÊU CẦU
-            if ($student && !empty($student->email)) {
-                try {
-                    \Illuminate\Support\Facades\Mail::to($student->email)
-                        ->queue(new \App\Mail\StudentRegistrationSuccessful($student));
-                    
-                    \Illuminate\Support\Facades\Log::info('Mail queued successfully for: ' . $student->email);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Mail Queue Error: ' . $e->getMessage());
-                }
-            }
-            */
-
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra: ' . $e->getMessage()])->withInput();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Student Registration Error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'request' => $request->all(),
+                'ref_id' => $ref_id
+            ]);
+            return redirect()->back()->withErrors(['system_error' => 'Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại sau. (Lỗi: ' . $e->getMessage() . ')'])->withInput();
         }
 
         // Xóa cookie sau khi đăng ký thành công
