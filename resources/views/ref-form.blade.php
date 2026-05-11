@@ -124,7 +124,7 @@
                 <div class="field mt-10">
                     <label class="label">Đợt tuyển sinh dự kiến <span class="req">*</span></label>
                     <select name="quota_id" id="quota_id" class="field-select @error('quota_id') border-red-500 @enderror" required disabled>
-                        <option value="">-- Vui lòng chọn chương trình học trước --</option>
+                        <option value="">-- Vui lòng chọn chương trình học--</option>
                     </select>
                     <input type="hidden" name="intake_id" id="intake_id" value="{{ old('intake_id') }}">
                     @error('quota_id') <div class="text-red-500 text-sm mt-1">{{ $message }}</div> @enderror
