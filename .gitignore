@@ -25,3 +25,5 @@ Thumbs.db
 
 # Local scratch scripts (may contain sensitive credentials)
 scratch_*.php
+
+package-lock.json
