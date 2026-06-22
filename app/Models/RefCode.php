@@ -5,8 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+use Illuminate\Notifications\Notifiable;
+
 class RefCode extends Model
 {
+    use Notifiable;
+
     protected $fillable = [
         'code',
         'collaborator_id',
@@ -20,6 +24,20 @@ class RefCode extends Model
     public function collaborator(): BelongsTo
     {
         return $this->belongsTo(Collaborator::class);
+    }
+
+    /**
+     * Route notifications for the Telegram channel.
+     */
+    public function routeNotificationForTelegram(): ?string {
+        return $this->telegram_chat_id;
+    }
+
+    /**
+     * Check if proxy wants to receive notifications. Always true for proxy test.
+     */
+    public function wantsNotification(string $type, string $channel): bool {
+        return $channel === 'telegram' && !empty($this->telegram_chat_id);
     }
 
     public static function resolveTelegramChatId(?string $sourceRef, object $defaultUser): ?string

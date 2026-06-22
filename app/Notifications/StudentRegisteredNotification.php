@@ -14,12 +14,14 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
     use Queueable;
 
     protected $student;
+    protected $forceToNotifiable;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(Student $student) {
+    public function __construct(Student $student, bool $forceToNotifiable = false) {
         $this->student = $student;
+        $this->forceToNotifiable = $forceToNotifiable;
     }
 
     /**
@@ -35,7 +37,10 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
         }
 
         if ($notifiable->wantsNotification('student_registered', 'telegram')) {
-            $chatId = \App\Models\RefCode::resolveTelegramChatId($this->student->source_ref ?? null, $notifiable);
+            $chatId = $this->forceToNotifiable 
+                ? ($notifiable->routeNotificationForTelegram() ?? null)
+                : \App\Models\RefCode::resolveTelegramChatId($this->student->source_ref ?? null, $notifiable);
+
             if ($chatId) {
                 $channels[] = TelegramChannel::class;
             }
@@ -81,7 +86,9 @@ class StudentRegisteredNotification extends Notification implements ShouldQueue 
         $intake = $this->student->intake?->name ?? ($this->student->intake_month ? "Tháng {$this->student->intake_month}" : 'Chưa xác định');
         $address = $this->student->address ?? 'Chưa cập nhật';
 
-        $chatId = \App\Models\RefCode::resolveTelegramChatId($this->student->source_ref ?? null, $notifiable);
+        $chatId = $this->forceToNotifiable 
+            ? ($notifiable->routeNotificationForTelegram() ?? null)
+            : \App\Models\RefCode::resolveTelegramChatId($this->student->source_ref ?? null, $notifiable);
 
         $message = TelegramMessage::create()
             ->to($chatId)

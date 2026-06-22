@@ -27,8 +27,8 @@ class StudentApiController extends Controller {
             ], 401);
         }
 
-        // Áp dụng logic phân quyền từ StudentResource
-        $query = $this->getAuthorizedQuery($user);
+        // Áp dụng logic phân quyền từ StudentResource và eager load quan hệ để tránh N+1 Query
+        $query = $this->getAuthorizedQuery($user)->with(['collaborator', 'intake', 'payment']);
 
         // Filtering
         $query = $this->applyFilters($query, $request);

@@ -104,14 +104,27 @@ class StudentObserver {
             $student->saveQuietly();
         }
 
-        // 1. Notify the individual collaborator
+        // 1. Notify the Proxy CTV (if any)
+        if ($student->source_ref) {
+            $proxy = \App\Models\RefCode::where('code', $student->source_ref)->first();
+            if ($proxy && $proxy->telegram_chat_id) {
+                try {
+                    $proxy->notify(new \App\Notifications\StudentRegisteredNotification($student));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Proxy): ' . $e->getMessage());
+                }
+            }
+        }
+
+        // 2. Notify the Master CTV
         if ($student->collaborator_id && $student->collaborator) {
             $user = \App\Models\User::where('email', $student->collaborator->email)->first();
             if ($user) {
                 try {
-                    $user->notify(new \App\Notifications\StudentRegisteredNotification($student));
+                    // forceToNotifiable = true ensures the Master always receives the notification
+                    $user->notify(new \App\Notifications\StudentRegisteredNotification($student, true));
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Collaborator): ' . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Master): ' . $e->getMessage());
                 }
             }
         }

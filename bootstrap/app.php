@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/telegram/webhook',
         ]);
         $middleware->web(append: [
-            // \Spatie\Csp\AddCspHeaders::class,
+            \Spatie\Csp\AddCspHeaders::class,
             \App\Http\Middleware\HandleHtmlspecialcharsError::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
