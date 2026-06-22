@@ -10,7 +10,7 @@ class ListCollaborators extends ListRecords {
     protected static string $resource = CollaboratorResource::class;
 
     public function getTitle(): string {
-        return 'Danh sách cộng tác viên 123';
+        return 'Danh sách cộng tác viên';
     }
     public function getBreadcrumb(): string {
         return 'Danh sách cộng tác viên';
