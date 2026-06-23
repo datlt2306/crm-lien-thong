@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 class StudentForm {
     private static function getProgramLabel(?string $programCode): string {
-        return match (strtoupper((string) $programCode)) {
+        return match (strtolower((string) $programCode)) {
             'regular' => 'Chính quy',
             'part_time' => 'Vừa học vừa làm',
             'distance' => 'Đào tạo từ xa',
@@ -50,8 +50,7 @@ class StudentForm {
                                     ->label('Mã hồ sơ')
                                     ->disabled()
                                     ->dehydrated(false)
-                                    ->visible(fn(?Student $record) => filled($record?->profile_code))
-                                    ->helperText('Mã hồ sơ được hệ thống tự sinh, không chỉnh sửa thủ công.'),
+                                    ->visible(fn(?Student $record) => filled($record?->profile_code)),
                                 TextInput::make('full_name')
                                     ->label('Họ và tên')
                                     ->required(),
@@ -118,18 +117,32 @@ class StudentForm {
                                     })
                                     ->searchable()
                                     ->required()
-                                    ->live()
-                                    ->helperText('Chọn đợt tuyển sinh theo đúng hệ đào tạo cần đăng ký'),
+                                    ->live(),
 
                                 \Filament\Forms\Components\Select::make('quota_id')
                                     ->label('Chương trình tuyển sinh (Khóa học)')
-                                    ->options(function ($get) {
-                                        $intakeId = $get('intake_id');
+                                    ->options(function ($get, ?Student $record) {
+                                        $intakeId = $get('intake_id') ?: $record?->intake_id;
                                         if (!$intakeId) {
+                                            if ($record?->quota_id) {
+                                                $quota = \App\Models\Quota::find($record->quota_id);
+                                                if ($quota) {
+                                                    $programLabel = self::getProgramLabel($quota->program_name);
+                                                    return [
+                                                        $quota->id => ($quota->major_name ?: $quota->name) . " - {$programLabel} (Còn {$quota->available_slots} chỉ tiêu)"
+                                                    ];
+                                                }
+                                            }
                                             return [];
                                         }
-                                        return \App\Models\Quota::where('intake_id', $intakeId)
-                                            ->where('status', \App\Models\Quota::STATUS_ACTIVE)
+                                        return \App\Models\Quota::query()
+                                            ->where('intake_id', $intakeId)
+                                            ->where(function ($query) use ($record) {
+                                                $query->where('status', \App\Models\Quota::STATUS_ACTIVE);
+                                                if ($record?->quota_id) {
+                                                    $query->orWhere('id', $record->quota_id);
+                                                }
+                                            })
                                             ->orderByDesc('id')
                                             ->get()
                                             ->unique(function ($quota) {
@@ -145,7 +158,6 @@ class StudentForm {
                                     ->searchable()
                                     ->preload()
                                     ->required()
-                                    ->helperText('Chọn ngành và hệ đào tạo tương ứng (chỉ hiển thị các chỉ tiêu đang mở)')
                                     ->afterStateUpdated(function ($state, callable $set) {
                                         // Tự động cập nhật major khi chọn quota
                                         if ($state) {
@@ -165,7 +177,6 @@ class StudentForm {
                                         ->pluck('name', 'name')
                                         ->toArray())
                                     ->searchable()
-                                    ->helperText('Tự động điền khi chọn Chương trình tuyển sinh. Admin có thể chỉnh thủ công.')
                                     ->visible(fn() => in_array(Auth::user()?->role, ['super_admin', 'admin', 'admissions', 'document', 'accountant'])),
 
                                 \Filament\Forms\Components\Select::make('program_type')
@@ -175,7 +186,6 @@ class StudentForm {
                                         ->pluck('name', 'code')
                                         ->toArray())
                                     ->searchable()
-                                    ->helperText('Tự động điền khi chọn Chương trình tuyển sinh. Admin có thể chỉnh thủ công.')
                                     ->visible(fn() => in_array(Auth::user()?->role, ['super_admin', 'admin', 'admissions', 'document', 'accountant'])),
 
                                 \Filament\Forms\Components\Select::make('source')
@@ -230,12 +240,7 @@ class StudentForm {
 
                                         return null;
                                     })
-                                    ->helperText('Chọn tình trạng chi tiết của hồ sơ')
                                     ->visible(fn() => Auth::user()?->role !== 'collaborator'),
-                                \Filament\Forms\Components\Textarea::make('address')
-                                    ->label('Địa chỉ')
-                                    ->rows(3)
-                                    ->helperText('Nhập địa chỉ của sinh viên'),
                                 \Filament\Forms\Components\Placeholder::make('fee_display')
                                     ->label('Lệ phí (VNĐ)')
                                     ->content(function (?Student $record, $get) {
@@ -297,11 +302,12 @@ class StudentForm {
                                             </div>
                                         ");
                                     })
-                                    ->helperText('Tiền lệ phí được quản lý thông qua luồng Tài chính, không thể chỉnh sửa trực tiếp tại đây.')
                                     ->visible(fn() => Auth::user()?->role !== 'collaborator'),
-                                Textarea::make('notes')
+                                TextInput::make('address')
+                                    ->label('Địa chỉ'),
+                                \Filament\Forms\Components\Textarea::make('notes')
                                     ->label('Ghi chú')
-                                    ->columnSpanFull(),
+                                    ->rows(1),
                             ])
                             ->columns(2),
 
