@@ -30,17 +30,23 @@ class AnnualQuotasTable {
         $canDelete = $user && $user->can('annual_quota_delete');
 
         return $table
+            ->heading('Chỉ tiêu năm')
+            ->description('Quản lý danh sách các chỉ tiêu năm.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm chỉ tiêu năm')
+                    ->url(fn() => \App\Filament\Resources\AnnualQuotas\AnnualQuotaResource::getUrl('create'))
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_create')),
+            ])
             ->recordUrl(fn($r) => ($canEdit && $r) ? \App\Filament\Resources\AnnualQuotas\AnnualQuotaResource::getUrl('edit', ['record' => $r]) : null)
             ->columns([
                 TextColumn::make('major_name')
                     ->label('Ngành')
-                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('program_name')
                     ->label('Hệ đào tạo')
                     ->formatStateUsing(fn($state) => self::getProgramLabel($state))
-                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('year')
@@ -76,39 +82,39 @@ class AnnualQuotasTable {
                     ->label('Ngày tạo')
                     ->date('d/m/Y')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    // ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('major_name')
-                    ->label('Ngành')
-                    ->options(fn() => \Illuminate\Support\Facades\DB::table('annual_quotas')->whereNotNull('major_name')->distinct()->pluck('major_name', 'major_name')->toArray())
-                    ->searchable()
-                    ->preload(),
-                \Filament\Tables\Filters\SelectFilter::make('program_name')
-                    ->label('Hệ đào tạo')
-                    ->options(function () {
-                        $values = \Illuminate\Support\Facades\DB::table('annual_quotas')
-                            ->whereNotNull('program_name')
-                            ->distinct()
-                            ->pluck('program_name')
-                            ->toArray();
+            // ->filters([
+            //     \Filament\Tables\Filters\SelectFilter::make('major_name')
+            //         ->label('Ngành')
+            //         ->options(fn() => \Illuminate\Support\Facades\DB::table('annual_quotas')->whereNotNull('major_name')->distinct()->pluck('major_name', 'major_name')->toArray())
+            //         ->searchable()
+            //         ->preload(),
+            //     \Filament\Tables\Filters\SelectFilter::make('program_name')
+            //         ->label('Hệ đào tạo')
+            //         ->options(function () {
+            //             $values = \Illuminate\Support\Facades\DB::table('annual_quotas')
+            //                 ->whereNotNull('program_name')
+            //                 ->distinct()
+            //                 ->pluck('program_name')
+            //                 ->toArray();
 
-                        $options = [];
-                        foreach ($values as $value) {
-                            $options[$value] = self::getProgramLabel($value);
-                        }
+            //             $options = [];
+            //             foreach ($values as $value) {
+            //                 $options[$value] = self::getProgramLabel($value);
+            //             }
 
-                        return $options;
-                    })
-                    ->searchable()
-                    ->preload(),
-                \Filament\Tables\Filters\SelectFilter::make('year')
-                    ->label('Năm')
-                    ->options(fn() => collect(range(now()->year - 2, now()->year + 2))->mapWithKeys(fn($y) => [$y => (string) $y])),
-                \Filament\Tables\Filters\SelectFilter::make('status')
-                    ->label('Trạng thái')
-                    ->options(\App\Models\AnnualQuota::getStatusOptions()),
-            ])
+            //             return $options;
+            //         })
+            //         ->searchable()
+            //         ->preload(),
+            //     \Filament\Tables\Filters\SelectFilter::make('year')
+            //         ->label('Năm')
+            //         ->options(fn() => collect(range(now()->year - 2, now()->year + 2))->mapWithKeys(fn($y) => [$y => (string) $y])),
+            //     \Filament\Tables\Filters\SelectFilter::make('status')
+            //         ->label('Trạng thái')
+            //         ->options(\App\Models\AnnualQuota::getStatusOptions()),
+            // ])
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make()->visible(fn() => $canEdit),

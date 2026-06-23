@@ -33,4 +33,99 @@
     color: rgb(17 24 39) !important; /* text-gray-900 / dark bold color */
 }
 
+/* Tối ưu khoảng trống UI/UX: giảm thiểu tối đa các khoảng trống thừa */
+.fi-page {
+    gap: 0.75rem !important;
+}
+
+.fi-header {
+    margin-bottom: 0.15rem !important;
+}
+
+.fi-main-ctn {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.fi-main {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+/* Giảm khoảng cách cho tabs */
+.fi-ta-ctn > .fi-tabs {
+    margin-bottom: -0.25rem !important;
+    margin-top: 0px !important;
+}
+
+.fi-ta-header {
+    padding: 0.35rem 0.75rem !important;
+}
+
+.fi-ta-header-ctn {
+    gap: 0.35rem !important;
+}
+
+/* Giảm padding của các tab items */
+.fi-tabs-item {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+/* Giảm khoảng cách trong các form/infolist */
+.fi-fo-field-wrp {
+    gap: 0.15rem !important;
+}
+
+.fi-in-entry-wrp {
+    gap: 0.15rem !important;
+}
+
+/* Tăng kích thước font chữ cho tiêu đề bảng (Table Heading) */
+.fi-ta-header-heading,
+.fi-ta-header h2,
+.fi-ta-header-heading-ctn h2,
+.fi-ta-header-ctn h2 {
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    line-height: 2rem !important;
+}
+
+/* Tinh chỉnh padding cho header bảng để thông thoáng hơn khi có tiêu đề lớn */
+.fi-ta-header {
+    padding-top: 0.85rem !important;
+    padding-bottom: 0.85rem !important;
+}
+
+/* Ẩn khoảng trống của thanh công cụ (Toolbar) nếu không có ô tìm kiếm hoặc bộ lọc */
+.fi-ta-header-toolbar:not(:has(input)):not(:has(select)):not(:has(button)),
+.fi-ta-header-toolbar[style*="display: none"],
+.fi-ta-header-toolbar[style*="display:none"] {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+/* Loại bỏ viền phân cách (divide-y) và khoảng trống của container nếu toolbar bị ẩn */
+.fi-ta-header-ctn:has(.fi-ta-header-toolbar[style*="display: none"]),
+.fi-ta-header-ctn:has(.fi-ta-header-toolbar[style*="display:none"]),
+.fi-ta-header-ctn:not(:has(input)):not(:has(select)):not(:has(button)) {
+    padding-bottom: 0px !important;
+    gap: 0px !important;
+}
+
+.fi-ta-header-ctn:has(.fi-ta-header-toolbar[style*="display: none"]) > *,
+.fi-ta-header-ctn:has(.fi-ta-header-toolbar[style*="display:none"]) > * {
+    border-top-width: 0px !important;
+}
+
+
+
+
+
+
+
 

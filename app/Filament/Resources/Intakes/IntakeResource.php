@@ -20,6 +20,8 @@ class IntakeResource extends Resource {
     protected static string|BackedEnum|null $navigationIcon = null;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Đợt tuyển sinh';
+            protected static ?string $pluralLabel = 'Đợt tuyển sinh';
+
     protected static ?int $navigationSort = 4;
 
     public static function shouldRegisterNavigation(): bool {

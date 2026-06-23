@@ -22,6 +22,8 @@ class AnnualQuotaResource extends Resource {
     protected static string|\BackedEnum|null $navigationIcon = null;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Chỉ tiêu năm';
+    protected static ?string $pluralLabel = 'Chỉ tiêu năm';
+
     protected static ?int $navigationSort = 5;
 
     public static function shouldRegisterNavigation(): bool {

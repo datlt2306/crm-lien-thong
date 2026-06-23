@@ -25,10 +25,17 @@ use App\Models\User;
 class CollaboratorsTable {
     public static function configure(Table $table): Table {
         return $table
+            ->heading('Danh sách cộng tác viên')
+            ->description('Quản lý danh sách cộng tác viên')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm mới')
+                    ->url(fn() => \App\Filament\Resources\Collaborators\CollaboratorResource::getUrl('create')),
+            ])
             ->columns([
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
-                    ->searchable()
+                    // ->searchable()
                     ->sortable(),
                 TextColumn::make('contact')
                     ->label('Liên hệ')
@@ -46,31 +53,31 @@ class CollaboratorsTable {
                         return implode('<br>', $lines) ?: '—';
                     })
                     ->html()
-                    ->searchable(query: function ($query, $search) {
-                        return $query->where(function ($q) use ($search) {
-                            $q->where('phone', 'like', "%$search%")
-                                ->orWhere('email', 'like', "%$search%");
-                        });
-                    })
+                    // ->searchable(query: function ($query, $search) {
+                    //     return $query->where(function ($q) use ($search) {
+                    //         $q->where('phone', 'like', "%$search%")
+                    //             ->orWhere('email', 'like', "%$search%");
+                    //     });
+                    // })
                     ->sortable(),
                 // Đã loại bỏ cột CTV cấp trên và số CTV con - hệ thống chỉ còn 1 cấp
-                TextColumn::make('identity_card')
-                    ->label('CCCD')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('bank_info')
-                    ->label('Ngân hàng / STK')
-                    ->state(fn($record) => $record)
-                    ->formatStateUsing(fn($record) => $record->bank_name && $record->bank_account
-                        ? e($record->bank_name) . ' - ' . e($record->bank_account)
-                        : ($record->bank_name ? e($record->bank_name) : ($record->bank_account ? '•••' . substr($record->bank_account, -4) : '—')))
-                    ->searchable(query: function ($query, $search) {
-                        return $query->where(function ($q) use ($search) {
-                            $q->where('bank_name', 'like', "%{$search}%")
-                                ->orWhere('bank_account', 'like', "%{$search}%");
-                        });
-                    })
-                    ->toggleable(isToggledHiddenByDefault: true),
+                // TextColumn::make('identity_card')
+                //     ->label('CCCD'),
+                    // ->searchable()
+                    // ->toggleable(isToggledHiddenByDefault: true),
+                // TextColumn::make('bank_info')
+                //     ->label('Ngân hàng / STK')
+                //     ->state(fn($record) => $record)
+                //     ->formatStateUsing(fn($record) => $record->bank_name && $record->bank_account
+                //         ? e($record->bank_name) . ' - ' . e($record->bank_account)
+                //         : ($record->bank_name ? e($record->bank_name) : ($record->bank_account ? '•••' . substr($record->bank_account, -4) : '—'))),
+                    // ->searchable(query: function ($query, $search) {
+                    //     return $query->where(function ($q) use ($search) {
+                    //         $q->where('bank_name', 'like', "%{$search}%")
+                    //             ->orWhere('bank_account', 'like', "%{$search}%");
+                    //     });
+                    // })
+                    // ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
@@ -93,14 +100,14 @@ class CollaboratorsTable {
                     ->formatStateUsing(fn($state) => $state ? 'Hoạt động' : 'Bị khóa'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
-                    ->dateTime('d/m/Y H:i:s')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->dateTime('d/m/Y H:i:s'),
+                    // ->sortable()
+                    // ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
                     ->label('Ngày cập nhật')
                     ->dateTime('d/m/Y H:i:s')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    // ->sortable()
+                    // ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
@@ -256,7 +263,7 @@ class CollaboratorsTable {
                                 ->label('Chọn CTV tiếp nhận')
                                 ->options(fn($record) => Collaborator::where('is_active', true)->where('id', '!=', $record->id)->pluck('full_name', 'id'))
                                 ->required()
-                                ->searchable(),
+                                // ->searchable(),
                         ])
                         ->action(function (Collaborator $record, array $data) {
                             $newCollabId = $data['new_collaborator_id'];

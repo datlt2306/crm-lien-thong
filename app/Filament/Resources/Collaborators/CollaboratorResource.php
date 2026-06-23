@@ -27,6 +27,7 @@ class CollaboratorResource extends Resource {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Cộng tác viên';
     protected static ?string $navigationLabel = 'Cộng tác viên';
+    protected static ?string $pluralLabel = 'Cộng tác viên';
     protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = null;

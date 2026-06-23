@@ -19,9 +19,16 @@ class MajorsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->heading('Ngành đào tạo')
+            ->description('Quản lý danh sách các ngành học đào tạo.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm mới')
+                    ->url(fn() => \App\Filament\Resources\Majors\MajorResource::getUrl('create')),
+            ])
             ->columns([
-                TextColumn::make('name')->label('Tên ngành')->searchable()->sortable(),
-                TextColumn::make('code')->label('Mã ngành')->searchable(),
+                TextColumn::make('name')->label('Tên ngành')->sortable(),
+                TextColumn::make('code')->label('Mã ngành'),
                 TextColumn::make('is_active')
                     ->label('Trạng thái')
                     ->badge()

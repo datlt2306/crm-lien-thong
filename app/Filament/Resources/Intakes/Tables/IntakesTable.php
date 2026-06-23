@@ -86,25 +86,28 @@ class IntakesTable {
             ->whereIn('quotas.id', $dedupedQuotaIds);
 
         return $table
+            ->heading('Chỉ tiêu tuyển sinh')
+            ->description('Quản lý danh sách các chỉ tiêu tuyển sinh.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm chỉ tiêu')
+                    ->url(fn() => \App\Filament\Resources\Intakes\IntakeResource::getUrl('create')),
+            ])
             ->query($query)
             ->recordUrl(fn($r) => ($user?->can('intake_view') && $r?->intake_id) ? self::getEditUrlForQuota($r) : null)
             ->columns([
                 TextColumn::make('intake.name')
                     ->label('Tên đợt tuyển sinh')
-                    ->searchable()
                     ->sortable(),
                 BadgeColumn::make('major_name')
                     ->label('Ngành tuyển sinh')
                     ->formatStateUsing(fn(?string $state) => $state ?: 'Chưa xác định')
                     ->color(fn(?string $state) => self::getMajorBadgeColor($state))
-                    ->searchable()
                     ->sortable(),
                 TextColumn::make('program_name')
                     ->label('Hệ tuyển sinh')
                     ->formatStateUsing(fn($state) => self::getProgramLabel($state))
-                    ->searchable()
                     ->sortable(),
-
                 BadgeColumn::make('year')
                     ->label('Năm')
                     ->getStateUsing(function (Quota $record) {
@@ -150,8 +153,8 @@ class IntakesTable {
                 TextColumn::make('target_quota')
                     ->label('Chỉ tiêu')
                     ->formatStateUsing(fn($state) => number_format((int) $state))
-                    ->tooltip('Tổng số lượng học viên tối đa có thể tiếp nhận cho chương trình này.')
-                    ->sortable(),
+                    ->tooltip('Tổng số lượng học viên tối đa có thể tiếp nhận cho chương trình này.'),
+                    // ->sortable(),
 
                 TextColumn::make('utilization')
                     ->label('Tỷ lệ')
@@ -170,27 +173,27 @@ class IntakesTable {
                 TextColumn::make('students_count')
                     ->label('Học viên')
                     ->state(fn(Quota $record) => Student::where('quota_id', $record->id)->count())
-                    ->tooltip('Tổng số lượng học viên đã đăng ký vào chương trình này (Bao gồm tất cả trạng thái).')
-                    ->sortable(false),
+                    ->tooltip('Tổng số lượng học viên đã đăng ký vào chương trình này (Bao gồm tất cả trạng thái).'),
+                    // ->sortable(false),
 
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
-                    ->dateTime('d/m/Y H:i:s')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->dateTime('d/m/Y H:i:s'),
+                    // ->sortable()
+                    // ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('status')
-                    ->label('Trạng thái')
-                    ->options(Intake::getStatusOptions())
-                    ->query(function ($query, array $data) {
-                        if (!isset($data['value']) || $data['value'] === '') {
-                            return $query;
-                        }
-                        return $query->whereHas('intake', fn($q) => $q->where('status', $data['value']));
-                    }),
+            // ->filters([
+            //     \Filament\Tables\Filters\SelectFilter::make('status')
+            //         ->label('Trạng thái')
+            //         ->options(Intake::getStatusOptions())
+            //         ->query(function ($query, array $data) {
+            //             if (!isset($data['value']) || $data['value'] === '') {
+            //                 return $query;
+            //             }
+            //             return $query->whereHas('intake', fn($q) => $q->where('status', $data['value']));
+            //         }),
 
-            ])
+            // ])
             ->recordActions([
                 ActionGroup::make([
                     Action::make('edit')

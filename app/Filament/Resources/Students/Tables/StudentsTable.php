@@ -32,6 +32,15 @@ use Maatwebsite\Excel\Facades\Excel;
 class StudentsTable {
     public static function configure(Table $table): Table {
         return $table
+            ->heading('Danh sách học viên')
+            ->description('Quản lý hồ sơ và thông tin đăng ký của các học viên.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm học viên mới')
+                    ->url(fn() => \App\Filament\Resources\Students\StudentResource::getUrl('create'))
+                    ->visible(fn() => Auth::user()?->can('student_create')),
+            ])
+            ->striped()
             ->recordUrl(function (Student $record) {
                 $user = Auth::user();
 

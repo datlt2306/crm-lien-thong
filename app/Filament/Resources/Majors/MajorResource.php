@@ -20,6 +20,8 @@ class MajorResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Ngành đào tạo';
+        protected static ?string $pluralLabel = 'Ngành đào tạo';
+
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 2;
 

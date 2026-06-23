@@ -9,25 +9,28 @@ use Filament\Resources\Pages\ListRecords;
 class ListIntakes extends ListRecords {
     protected static string $resource = IntakeResource::class;
 
-    public function getTabs(): array
-    {
-        return [
-            'active' => \Filament\Schemas\Components\Tabs\Tab::make('Đợt tuyển sinh')
-                ->modifyQueryUsing(fn ($query) => $query->whereNull('quotas.deleted_at'))
-                ->badge(fn() => \App\Models\Intake::whereNull('deleted_at')->count())
-                ->badgeColor('success'),
-            'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')
-                ->icon('heroicon-o-trash')
-                ->modifyQueryUsing(fn ($query) => $query->onlyTrashed())
-                ->badge(fn() => \App\Models\Intake::onlyTrashed()->count())
-                ->badgeColor('danger'),
-        ];
-    }
+    // public function getTabs(): array
+    // {
+    //     return [
+    //         'active' => \Filament\Schemas\Components\Tabs\Tab::make('Đợt tuyển sinh')
+    //             ->modifyQueryUsing(fn ($query) => $query->whereNull('quotas.deleted_at'))
+    //             ->badge(fn() => \App\Models\Intake::whereNull('deleted_at')->count())
+    //             ->badgeColor('success'),
+    //         'trash' => \Filament\Schemas\Components\Tabs\Tab::make('Thùng rác')
+    //             ->icon('heroicon-o-trash')
+    //             ->modifyQueryUsing(fn ($query) => $query->onlyTrashed())
+    //             ->badge(fn() => \App\Models\Intake::onlyTrashed()->count())
+    //             ->badgeColor('danger'),
+    //     ];
+    // }
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            CreateAction::make()->label('Thêm đợt tuyển sinh'),
-        ];
+    // protected function getHeaderActions(): array
+    // {
+    //     return [
+    //         CreateAction::make()->label('Thêm đợt tuyển sinh'),
+    //     ];
+    // }
+     public function getTitle(): string {
+        return '';
     }
 }

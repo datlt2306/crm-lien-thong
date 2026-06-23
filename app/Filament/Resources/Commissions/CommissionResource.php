@@ -53,6 +53,8 @@ class CommissionResource extends Resource {
         }
 
         return $table
+            ->heading('Báo cáo hoa hồng & Đối soát')
+            ->description('Quản lý báo cáo hoa hồng và thực hiện đối soát chi trả.')
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('student.full_name')
                     ->label('Họ và tên')
@@ -713,7 +715,90 @@ class CommissionResource extends Resource {
                 ]),
             ])
             ->headerActions([
-                // Nút chuyển cho CTV cấp 2: hiển thị khi chọn một item downline ở trạng thái phù hợp
+                Action::make('create')
+                    ->label('Thêm mới')
+                    ->modalHeading('Thêm hoa hồng thủ công')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('payment_id')
+                            ->label('Đợt thanh toán (Học viên)')
+                            ->options(fn () => \App\Models\Payment::query()
+                                ->with('student')
+                                ->latest()
+                                ->get()
+                                ->mapWithKeys(fn($p) => [
+                                    $p->id => ($p->student?->full_name ?? 'N/A') . " - " . number_format($p->amount, 0, ',', '.') . " VND (" . ($p->student?->profile_code ?? 'N/A') . ")"
+                                ])
+                            )
+                            ->searchable()
+                            ->required(),
+                        \Filament\Forms\Components\Select::make('recipient_collaborator_id')
+                            ->label('Người nhận hoa hồng (CTV)')
+                            ->options(fn () => \App\Models\Collaborator::query()->pluck('full_name', 'id'))
+                            ->searchable()
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('amount')
+                            ->label('Số tiền hoa hồng')
+                            ->numeric()
+                            ->required(),
+                        \Filament\Forms\Components\Select::make('role')
+                            ->label('Vai trò nhận')
+                            ->options([
+                                'direct' => 'Trực tiếp (CTV cấp 1)',
+                                'override' => 'Gián tiếp (CTV cấp 2/QL)',
+                            ])
+                            ->default('direct')
+                            ->required(),
+                        \Filament\Forms\Components\Select::make('status')
+                            ->label('Trạng thái chi trả')
+                            ->options([
+                                \App\Models\CommissionItem::STATUS_PENDING => 'Chờ đối soát (Chưa nhập học)',
+                                \App\Models\CommissionItem::STATUS_PAYABLE => 'Có thể thanh toán (Đến hạn)',
+                                \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED => 'Đã chốt chi (Đã xác nhận thanh toán)',
+                            ])
+                            ->default(\App\Models\CommissionItem::STATUS_PAYABLE)
+                            ->required(),
+                        \Filament\Forms\Components\Textarea::make('notes')
+                            ->label('Ghi chú')
+                            ->placeholder('Nhập ghi chú hoặc lý do tạo thủ công...'),
+                    ])
+                    ->action(function (array $data) {
+                        $payment = \App\Models\Payment::find($data['payment_id']);
+                        if (!$payment) return;
+
+                        \Illuminate\Support\Facades\DB::transaction(function () use ($data, $payment) {
+                            $commission = Commission::firstOrCreate(
+                                ['payment_id' => $payment->id],
+                                [
+                                    'student_id' => $payment->student_id,
+                                    'rule' => [
+                                        'description' => 'Tạo thủ công',
+                                        'amount' => $payment->amount,
+                                    ],
+                                    'generated_at' => now(),
+                                ]
+                            );
+
+                            CommissionItem::create([
+                                'commission_id' => $commission->id,
+                                'recipient_collaborator_id' => $data['recipient_collaborator_id'],
+                                'role' => $data['role'],
+                                'amount' => $data['amount'],
+                                'status' => $data['status'],
+                                'trigger' => 'manual',
+                                'payable_at' => ($data['status'] === CommissionItem::STATUS_PAYABLE) ? now() : null,
+                                'visibility' => 'visible',
+                                'meta' => [
+                                    'description' => $data['notes'] ?? 'Tạo thủ công',
+                                ],
+                            ]);
+                        });
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Tạo hoa hồng thành công')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('commission_update') || \Illuminate\Support\Facades\Auth::user()?->role === 'super_admin'),
             ])
             ->modifyQueryUsing(function ($query) {
                 $user = Auth::user();

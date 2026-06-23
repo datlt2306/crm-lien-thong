@@ -20,6 +20,7 @@ class ProgramResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Hệ đào tạo';
+    protected static ?string $pluralLabel = 'Hệ đào tạo';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 3;
 

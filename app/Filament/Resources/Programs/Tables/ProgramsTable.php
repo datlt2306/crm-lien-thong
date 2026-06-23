@@ -19,8 +19,15 @@ class ProgramsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->heading('Hệ đào tạo')
+            ->description('Quản lý danh sách các hệ đào tạo.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm hệ đào tạo')
+                    ->url(fn() => \App\Filament\Resources\Programs\ProgramResource::getUrl('create')),
+            ])
             ->columns([
-                TextColumn::make('name')->label('Hệ đào tạo')->searchable()->sortable(),
+                TextColumn::make('name')->label('Hệ đào tạo')->sortable(),
 
                 TextColumn::make('is_active')
                     ->label('Trạng thái')
