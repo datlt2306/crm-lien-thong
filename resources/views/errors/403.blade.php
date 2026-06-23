@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đã xảy ra lỗi | Liên thông Đại học</title>
+    <title>403 - Không có quyền truy cập | Liên thông Đại học</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -73,16 +73,16 @@
     <div class="wrap" style="margin-top: 5vh;">
         <div class="card">
             <div class="hero">
-                <h1>Có lỗi xảy ra</h1>
-                <p>Đã xảy ra sự cố không mong muốn trong quá trình xử lý.</p>
+                <h1>403 - Giới hạn truy cập</h1>
+                <p>Bạn không có quyền xem trang hoặc tài liệu này.</p>
             </div>
             <div class="content">
                 <div class="error-container">
                     <div class="error-icon">
-                        <i data-lucide="alert-triangle" style="width: 72px; height: 72px;"></i>
+                        <i data-lucide="shield-alert" style="width: 72px; height: 72px;"></i>
                     </div>
                     <p class="error-message">
-                        {{ $message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại sau.' }}
+                        {{ $exception->getMessage() ?: 'Bạn không có quyền thực hiện hành động này hoặc phiên đăng nhập của bạn không đủ đặc quyền để xem dữ liệu được yêu cầu.' }}
                     </p>
                     <div class="btn-group">
                         <a href="javascript:history.back()" class="btn-secondary">

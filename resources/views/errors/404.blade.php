@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đã xảy ra lỗi | Liên thông Đại học</title>
+    <title>404 - Không tìm thấy trang | Liên thông Đại học</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
         }
         .error-icon {
             margin-bottom: 24px;
-            color: #ef4444;
+            color: #4f46e5;
         }
         .error-message {
             font-size: 16px;
@@ -73,16 +73,16 @@
     <div class="wrap" style="margin-top: 5vh;">
         <div class="card">
             <div class="hero">
-                <h1>Có lỗi xảy ra</h1>
-                <p>Đã xảy ra sự cố không mong muốn trong quá trình xử lý.</p>
+                <h1>404 - Không tìm thấy trang</h1>
+                <p>Đường liên kết không tồn tại hoặc đã bị di chuyển.</p>
             </div>
             <div class="content">
                 <div class="error-container">
                     <div class="error-icon">
-                        <i data-lucide="alert-triangle" style="width: 72px; height: 72px;"></i>
+                        <i data-lucide="compass" style="width: 72px; height: 72px;"></i>
                     </div>
                     <p class="error-message">
-                        {{ $message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại sau.' }}
+                        {{ $exception->getMessage() ?: 'Rất tiếc, trang bạn đang truy cập không tồn tại hoặc thông tin này không khả dụng trên hệ thống.' }}
                     </p>
                     <div class="btn-group">
                         <a href="javascript:history.back()" class="btn-secondary">

@@ -124,10 +124,10 @@ class EditCollaborator extends EditRecord {
     }
 
     public function getTitle(): string {
-        return 'Chỉnh sửa CTV con';
+        return 'Chỉnh sửa Cộng Tác Viên';
     }
 
     public function getBreadcrumb(): string {
-        return 'Chỉnh sửa CTV con';
+        return 'Chỉnh sửa Cộng Tác Viên';
     }
 }
