@@ -107,13 +107,18 @@
                                 'part_time' => '💼 HỆ VỪA HỌC VỪA LÀM', 
                                 'distance' => '🌐 HỆ ĐÀO TẠO TỪ XA'
                             ];
+                            $typeSuffixes = [
+                                'regular' => 'Chính quy', 
+                                'part_time' => 'Vừa học vừa làm', 
+                                'distance' => 'Từ xa'
+                            ];
                             $groupedPrograms = collect($programs ?? [])->groupBy('program_name');
                         @endphp
                         @foreach($groupedPrograms as $type => $group)
                             <optgroup label="{{ $typeLabels[$type] ?? $type }}">
                                 @foreach($group as $program)
                                     <option value="{{ $program['major_name'] }}|{{ $program['program_name'] }}">
-                                        {{ $program['major_name'] }}
+                                        {{ $program['major_name'] }} - {{ $typeSuffixes[$program['program_name']] ?? $program['program_name'] }}
                                     </option>
                                 @endforeach
                             </optgroup>
