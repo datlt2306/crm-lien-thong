@@ -5,11 +5,9 @@
 
 return [
 
-    /*
-     * Presets will determine which CSP headers will be set. A valid CSP preset is
-     * any class that implements `Spatie\Csp\Preset`
-     */
-    'policy' => App\Support\Csp\CrmPolicy::class,
+    'presets' => [
+        App\Support\Csp\CrmPolicy::class,
+    ],
 
     /**
      * Register additional global CSP directives here.

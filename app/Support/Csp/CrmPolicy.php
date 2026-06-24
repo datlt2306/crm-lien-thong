@@ -4,39 +4,40 @@ namespace App\Support\Csp;
 
 use Spatie\Csp\Directive;
 use Spatie\Csp\Keyword;
-use Spatie\Csp\Policies\Policy;
+use Spatie\Csp\Policy;
+use Spatie\Csp\Preset;
 
-class CrmPolicy extends Policy
+class CrmPolicy implements Preset
 {
-    public function configure()
+    public function configure(Policy $policy): void
     {
-        $this
-            ->addDirective(Directive::BASE, Keyword::SELF)
-            ->addDirective(Directive::CONNECT, [
+        $policy
+            ->add(Directive::BASE, Keyword::SELF)
+            ->add(Directive::CONNECT, [
                 Keyword::SELF,
                 'https://www.google.com',
                 'https://www.gstatic.com',
                 'https://static.cloudflareinsights.com',
             ])
-            ->addDirective(Directive::DEFAULT, Keyword::SELF)
-            ->addDirective(Directive::FONT, [
+            ->add(Directive::DEFAULT, Keyword::SELF)
+            ->add(Directive::FONT, [
                 Keyword::SELF,
                 'https://fonts.gstatic.com',
                 'data:',
             ])
-            ->addDirective(Directive::FRAME, [
+            ->add(Directive::FRAME, [
                 Keyword::SELF,
                 'https://www.google.com',
                 'https://www.gstatic.com',
             ])
-            ->addDirective(Directive::IMG, [
+            ->add(Directive::IMG, [
                 Keyword::SELF,
                 'https:',
                 'data:',
             ])
-            ->addDirective(Directive::MEDIA, Keyword::SELF)
-            ->addDirective(Directive::OBJECT, Keyword::NONE)
-            ->addDirective(Directive::SCRIPT, [
+            ->add(Directive::MEDIA, Keyword::SELF)
+            ->add(Directive::OBJECT, Keyword::NONE)
+            ->add(Directive::SCRIPT, [
                 Keyword::SELF,
                 Keyword::UNSAFE_INLINE,
                 Keyword::UNSAFE_EVAL,
@@ -45,7 +46,7 @@ class CrmPolicy extends Policy
                 'https://unpkg.com',
                 'https://static.cloudflareinsights.com',
             ])
-            ->addDirective(Directive::STYLE, [
+            ->add(Directive::STYLE, [
                 Keyword::SELF,
                 Keyword::UNSAFE_INLINE,
                 'https://fonts.googleapis.com',
