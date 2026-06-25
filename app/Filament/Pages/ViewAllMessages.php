@@ -11,6 +11,21 @@ class ViewAllMessages extends Page {
     protected static string|\BackedEnum|null $navigationIcon = null;
     protected string $view = 'filament.pages.view-all-messages';
     protected static ?string $title = 'Tất cả tin nhắn';
+    
+    public function getTitle(): string
+    {
+        return 'Tất cả tin nhắn';
+    }
+
+    public function getHeading(): string
+    {
+        return 'Tất cả tin nhắn';
+    }
+
+    public function getDescription(): ?string
+    {
+        return 'Hộp thư và tin nhắn thông báo từ hệ thống.';
+    }
     protected static ?string $navigationLabel = 'Tin nhắn';
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?int $navigationSort = 6;

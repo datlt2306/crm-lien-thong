@@ -305,8 +305,8 @@
                                 <div class="payment-details">
                                     <div class="payment-row mb-8"><span class="payment-label w-85">Ngân hàng:</span> <span class="payment-value">BIDV</span></div>
                                     <div class="payment-row mb-8"><span class="payment-label w-85">Số tài khoản:</span> <span class="payment-value">8849994466</span></div>
-                                    <div class="payment-row mb-8"><span class="payment-label w-85">Người nhận:</span> <span class="payment-value">Cô Ly</span></div>
-                                    <div class="payment-row mb-0"><span class="payment-label w-85">Nội dung:</span> <span class="payment-value fs-13 c-indigo">Họ tên + Ngày sinh</span></div>
+                                    <div class="payment-row mb-8"><span class="payment-label w-85">Người nhận:</span> <span class="payment-value">Tô Thị Thảo Ly</span></div>
+                                    <div class="payment-row mb-0"><span class="payment-label w-85">Nội dung:</span> <span class="payment-value fs-13 c-indigo">Họ tên + Ngày sinh + Nơi sinh</span></div>
                                 </div>
                                 <div class="qr-code-wrapper w-180 border-indigo-qr">
                                     <img src="${window.location.origin}/assets/qr-ly.png" alt="QR" onerror="this.parentElement.style.display='none'">
@@ -315,7 +315,9 @@
                         </div>
                         
                         <div class="fs-12 c-indigo mt-16 lh-1-6 bg-indigo-light p-12 border-radius-12 border-indigo-light flex gap-10 flex-start">
-                            <i data-lucide="info" class="w-18px h-18px flex-shrink-0"></i>
+                            <div>Sau khi chuyển khoản, sinh viên cần gửi biên lai vào nhóm Zalo để xác nhận.</div>
+                        </div>
+                        <div class="fs-12 c-indigo mt-16 lh-1-6 bg-indigo-light p-12 border-radius-12 border-indigo-light flex gap-10 flex-start">
                             <div>
                                 <strong>Chính sách hoàn phí:</strong> Không hoàn trả lệ phí (trừ khi trường không mở lớp). Có thể bảo lưu hồ sơ trong vòng 2 đợt tuyển sinh liên tiếp.
                             </div>
@@ -430,7 +432,7 @@
                                 <div class="mt-10 flex items-center gap-8">
                                     <div class="bg-emerald color-white p-4-12 border-radius-20 fw-700">
                                         <i data-lucide="phone" class="w-12px h-12px display-inline-block valign-middle mr-4"></i>
-                                        0966.666.585 (Cô Hà)
+                                        0966.660.585 (Cô Hà)
                                     </div>
                                 </div>
                             </div>

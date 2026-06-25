@@ -75,6 +75,55 @@ class StudentSeeder extends Seeder {
             ['Lê Anh Tú', '10/02/2005', 'Hưng Yên', '0834244983', 'Công nghệ thông tin', '033205004668', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com', 'L8A2M'],
             ['Trần Quang Đông', '09/07/2004', 'Hà Nội', '0368015218', 'Công nghệ thông tin', '015204004187', 'Đợt 1/2026', 1750000, 'regular', 'datletrong2306@gmail.com', 'L8A2M'],
             ['Nguyễn Thị Minh', '07/03/2003', 'Hà Nội', '0961716490', 'Công nghệ thông tin', '001303044906', 'Đợt 1/2026', 1750000, 'regular', 'datletrong2306@gmail.com', 'DAT'],
+            
+            // Bổ sung thêm sinh viên từ danh sách mới
+            ['Nguyễn Thanh Thủy', '30/01/2004', 'Hà Nội', '0978565512', 'Công nghệ thông tin', '001304038069', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Đào Ngọc Hảo', '01/05/2005', 'Hà Nội', '0978565512', 'Công nghệ thông tin', '0867318064', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Trịnh Văn Thanh', '15/09/2005', 'Ninh Bình', '0978113103', 'Công nghệ thông tin', '037205003810', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Thế Sơn', '12/02/2005', 'Thái Bình', '0363075579', 'Công nghệ thông tin', '034205006664', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Vũ Như Định', '03/02/2004', 'Thái Bình', '0345769964', 'Công nghệ thông tin', '038204014083', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Phạm Văn Thành Long', '25/08/2003', 'Hà Nội', '0345939554', 'Công nghệ thông tin', '001203044518', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Lưu Quý Toàn', '20/09/2003', 'Hà Nội', '0356123951', 'Công nghệ thông tin', '001203041532', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Quý Ninh', '23/09/2005', 'Hà Nội', '0988361570', 'Công nghệ thông tin', '001205030398', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Thế Bình Anh', '04/10/2005', 'Hà Nội', '0396344804', 'Công nghệ thông tin', '001205032759', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Đức Cường', '15/07/2002', 'Hà Nội', '0762211710', 'Công nghệ thông tin', '024202008692', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Phạm Hoàng Phi Hùng', '19/07/1999', 'Hà Nội', '0974815770', 'Công nghệ thông tin', '012099003854', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Bùi Ngọc Khánh', '24/07/2005', 'Hà Nội', '0972918696', 'Công nghệ thông tin', '001205032726', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Đoàn Tâm Đan', '14/05/2005', 'Hà Nội', '0342908966', 'Công nghệ thông tin', '001205045176', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Thị Ngọc Ánh', '12/10/2005', 'Hà Nội', '0398896405', 'Công nghệ thông tin', '001305030319', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Hoàng Minh Quân', '12/10/2005', 'Hà Nội', '0372298205', 'Công nghệ thông tin', '008205004495', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Đăng Vũ', '17/11/2004', 'Hà Nội', '0986033923', 'Công nghệ thông tin', '001204048679', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Văn Hải', '01/02/2001', 'Hà Nội', '0947612865', 'Công nghệ thông tin', '040201007272', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Nguyễn Quang Lợi', '01/01/2005', 'Hà Nội', '0968839615', 'Công nghệ thông tin', '205033035', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Trương Ngọc Hà', '31/01/2005', 'Vĩnh Phúc', '0967202005', 'Công nghệ thông tin', '', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Quỳnh Anh', '10/12/2004', 'Hà Nội', '0904837461', 'Công nghệ thông tin', '001304024543', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Phan Đức Hoàng', '18/09/2003', 'Hà Nội', '0862837464', 'Công nghệ thông tin', '030203006038', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Bùi Ngọc Hảo', '30/11/2003', 'Hưng Yên', '0705504208', 'Công nghệ thông tin', '034303005607', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Thị Thanh', '10/09/2003', 'Hà Nội', '0866805148', 'Công nghệ thông tin', '036303010857', 'Đợt 1/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Quang Khải', '12/08/2004', 'Hà Nội', '0564669252', 'Công nghệ thông tin', '036204015859', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Dương Văn Toàn', '22/09/2001', 'Ninh Bình', '0961273141', 'Công nghệ thông tin', '035201004187', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Phạm Anh Tuấn', '28/03/2002', 'Thanh Hóa', '0946042556', 'Công nghệ thông tin', '038202013839', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Nguyễn Quang Quyền', '12/11/2005', 'Hà Nội', '0399202005', 'Công nghệ thông tin', '001205030534', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Phí Duy Mạnh', '09/09/2005', 'Hà Nội', '0395346930', 'Công nghệ thông tin', '001205033840', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Hoàng Tiến Anh', '04/05/2005', 'Hà Nội', '0934272337', 'Công nghệ thông tin', '030205006552', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Phạm Thị Thanh Thủy', '15/01/2004', 'Ninh Bình', '0396119561', 'Công nghệ thông tin', '036304013377', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Đăng An', '11/06/2005', 'Ninh Bình', '0346584826', 'Công nghệ thông tin', '024205011425', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Dương Anh Quân', '04/07/2003', 'Hà Nội', '0354951581', 'Công nghệ thông tin', '001203047257', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Hữu Bách', '10/09/2004', 'Hà Nội', '0865432702', 'Công nghệ thông tin', '001204017215', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Lê Tuấn Anh', '19/05/2005', 'Hà Nội', '0388316055', 'Công nghệ thông tin', '001205039004', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Vũ Đức Dũng', '27/09/2004', 'Hà Nội', '', 'Công nghệ thông tin', '001204041155', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Tuấn Anh', '13/05/2003', 'Phú Thọ', '0338165696', 'Công nghệ thông tin', '025203008389', 'Đợt 2/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Thị Minh Anh', '28/11/2005', 'Phú Thọ', '0868215840', 'Công nghệ thông tin', '001305031346', 'Đợt 2/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Vũ Thị Thu Thảo', '05/06/2005', 'Phú Thọ', '0965038591', 'Công nghệ thông tin', '034305007027', 'Đợt 2/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Đình Huy', '14/08/2007', 'Phú Thọ', '0343520738', 'Công nghệ thông tin', '001207039684', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Đào Đức Anh', '04/06/2006', 'Hà Nội', '0969778516', 'Công nghệ thông tin', '001206029111', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Trung Hiếu', '11/03/2006', 'Hà Nội', '0364934306', 'Công nghệ thông tin', '001206024816', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Lê Phục Hưng', '29/09/2005', 'Nghệ An', '0365252737', 'Công nghệ thông tin', '040205022678', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Thu Hà', '29/10/2004', 'Hà Nội', '0966456420', 'Công nghệ thông tin', '001304029179', 'Đợt 1/2026', 200000, 'distance', 'datletrong2306@gmail.com'],
+            ['Đặng Tuấn Minh', '30/12/2008', 'Hà Nội', '0386621738', 'Công nghệ thông tin', '001208015334', 'Đợt 2/2026', 200000, 'part_time', 'datletrong2306@gmail.com'],
+            ['Nguyễn Việt Anh', '07/10/2004', 'Hà Nội', '0375284204', 'Công nghệ thông tin', '001204032015', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Đức Tài', '22/04/2001', 'Hà Tĩnh', '0346342223', 'Công nghệ thông tin', '042201011366', 'Đợt 2/2026', 1750000, 'regular', 'datletrong2306@gmail.com'],
+            ['Nguyễn Viết Nhất', '06/06/2003', 'Hà Nội', '0845662003', 'Công nghệ thông tin', '001203032468', 'Đợt 2/2026', 750000, 'part_time', 'datletrong2306@gmail.com'],
         ];
 
         // Khớp con số 82.300.000 (Tăng phí cho 1 học viên PART_TIME từ 750k lên 1.200k? Hoặc điều chỉnh cụ thể)
@@ -110,13 +159,24 @@ class StudentSeeder extends Seeder {
                 }
             }
 
+            // Tránh lỗi Unique Constraint khi số điện thoại/CMND bị trùng hoặc trống
+            $phone = !empty($item[3]) ? str_replace(' ', '', $item[3]) : 'TEMP_PHONE_' . Str::random(8);
+            while (Student::where('phone', $phone)->exists()) {
+                $phone = $phone . '_' . Str::random(3);
+            }
+
+            $identityCard = !empty($item[5]) ? str_replace(' ', '', $item[5]) : 'TEMP_ID_' . Str::random(8);
+            while (Student::where('identity_card', $identityCard)->exists()) {
+                $identityCard = $identityCard . '_' . Str::random(3);
+            }
+
             $student = Student::create([
                 'full_name' => $item[0],
                 'dob' => $dob,
                 'birth_place' => $item[2],
-                'phone' => $item[3], 
+                'phone' => $phone, 
                 'major' => $item[4],
-                'identity_card' => $item[5], 
+                'identity_card' => $identityCard, 
                 'program_type' => $item[8],
                 'fee' => $item[7],
                 'collaborator_id' => $collab?->id,

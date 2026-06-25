@@ -15,6 +15,7 @@ class StudentDocumentResource extends Resource {
 
     protected static string|\BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Hồ sơ / Uploads';
+    protected static ?string $pluralLabel = 'Hồ sơ / Uploads';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 2;
 

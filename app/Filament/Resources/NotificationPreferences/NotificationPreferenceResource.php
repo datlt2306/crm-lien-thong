@@ -20,6 +20,7 @@ class NotificationPreferenceResource extends Resource {
     protected static string|BackedEnum|null $navigationIcon = null;
 
     protected static ?string $navigationLabel = 'Cài đặt thông báo';
+    protected static ?string $pluralLabel = 'Cài đặt thông báo';
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?int $navigationSort = 4;
 

@@ -22,6 +22,7 @@ class CommissionResource extends Resource {
     protected static ?string $model = Commission::class;
     protected static string|\UnitEnum|null $navigationGroup = 'Tài chính';
     protected static ?string $navigationLabel = 'Hoa hồng & Đối soát';
+    protected static ?string $pluralLabel = 'Hoa hồng & Đối soát';
     protected static ?int $navigationSort = 2;
     protected static string|\BackedEnum|null $navigationIcon = null;
 

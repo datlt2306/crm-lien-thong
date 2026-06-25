@@ -14,12 +14,12 @@ class ListCommissionPolicies extends ListRecords {
         return 'full';
     }
 
-    protected function getHeaderActions(): array {
-        return [
-            CreateAction::make()
-                ->label('Thêm chính sách mới'),
-        ];
-    }
+    // protected function getHeaderActions(): array {
+    //     return [
+    //         CreateAction::make()
+    //             ->label('Thêm chính sách mới'),
+    //     ];
+    // }
 
     public function getTabs(): array
     {
@@ -38,6 +38,10 @@ class ListCommissionPolicies extends ListRecords {
 
     public function getTitle(): string {
         return 'Cấu hình hoa hồng';
+    }
+
+    public function getHeading(): string {
+        return '';
     }
 
     public function getBreadcrumb(): string {

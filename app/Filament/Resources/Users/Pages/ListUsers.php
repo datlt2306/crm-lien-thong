@@ -12,6 +12,10 @@ class ListUsers extends ListRecords {
     public function getTitle(): string {
         return 'Danh sách người dùng';
     }
+
+    public function getHeading(): string {
+        return '';
+    }
     public function getBreadcrumb(): string {
         return 'Danh sách người dùng';
     }
@@ -28,9 +32,9 @@ class ListUsers extends ListRecords {
         ];
     }
 
-    protected function getHeaderActions(): array {
-        return [
-            CreateAction::make()->label('Thêm người dùng mới'),
-        ];
-    }
+    // protected function getHeaderActions(): array {
+    //     return [
+    //         CreateAction::make()->label('Thêm người dùng mới'),
+    //     ];
+    // }
 }

@@ -17,6 +17,13 @@ use Illuminate\Support\Facades\Gate;
 class UsersTable {
     public static function configure(Table $table): Table {
         return $table
+            ->heading('Danh sách người dùng')
+            ->description('Quản lý thông tin tài khoản người dùng và phân quyền truy cập.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm người dùng mới')
+                    ->url(fn() => \App\Filament\Resources\Users\UserResource::getUrl('create')),
+            ])
             ->columns([
                 ImageColumn::make('avatar')
                     ->label('Ảnh')

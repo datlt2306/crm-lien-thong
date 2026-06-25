@@ -24,6 +24,7 @@ class UserResource extends Resource {
 
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?string $navigationLabel = 'Người dùng';
+    protected static ?string $pluralLabel = 'Người dùng';
     protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = null;

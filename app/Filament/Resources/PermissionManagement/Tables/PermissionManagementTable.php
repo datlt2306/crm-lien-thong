@@ -13,6 +13,13 @@ use Filament\Tables\Table;
 class PermissionManagementTable {
     public static function configure(Table $table): Table {
         return $table
+            ->heading('Vai trò & Phân quyền')
+            ->description('Quản lý danh sách vai trò và phân quyền hạn tương ứng cho từng vai trò.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm mới')
+                    ->url(fn() => \App\Filament\Resources\PermissionManagement\PermissionManagementResource::getUrl('create')),
+            ])
             ->columns([
                 TextColumn::make('name')
                     ->label('Tên vai trò')

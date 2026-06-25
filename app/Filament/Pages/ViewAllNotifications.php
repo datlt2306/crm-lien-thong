@@ -11,6 +11,21 @@ class ViewAllNotifications extends Page {
     protected static string|\BackedEnum|null $navigationIcon = null;
     protected string $view = 'filament.pages.view-all-notifications';
     protected static ?string $title = 'Tất cả thông báo';
+    
+    public function getTitle(): string
+    {
+        return 'Tất cả thông báo';
+    }
+
+    public function getHeading(): string
+    {
+        return 'Tất cả thông báo';
+    }
+
+    public function getDescription(): ?string
+    {
+        return 'Xem toàn bộ thông báo từ hệ thống.';
+    }
     protected static ?string $navigationLabel = 'Thông báo';
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?int $navigationSort = 5;

@@ -18,6 +18,7 @@ class PermissionManagementResource extends Resource {
 
     protected static string|BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Phân quyền';
+    protected static ?string $pluralLabel = 'Vai trò & Phân quyền';
     protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
     protected static ?int $navigationSort = 2;
 

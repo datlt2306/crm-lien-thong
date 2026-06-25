@@ -20,6 +20,7 @@ class QuotaResource extends Resource {
     protected static string|BackedEnum|null $navigationIcon = null;
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?string $navigationLabel = 'Đợt tuyển & Chỉ tiêu';
+    protected static ?string $pluralLabel = 'Đợt tuyển & Chỉ tiêu';
     protected static ?int $navigationSort = 4;
 
     public static function shouldRegisterNavigation(): bool {

@@ -14,6 +14,13 @@ use Filament\Tables\Filters\TernaryFilter;
 class CommissionPoliciesTable {
     public static function configure(Table $table): Table {
         return $table
+            ->heading('Chính sách hoa hồng')
+            ->description('Thiết lập chính sách tính hoa hồng, định mức chi trả cho cộng tác viên.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm chính sách mới')
+                    ->url(fn() => \App\Filament\Resources\CommissionPolicies\CommissionPolicyResource::getUrl('create')),
+            ])
             ->columns([
                 TextColumn::make('collaborator.full_name')
                     ->label('Đối tượng CTV')

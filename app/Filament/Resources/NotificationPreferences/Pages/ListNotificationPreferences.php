@@ -9,11 +9,21 @@ use Filament\Resources\Pages\ListRecords;
 class ListNotificationPreferences extends ListRecords
 {
     protected static string $resource = NotificationPreferenceResource::class;
-
-    protected function getHeaderActions(): array
+    
+    public function getTitle(): string
     {
-        return [
-            CreateAction::make(),
-        ];
+        return 'Cài đặt thông báo';
     }
+
+    public function getHeading(): string
+    {
+        return '';
+    }
+
+    // protected function getHeaderActions(): array
+    // {
+    //     return [
+    //         CreateAction::make(),
+    //     ];
+    // }
 }

@@ -69,7 +69,12 @@ class StudentsTable {
 
                 TextColumn::make('full_name')
                     ->label('Họ và tên')
-                    ->searchable()
+                    ->searchable(query: function ($query, $search) {
+                        return $query->where(function ($q) use ($search) {
+                            $q->where('full_name', 'like', "%$search%")
+                              ->orWhere('identity_card', 'like', "%$search%");
+                        });
+                    })
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('contact')
@@ -91,7 +96,8 @@ class StudentsTable {
                     ->searchable(query: function ($query, $search) {
                         return $query->where(function ($q) use ($search) {
                             $q->where('phone', 'like', "%$search%")
-                                ->orWhere('email', 'like', "%$search%");
+                                ->orWhere('email', 'like', "%$search%")
+                                ->orWhere('identity_card', 'like', "%$search%");
                         });
                     })
                     ->toggleable(),

@@ -16,6 +16,13 @@ use Filament\Tables\Table;
 class NotificationPreferencesTable {
     public static function configure(Table $table): Table {
         return $table
+            ->heading('Cấu hình nhận thông báo')
+            ->description('Quản lý các tùy chọn kênh nhận thông báo (Email, Push, In-App) của từng người dùng.')
+            ->headerActions([
+                \Filament\Actions\Action::make('create')
+                    ->label('Thêm cấu hình mới')
+                    ->url(fn() => \App\Filament\Resources\NotificationPreferences\NotificationPreferenceResource::getUrl('create')),
+            ])
             ->columns([
                 TextColumn::make('user.name')
                     ->label('Người dùng')

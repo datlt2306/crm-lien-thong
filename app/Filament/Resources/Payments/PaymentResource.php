@@ -23,6 +23,7 @@ class PaymentResource extends Resource {
     protected static ?string $model = Payment::class;
     protected static string|\UnitEnum|null $navigationGroup = 'Tài chính';
     protected static ?string $navigationLabel = 'Thanh toán';
+    protected static ?string $pluralLabel = 'Thanh toán';
     protected static ?int $navigationSort = 1;
     protected static string|\BackedEnum|null $navigationIcon = null;
 

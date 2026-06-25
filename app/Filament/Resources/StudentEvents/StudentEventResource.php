@@ -15,6 +15,7 @@ class StudentEventResource extends Resource {
 
     protected static string|\BackedEnum|null $navigationIcon = null;
     protected static ?string $navigationLabel = 'Sự kiện / Notes';
+    protected static ?string $pluralLabel = 'Sự kiện / Notes';
     protected static string|\UnitEnum|null $navigationGroup = 'Tuyển sinh';
     protected static ?int $navigationSort = 3;
 

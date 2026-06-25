@@ -9,11 +9,21 @@ use Filament\Resources\Pages\ListRecords;
 class ListPermissionManagement extends ListRecords
 {
     protected static string $resource = PermissionManagementResource::class;
-
-    protected function getHeaderActions(): array
+    
+    public function getTitle(): string
     {
-        return [
-            CreateAction::make(),
-        ];
+        return 'Phân quyền';
     }
+
+    public function getHeading(): string
+    {
+        return '';
+    }
+
+    // protected function getHeaderActions(): array
+    // {
+    //     return [
+    //         CreateAction::make(),
+    //     ];
+    // }
 }

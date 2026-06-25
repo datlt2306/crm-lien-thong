@@ -342,12 +342,11 @@ optgroup {
     display: flex;
     gap: 20px;
     align-items: center;
+    justify-content: center;
 }
 .qr-code-wrapper {
     background: white;
-    padding: 5px;
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
     text-align: center;
     flex-shrink: 0;
 }
@@ -462,8 +461,12 @@ optgroup {
 }
 
 /* Dynamic Content Utility Classes */
+.mt-16{
+    margin-top: 16px;
+}
 .mt-10 { margin-top: 10px; }
 .mb-8 { margin-bottom: 8px; }
+.p-12{padding: 12px;}
 .mb-0 { margin-bottom: 0; }
 .w-85 { width: 85px; }
 .w-180 { width: 180px; }

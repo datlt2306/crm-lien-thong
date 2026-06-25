@@ -119,6 +119,8 @@ class AuditLogResource extends Resource
                     ->placeholder('-'),
             ])
             ->defaultSort('created_at', 'desc')
+            ->heading(fn () => Auth::user()?->can('audit_log_view_all') ? 'Nhật ký hệ thống' : 'Nhật ký học viên')
+            ->description(fn () => Auth::user()?->can('audit_log_view_all') ? 'Quản lý và theo dõi lịch sử hoạt động của toàn bộ hệ thống.' : 'Theo dõi lịch sử hoạt động của học viên.')
             ->filters([
                 SelectFilter::make('event_group')
                     ->label('Nhóm nhật ký')

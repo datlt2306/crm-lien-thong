@@ -104,12 +104,15 @@ class StudentObserver {
             $student->saveQuietly();
         }
 
+        $sentTelegramChatIds = [];
+
         // 1. Notify the Proxy CTV (if any)
         if ($student->source_ref) {
             $proxy = \App\Models\RefCode::where('code', $student->source_ref)->first();
             if ($proxy && $proxy->telegram_chat_id) {
                 try {
                     $proxy->notify(new \App\Notifications\StudentRegisteredNotification($student));
+                    $sentTelegramChatIds[] = $proxy->telegram_chat_id;
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Proxy): ' . $e->getMessage());
                 }
@@ -119,21 +122,28 @@ class StudentObserver {
         // 2. Notify the Master CTV
         if ($student->collaborator_id && $student->collaborator) {
             $user = \App\Models\User::where('email', $student->collaborator->email)->first();
-            if ($user) {
+            if ($user && $user->telegram_chat_id && !in_array($user->telegram_chat_id, $sentTelegramChatIds)) {
                 try {
                     // forceToNotifiable = true ensures the Master always receives the notification
                     $user->notify(new \App\Notifications\StudentRegisteredNotification($student, true));
+                    $sentTelegramChatIds[] = $user->telegram_chat_id;
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error('Telegram Notification Error (Master): ' . $e->getMessage());
                 }
             }
         }
 
-        // 2. Notify Super Admins
+        // 3. Notify Super Admins
         $superAdmins = \App\Models\User::where('role', 'super_admin')->get();
         foreach ($superAdmins as $admin) {
+            if ($admin->telegram_chat_id && in_array($admin->telegram_chat_id, $sentTelegramChatIds)) {
+                continue;
+            }
             try {
                 $admin->notify(new \App\Notifications\StudentRegisteredNotification($student));
+                if ($admin->telegram_chat_id) {
+                    $sentTelegramChatIds[] = $admin->telegram_chat_id;
+                }
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Telegram Notification Error (SuperAdmin): ' . $e->getMessage());
             }
