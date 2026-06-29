@@ -215,6 +215,10 @@ class Payment extends Model {
         return $this->hasOne(Commission::class);
     }
 
+    public function adjustments(): \Illuminate\Database\Eloquent\Relations\HasMany {
+        return $this->hasMany(PaymentAdjustment::class);
+    }
+
     /**
      * Kiểm tra xem đã có bất kỳ mục hoa hồng nào được xác nhận chi hoặc đã chi chưa
      */

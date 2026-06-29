@@ -3,24 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\HasAuditLog;
 
-class Commission extends Model {
-    use SoftDeletes;
+class PaymentAdjustment extends Model {
+    use HasFactory, SoftDeletes, HasAuditLog;
+
     protected $fillable = [
         'payment_id',
         'student_id',
-        'rule',
-        'generated_at',
+        'type',
+        'amount',
+        'reason',
+        'refund_status',
+        'refund_proof_path',
+        'created_by',
     ];
 
     protected $casts = [
-        'rule' => 'array',
-        'generated_at' => 'datetime',
+        'amount' => 'decimal:2',
     ];
-
 
     public function payment(): BelongsTo {
         return $this->belongsTo(Payment::class);
@@ -30,11 +34,7 @@ class Commission extends Model {
         return $this->belongsTo(Student::class);
     }
 
-    public function items(): HasMany {
-        return $this->hasMany(CommissionItem::class);
-    }
-
-    public function adjustments(): HasMany {
-        return $this->hasMany(CommissionAdjustment::class);
+    public function creator(): BelongsTo {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

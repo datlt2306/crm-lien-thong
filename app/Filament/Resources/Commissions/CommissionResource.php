@@ -119,6 +119,13 @@ class CommissionResource extends Resource {
                     ->money('VND')
                     ->sortable()
                     ->visible(fn(): bool => !$isCtv),
+
+                \Filament\Tables\Columns\TextColumn::make('items.recipient.full_name')
+                    ->label('CTV nhận')
+                    ->visible(fn(): bool => !$isCtv)
+                    ->placeholder('Không có')
+                    ->searchable()
+                    ->listWithLineBreaks(),
                 
                 \Filament\Tables\Columns\TextColumn::make('recipient_ctv')
                     ->label('Hoa hồng của tôi')
@@ -344,54 +351,22 @@ class CommissionResource extends Resource {
                         })
                         ->action(function (Commission $record, array $data) {
                             $record->items()->where('role', 'direct')->whereIn('status', [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])
-                                ->each(fn($item) => $item->markAsPaymentConfirmed($data['bill'] ?? null, \Illuminate\Support\Facades\Auth::user()->id));
+                                ->each(function ($item) use ($data) {
+                                    $item->markAsPaymentConfirmed($data['bill'] ?? null, \Illuminate\Support\Facades\Auth::user()->id);
+                                    
+                                    // Tự động xác nhận nhận tiền để nạp vào ví CTV (do CTV không đối soát trên web nữa)
+                                    $service = new \App\Services\CommissionService();
+                                    $service->confirmDirectReceived($item, \Illuminate\Support\Facades\Auth::user()->id);
+                                });
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Đã xác nhận thanh toán')
-                                ->body('Các khoản hoa hồng trực tiếp đã được chốt chi.')
+                                ->title('Đã xác nhận thanh toán & Nạp ví')
+                                ->body('Các khoản hoa hồng trực tiếp đã được chi và nạp vào ví của CTV.')
                                 ->success()
                                 ->send();
                         }),
 
-                    Action::make('confirm_received')
-                        ->label('Xác nhận đã nhận tiền')
-                        ->icon('heroicon-o-hand-thumb-up')
-                        ->color('info')
-                        ->requiresConfirmation()
-                        ->modalHeading('Xác nhận đã nhận tiền')
-                        ->modalDescription('Xác nhận đã nhận được tiền hoa hồng.')
-                        ->modalSubmitActionLabel('Xác nhận đã nhận')
-                        ->modalCancelActionLabel('Hủy')
-                        ->visible(function (Commission $record) use ($user): bool {
-                            if ($user->role !== 'collaborator') return false;
-                            $collab = \App\Models\Collaborator::where('email', $user->email)->first();
-                            if (!$collab) return false;
-                            
-                            return $record->items()
-                                ->where('status', CommissionItem::STATUS_PAYMENT_CONFIRMED)
-                                && $record->items()->where('role', 'direct')
-                                && $record->items()->where('recipient_collaborator_id', $collab->id)
-                                ->exists();
-                        })
-                        ->action(function (Commission $record) use ($user) {
-                            $collab = \App\Models\Collaborator::where('email', $user->email)->first();
-                            $item = $record->items()
-                                ->where('status', CommissionItem::STATUS_PAYMENT_CONFIRMED)
-                                ->where('role', 'direct')
-                                ->where('recipient_collaborator_id', $collab->id)
-                                ->first();
 
-                            if ($item) {
-                                $service = new \App\Services\CommissionService();
-                                $service->confirmDirectReceived($item, $user->id);
-                            }
-
-                            \Filament\Notifications\Notification::make()
-                                ->title('Đã xác nhận nhận tiền')
-                                ->body('Hoa hồng đã được chuyển vào ví của bạn.')
-                                ->success()
-                                ->send();
-                        }),
 
                     Action::make('view_bill_student')
                         ->label('Xem bill nộp tiền')
@@ -672,11 +647,15 @@ class CommissionResource extends Resource {
                                         ];
                                         $totalAmount += $amount;
 
-                                        $item->updateQuietly([
-                                            'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
-                                            'payment_confirmed_at' => now(),
-                                            'payment_confirmed_by' => $userId,
-                                        ]);
+                                         $item->update([
+                                             'status' => CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                             'payment_confirmed_at' => now(),
+                                             'payment_confirmed_by' => $userId,
+                                         ]);
+
+                                         // Tự động xác nhận nhận tiền để nạp vào ví CTV (do CTV không đối soát trên web nữa)
+                                         $service = new \App\Services\CommissionService();
+                                         $service->confirmDirectReceived($item, $userId);
                                         
                                         $successCount++;
                                     });

@@ -251,13 +251,36 @@ class PublicStudentController extends Controller {
             default => Student::PROGRAM_REGULAR // Default fallback
         };
 
-        // Tìm student theo số điện thoại và collaborator hiện tại
+        // Tìm student theo số điện thoại
         $student = Student::where('phone', $validated['phone'])
-            ->where('collaborator_id', $collaborator->id)
             ->first();
 
         if (!$student) {
             return back()->withErrors(['phone' => 'Không tìm thấy hồ sơ sinh viên. Vui lòng gửi form đăng ký trước.']);
+        }
+
+        // Nếu học viên đang thuộc CTV khác
+        if ($student->collaborator_id !== $collaborator->id) {
+            $hasVerifiedPayment = $student->payment && $student->payment->status === Payment::STATUS_VERIFIED;
+            if ($hasVerifiedPayment || in_array($student->status, [Student::STATUS_ENROLLED, Student::STATUS_APPROVED])) {
+                return back()->withErrors(['phone' => 'Học viên này đã nộp tiền và thuộc về CTV khác. Không thể thay đổi người giới thiệu.']);
+            }
+
+            // Kiểm tra thời hạn khóa lead (mặc định 14 ngày)
+            $lockDays = config('services.lead_lock_days', 14);
+            $createdAt = $student->created_at ?? now();
+            $lockUntil = $createdAt->copy()->addDays($lockDays);
+
+            if (now()->lt($lockUntil)) {
+                $daysRemaining = ceil(now()->diffInMinutes($lockUntil) / 1440);
+                return back()->withErrors(['phone' => "Học viên này đang được khóa để CTV khác chăm sóc. Bạn có thể chốt sau {$daysRemaining} ngày nữa nếu học viên chưa nộp tiền."]);
+            }
+
+            // Cập nhật người giới thiệu của học viên sang CTV mới chốt thành công
+            $student->update([
+                'collaborator_id' => $collaborator->id,
+                'instructor' => $collaborator->full_name ?? null,
+            ]);
         }
 
         // Tạo hoặc cập nhật payment trước để có instance gọi hàm generateStandardBillPath

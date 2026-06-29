@@ -15,7 +15,12 @@ class CommissionService {
     /**
      * Tạo commission khi Payment được xác nhận
      */
-    public function createCommissionFromPayment(Payment $payment): Commission {
+    public function createCommissionFromPayment(Payment $payment): ?Commission {
+        $collaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
+        if (!$collaboratorId) {
+            return null;
+        }
+
         return DB::transaction(function () use ($payment) {
             // 1. Tìm chính sách phù hợp
             $policy = $this->getMatchingPolicy($payment);
@@ -225,6 +230,45 @@ class CommissionService {
     /**
      * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
      */
+    /**
+     * Thêm hoa hồng vào ví CTV và ghi nhận giao dịch ví
+     */
+    public function addCommissionToWallet(\App\Models\Collaborator $collaborator, float $amount, string $description, ?int $commissionItemId = null, ?int $commissionAdjustmentId = null): void {
+        DB::transaction(function () use ($collaborator, $amount, $description, $commissionItemId, $commissionAdjustmentId) {
+            $wallet = \App\Models\Wallet::firstOrCreate(
+                ['collaborator_id' => $collaborator->id],
+                ['balance' => 0, 'total_received' => 0, 'total_paid' => 0]
+            );
+
+            // Khóa dòng ví để chống race condition
+            $wallet = \App\Models\Wallet::where('id', $wallet->id)->lockForUpdate()->first();
+
+            $balanceBefore = (float)$wallet->balance;
+            if ($amount >= 0) {
+                $wallet->increment('balance', $amount);
+                $wallet->increment('total_received', $amount);
+            } else {
+                $wallet->decrement('balance', abs($amount));
+                $wallet->increment('total_paid', abs($amount));
+            }
+            $balanceAfter = (float)$wallet->balance;
+
+            \App\Models\WalletTransaction::create([
+                'wallet_id' => $wallet->id,
+                'type' => $amount >= 0 ? 'deposit' : 'withdrawal',
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => $description,
+                'commission_item_id' => $commissionItemId,
+                'meta' => $commissionAdjustmentId ? ['commission_adjustment_id' => $commissionAdjustmentId] : null,
+            ]);
+        });
+    }
+
+    /**
+     * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
+     */
     public function confirmDirectReceived(CommissionItem $item, int $userId): void {
         DB::transaction(function () use ($item, $userId) {
             // Lock row commission_item để ngăn việc gửi nhiều request đồng thời (Race Condition)
@@ -235,6 +279,17 @@ class CommissionService {
             if ($lockedItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
 
             $lockedItem->markAsReceivedConfirmed($userId);
+
+            // Nạp tiền vào Ví CTV khả dụng
+            if ($lockedItem->recipient) {
+                $studentName = $lockedItem->commission?->student?->full_name ?? 'Sinh viên';
+                $this->addCommissionToWallet(
+                    $lockedItem->recipient,
+                    (float)$lockedItem->amount,
+                    "Nhận hoa hồng giới thiệu sinh viên {$studentName}",
+                    $lockedItem->id
+                );
+            }
         });
     }
 
@@ -254,7 +309,7 @@ class CommissionService {
     }
 
     /**
-     * Tính toán lại hoa hồng khi sinh viên chuyển hệ
+     * Tính toán lại hoa hồng khi sinh viên chuyển hệ / ngành
      */
     public function recalculateCommissionOnTransfer(Payment $payment): void {
         DB::transaction(function () use ($payment) {
@@ -274,18 +329,8 @@ class CommissionService {
                 ],
             ]);
 
-            // 3. Xử lý các CommissionItem (Trừ các dòng đã huỷ)
-            $items = $commission->items()
-                ->where('status', '!=', CommissionItem::STATUS_CANCELLED)
-                ->get();
-            
-            // Chuẩn hoá role cũ (PRIMARY -> direct) cho dữ liệu seed cũ
-            foreach ($items as $item) {
-                if (strtoupper((string)$item->role) === 'PRIMARY') {
-                    $item->role = 'direct'; // Cập nhật attribute trong memory để groupBy chính xác
-                    $item->save();
-                }
-            }
+            // 3. Lấy tất cả items hiện có của commission này
+            $items = $commission->items()->get();
 
             $newRules = [];
             if ($policy && !empty($policy->payout_rules)) {
@@ -308,82 +353,176 @@ class CommissionService {
                 }
             }
 
-            // Phân nhóm items và rules theo role để xử lý
-            $remainingItems = $items->groupBy('role');
-            $rulesByRole = collect($newRules)->groupBy(function($rule) {
-                return $rule['recipient_type'] === 'direct_ctv' ? 'direct' : 'override';
-            });
+            // Phân nhóm rules theo recipient
+            $directCollaboratorId = $payment->primary_collaborator_id ?? ($payment->student->collaborator_id ?? null);
 
-            // 1. Xử lý các rules: Cố gắng cập nhật item hiện có, nếu không có thì tạo mới
-            foreach ($rulesByRole as $role => $roleRules) {
-                $roleItems = $remainingItems->get($role, collect());
-                
-                foreach ($roleRules as $index => $rule) {
-                    $item = $roleItems->get($index);
-                    
-                    $initialStatus = ($rule['payout_trigger'] === 'student_enrolled') 
-                        ? CommissionItem::STATUS_PENDING 
-                        : CommissionItem::STATUS_PAYABLE;
-
-                    if ($item) {
-                        // Cập nhật item hiện có
-                        $item->update([
-                            'original_amount' => ($item->original_amount > 0) ? $item->original_amount : $item->amount,
-                            'amount' => (float)$rule['amount_vnd'],
-                            'trigger' => $rule['payout_trigger'],
-                            'status' => ($item->status === CommissionItem::STATUS_PAID || $item->status === CommissionItem::STATUS_PAYMENT_CONFIRMED || $item->status === CommissionItem::STATUS_RECEIVED_CONFIRMED) 
-                                        ? $item->status // Giữ nguyên trạng thái nếu đã chi trả
-                                        : $initialStatus,
-                            'is_adjusted' => true,
-                            'recipient_collaborator_id' => ($rule['recipient_type'] === 'specific_ctv') ? ($rule['recipient_id'] ?? $item->recipient_collaborator_id) : $item->recipient_collaborator_id,
-                        ]);
-                        // Đánh dấu item này đã được xử lý
-                        $roleItems->forget($index);
-                    } else {
-                        // Tạo mới nếu thiếu dòng
-                        CommissionItem::create([
-                            'commission_id' => $commission->id,
-                            'recipient_collaborator_id' => ($rule['recipient_type'] === 'direct_ctv') 
-                                ? ($payment->primary_collaborator_id ?? $payment->student->collaborator_id) 
-                                : ($rule['recipient_id'] ?? null),
-                            'role' => $role,
-                            'amount' => (float)$rule['amount_vnd'],
-                            'status' => $initialStatus,
-                            'trigger' => $rule['payout_trigger'],
-                            'payable_at' => ($initialStatus === CommissionItem::STATUS_PAYABLE) ? now() : null,
-                            'visibility' => 'visible',
-                            'is_adjusted' => true,
-                            'meta' => [
-                                'description' => $rule['description'] ?? 'Tạo mới do chuyển hệ',
-                                'program_type' => $payment->program_type,
-                            ],
-                        ]);
-                    }
+            $rulesByRecipient = [];
+            foreach ($newRules as $rule) {
+                $recipientId = null;
+                if ($rule['recipient_type'] === 'direct_ctv') {
+                    $recipientId = $directCollaboratorId;
+                } elseif ($rule['recipient_type'] === 'specific_ctv') {
+                    $recipientId = $rule['recipient_id'] ?? null;
                 }
-                
-                // 2. Hủy các item dư thừa của role này
-                foreach ($roleItems as $remainingItem) {
-                    if ($remainingItem->status !== CommissionItem::STATUS_PAID && 
-                        $remainingItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED && 
-                        $remainingItem->status !== CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                        $remainingItem->update(['status' => CommissionItem::STATUS_CANCELLED]);
-                    }
+                if ($recipientId) {
+                    $rulesByRecipient[$recipientId][] = $rule;
                 }
             }
 
-            // 3. Nếu không có rules nào cho một role hiện có, hủy tất cả items của role đó
-            $existingRoles = $items->pluck('role')->unique();
-            foreach ($existingRoles as $role) {
-                if (!$rulesByRole->has($role)) {
-                    foreach ($remainingItems->get($role, collect()) as $item) {
-                        if ($item->status !== CommissionItem::STATUS_PAID && 
-                            $item->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED && 
-                            $item->status !== CommissionItem::STATUS_RECEIVED_CONFIRMED) {
-                            $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+            foreach ($rulesByRecipient as $recipientId => $recipientRules) {
+                // 1. Cancel all existing unpaid items and pending adjustments for this recipient
+                $existingItems = $items->where('recipient_collaborator_id', $recipientId);
+                foreach ($existingItems as $item) {
+                    $isPaid = in_array($item->status, [
+                        CommissionItem::STATUS_PAID,
+                        CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                        CommissionItem::STATUS_RECEIVED_CONFIRMED
+                    ]);
+                    if (!$isPaid) {
+                        $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                    }
+                }
+
+                $commission->adjustments()
+                    ->where('recipient_collaborator_id', $recipientId)
+                    ->where('status', CommissionItem::STATUS_PENDING)
+                    ->update(['status' => CommissionItem::STATUS_CANCELLED]);
+
+                // 2. Separate rules into Active and Pending
+                $activeRules = [];
+                $pendingRules = [];
+
+                $isStudentEnrolled = ($payment->student?->status === Student::STATUS_ENROLLED);
+
+                foreach ($recipientRules as $rule) {
+                    $trigger = $rule['payout_trigger'] ?? 'payment_verified';
+                    if ($trigger === 'payment_verified' || ($trigger === 'student_enrolled' && $isStudentEnrolled)) {
+                        $activeRules[] = $rule;
+                    } else {
+                        $pendingRules[] = $rule;
+                    }
+                }
+
+                // 3. Process Pending Rules (simply create pending adjustments)
+                foreach ($pendingRules as $rule) {
+                    \App\Models\CommissionAdjustment::create([
+                        'commission_id' => $commission->id,
+                        'recipient_collaborator_id' => $recipientId,
+                        'amount' => (float)$rule['amount_vnd'],
+                        'reason' => "Điều chỉnh hoa hồng (Đợi nhập học) do chuyển hệ sang " . $payment->program_type,
+                        'status' => CommissionItem::STATUS_PENDING,
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+
+                // 4. Process Active Rules (compare against net paid so far)
+                $totalActiveAmount = 0;
+                foreach ($activeRules as $rule) {
+                    $totalActiveAmount += (float)$rule['amount_vnd'];
+                }
+
+                // Calculate total net paid so far
+                $paidItemsSum = 0;
+                foreach ($existingItems as $item) {
+                    $isPaid = in_array($item->status, [
+                        CommissionItem::STATUS_PAID,
+                        CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                        CommissionItem::STATUS_RECEIVED_CONFIRMED
+                    ]);
+                    if ($isPaid) {
+                        $paidItemsSum += (float)$item->amount;
+                    }
+                }
+
+                $paidAdjustmentsSum = (float)$commission->adjustments()
+                    ->where('recipient_collaborator_id', $recipientId)
+                    ->whereNotIn('status', [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_CANCELLED])
+                    ->sum('amount');
+
+                $totalNetPaid = $paidItemsSum + $paidAdjustmentsSum;
+
+                // Adjust for the difference
+                $difference = $totalActiveAmount - $totalNetPaid;
+                if ($difference != 0) {
+                    $adjustment = \App\Models\CommissionAdjustment::create([
+                        'commission_id' => $commission->id,
+                        'recipient_collaborator_id' => $recipientId,
+                        'amount' => $difference,
+                        'reason' => "Điều chỉnh hoa hồng do chuyển hệ sang " . $payment->program_type . " (Chênh lệch so với thực tế đã nhận)",
+                        'status' => $difference < 0 ? 'received_confirmed' : 'payable',
+                        'created_by' => Auth::id(),
+                    ]);
+
+                    if ($difference < 0) {
+                        $collaborator = \App\Models\Collaborator::find($recipientId);
+                        if ($collaborator) {
+                            $studentName = $payment->student->full_name ?? 'Sinh viên';
+                            $this->addCommissionToWallet(
+                                $collaborator,
+                                $difference,
+                                "Khấu trừ chênh lệch hoa hồng do sinh viên {$studentName} chuyển hệ",
+                                null,
+                                $adjustment->id
+                            );
                         }
                     }
                 }
             }
+
+            // Hủy các items của những người không còn thuộc newRules
+            $newRecipients = array_keys($rulesByRecipient);
+
+            foreach ($items as $item) {
+                if (!in_array($item->recipient_collaborator_id, $newRecipients)) {
+                    $isPaid = in_array($item->status, [
+                        CommissionItem::STATUS_PAID,
+                        CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                        CommissionItem::STATUS_RECEIVED_CONFIRMED
+                    ]);
+                    if (!$isPaid) {
+                        $item->update(['status' => CommissionItem::STATUS_CANCELLED]);
+                    } else {
+                        // Đã thanh toán rồi nhưng giờ họ không được nhận nữa -> tạo adjustment âm thu hồi
+                        $recipientId = $item->recipient_collaborator_id;
+                        
+                        $paidAdjustmentsSum = (float)$commission->adjustments()
+                            ->where('recipient_collaborator_id', $recipientId)
+                            ->whereNotIn('status', [CommissionItem::STATUS_PENDING, CommissionItem::STATUS_CANCELLED])
+                            ->sum('amount');
+                            
+                        $totalNetPaid = (float)$item->amount + $paidAdjustmentsSum;
+                        
+                        if ($totalNetPaid > 0) {
+                            $difference = -$totalNetPaid;
+                            $adjustment = \App\Models\CommissionAdjustment::create([
+                                'commission_id' => $commission->id,
+                                'recipient_collaborator_id' => $recipientId,
+                                'amount' => $difference,
+                                'reason' => "Thu hồi hoa hồng do chuyển hệ học viên không còn thuộc chính sách chi trả",
+                                'status' => 'received_confirmed',
+                                'created_by' => Auth::id(),
+                            ]);
+
+                            $collaborator = \App\Models\Collaborator::find($recipientId);
+                            if ($collaborator) {
+                                $studentName = $payment->student->full_name ?? 'Sinh viên';
+                                $this->addCommissionToWallet(
+                                    $collaborator,
+                                    $difference,
+                                    "Thu hồi hoa hồng do sinh viên {$studentName} chuyển hệ",
+                                    null,
+                                    $adjustment->id
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            $commission->adjustments()
+                ->whereNotIn('recipient_collaborator_id', $newRecipients)
+                ->where('status', CommissionItem::STATUS_PENDING)
+                ->update(['status' => CommissionItem::STATUS_CANCELLED]);
         });
     }
 }

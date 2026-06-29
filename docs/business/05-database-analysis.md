@@ -9,15 +9,15 @@ erDiagram
     collaborators ||--o| wallets : "hasOne"
     collaborators ||--o| ref_codes : "hasMany (Proxy)"
     collaborators ||--o| students : "hasMany (referred)"
-    collaborators ||--o| payments : "hasMany"
     collaborators ||--o| commission_items : "hasMany"
     wallets ||--o| wallet_transactions : "hasMany"
     intakes ||--o| quotas : "hasMany"
     intakes ||--o| students : "hasMany"
     quotas ||--o| students : "hasMany"
-    students ||--o| payments : "hasOne"
+    students ||--o| student_ledgers : "hasMany"
+    students ||--o| payment_receipts : "hasMany (phiếu nộp tiền)"
     students ||--o| student_transfers : "hasMany"
-    payments ||--o| commissions : "hasOne"
+    payment_receipts ||--o| commissions : "hasOne"
     commissions ||--o| commission_items : "hasMany"
     commission_items ||--o| wallet_transactions : "hasMany"
 ```
@@ -27,27 +27,33 @@ erDiagram
 ## 2. Phân tích chi tiết các bảng cốt lõi
 
 ### 2.1 Bảng `students` (Thông tin học viên tuyển sinh)
-* **Khóa chính:** `id` (int), `uuid` (char 36 - Unique).
-* **Trường dữ liệu quan trọng:** `profile_code` (Mã hồ sơ tự sinh), `status` (Trạng thái tuyển sinh), `application_status` (Checklist thực tế), `quota_id` / `intake_id` / `collaborator_id` (Khóa ngoại).
-* **Chỉ mục (Indexes):** Hỗ trợ tìm kiếm nhanh theo CCCD, Email, Phone, và SoftDeletes index.
-* **Evidence:** [Student.php](file:///Users/ken/Folders/Projects/Herd/crm-lien-thong/app/Models/Student.php), Migration `2025_08_19_161509_create_students_table.php`, Migration `2026_04_18_153915_fix_students_unique_indexes_for_soft_deletes.php`
+*   **Khóa chính:** `id` (int), `uuid` (char 36 - Unique).
+*   **Trường dữ liệu quan trọng:** `profile_code` (Mã hồ sơ tự sinh), `status` (Trạng thái tuyển sinh), `application_status` (Checklist thực tế), `quota_id` / `intake_id` / `collaborator_id` (Khóa ngoại).
+*   **Chỉ mục (Indexes):** Hỗ trợ tìm kiếm nhanh theo CCCD, Email, Phone, và SoftDeletes index.
 
-### 2.2 Bảng `payments` (Xác minh nộp tiền học viên)
-* **Khóa chính:** `id` (int), `uuid` (Unique).
-* **Trường dữ liệu quan trọng:** `amount` (decimal), `status` (not_paid, submitted, verified, reverted), `bill_path` (đường dẫn bill chuyển khoản của sinh viên), `receipt_path` (đường dẫn phiếu thu chính thức).
-* **Evidence:** [Payment.php](file:///Users/ken/Folders/Projects/Herd/crm-lien-thong/app/Models/Payment.php), Migration `2025_08_21_005447_create_payments_table.php`
+### 2.2 Bảng `student_ledgers` (Sổ cái Công nợ Sinh viên)
+*   **Khóa chính:** `id` (bigint).
+*   **Trường dữ liệu:** 
+    *   `student_id` (Khóa ngoại trỏ đến `students.id`).
+    *   `type` (enum: `debit`, `credit`, `adjustment`, `refund`).
+    *   `amount` (decimal: 15,2).
+    *   `balance_after` (decimal: 15,2) - Số dư lũy kế sau giao dịch này.
+    *   `description` (string) - Lý do giao dịch (ví dụ: "Phát sinh học phí CQ", "Hủy học phí do chuyển hệ").
+    *   `created_by` (Khóa ngoại trỏ đến `users.id`).
+*   **Mô tả:** Đảm bảo toàn bộ nghiệp vụ tài chính của sinh viên không bao giờ bị sửa đè. Mọi thay đổi đều được ghi sổ theo thứ tự thời gian.
 
-### 2.3 Bảng `commission_items` (Chi tiết hoa hồng CTV)
-* **Trường dữ liệu quan trọng:** `commission_id`, `recipient_collaborator_id`, `amount`, `status` (pending, payable, paid, cancelled, payment_confirmed, received_confirmed), `trigger` (payment_verified, student_enrolled).
-* **Evidence:** [CommissionItem.php](file:///Users/ken/Folders/Projects/Herd/crm-lien-thong/app/Models/CommissionItem.php), Migration `2025_08_21_005518_create_commission_items_table.php`
+### 2.3 Bảng `payment_receipts` (Trước đây là `payments` - Chứng từ nộp tiền)
+*   **Khóa chính:** `id` (int), `uuid` (Unique).
+*   **Trường dữ liệu quan trọng:** `student_id`, `amount` (decimal), `status` (not_paid, submitted, verified, reverted), `bill_path` (bill chuyển khoản), `receipt_path` (phiếu thu chính thức).
+*   **Nguyên tắc bất biến:** Một khi đã ở trạng thái `verified`, trường `amount` cấm chỉnh sửa.
+
+### 2.4 Bảng `commission_items` (Chi tiết hoa hồng CTV)
+*   **Trường dữ liệu quan trọng:** `commission_id`, `recipient_collaborator_id`, `amount`, `status` (pending, payable, paid, cancelled, payment_confirmed, received_confirmed), `trigger` (payment_verified, student_enrolled).
 
 ---
 
 ## 3. Khóa ngoại và Ràng buộc (Foreign Keys & Constraints)
-* **`Student` -> `Quota` & `Intake`**: Ràng buộc mềm. Khi xóa đợt tuyển hoặc chỉ tiêu, hệ thống dùng SoftDeletes để bảo toàn liên kết lịch sử.
-* **`CommissionItem` -> `Collaborator`**: Liên kết khóa ngoại `recipient_collaborator_id` bắt buộc phải tồn tại trong bảng `collaborators` nhằm tránh việc phát sinh dòng hoa hồng vô chủ.
-* **`WalletTransaction` -> `Wallet` & `CommissionItem`**: Tạo vết tài chính rõ ràng. Khi phát sinh giao dịch ví (`WalletTransaction`), trường `commission_id` hoặc `commission_item_id` (nếu có) sẽ ánh xạ ngược lại dòng tiền nguồn.
-
-### Evidence:
-* Migration khóa ngoại ví: `2025_08_23_000010_add_foreign_keys_to_wallets_and_transactions.php`
-* Cấu trúc bảng ví và quan hệ: [Wallet.php](file:///Users/ken/Folders/Projects/Herd/crm-lien-thong/app/Models/Wallet.php)
+*   **`StudentLedger` -> `Student`**: Ràng buộc cứng. Không thể xóa sinh viên nếu còn tồn tại giao dịch trong Sổ cái công nợ chưa đối soát xong.
+*   **`Student` -> `Quota` & `Intake`**: Ràng buộc mềm sử dụng SoftDeletes.
+*   **`CommissionItem` -> `Collaborator`**: Liên kết khóa ngoại `recipient_collaborator_id` bắt buộc phải tồn tại trong bảng `collaborators` nhằm tránh việc phát sinh dòng hoa hồng vô chủ.
+*   **`WalletTransaction` -> `Wallet` & `CommissionItem`**: Tạo vết tài chính rõ ràng. Khi phát sinh giao dịch ví (`WalletTransaction`), trường `commission_item_id` sẽ ánh xạ ngược lại dòng tiền nguồn.

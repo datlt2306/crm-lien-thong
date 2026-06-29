@@ -39,9 +39,9 @@ class StudentObserver {
             $this->quotaService->handleStudentCancellation($student);
         }
         
-        // Ngược lại, nếu hồ sơ được phục hồi từ trạng thái hủy (nếu logic này cần thiết)
+        // Ngược lại, nếu hồ sơ được phục hồi từ trạng thái hủy
         if ($student->isDirty('status') && in_array($student->getOriginal('status'), [Student::STATUS_REJECTED, Student::STATUS_DROPPED]) && !in_array($student->status, [Student::STATUS_REJECTED, Student::STATUS_DROPPED])) {
-            // Không làm gì cả, quota sẽ được tính lại dựa trên trạng thái thanh toán
+            $this->quotaService->handleStudentRestoration($student);
         }
     }
 

@@ -216,6 +216,10 @@ class Student extends Model {
         return $this->hasMany(StudentTransfer::class);
     }
 
+    public function paymentAdjustments() {
+        return $this->hasMany(PaymentAdjustment::class);
+    }
+
     public function auditLogs() {
         return $this->hasMany(AuditLog::class)->latest();
     }

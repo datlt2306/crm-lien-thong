@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Organization;
 use App\Models\Payment;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +19,7 @@ class QuotaServiceTest extends TestCase {
         $this->quotaService = new QuotaService();
     }
 
-    private function createIntake(int $organizationId): int {
+    private function createIntake(): int {
         return (int) DB::table('intakes')->insertGetId([
             'name' => 'Đợt 1',
             'description' => 'Test intake',
@@ -28,18 +27,18 @@ class QuotaServiceTest extends TestCase {
             'end_date' => '2026-12-31',
             'enrollment_deadline' => '2026-12-31',
             'status' => 'active',
-            'organization_id' => $organizationId,
+            'organization_id' => 1,
             'settings' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
     }
 
-    private function createQuota(int $organizationId, int $intakeId, int $target, int $current): int {
+    private function createQuota(int $intakeId, int $target, int $current): int {
         return (int) DB::table('quotas')->insertGetId([
             'intake_id' => $intakeId,
-            'organization_id' => $organizationId,
             'name' => 'CNTT - Chính quy',
+            'organization_id' => 1,
             'major_name' => 'Công nghệ thông tin',
             'program_name' => 'REGULAR',
             'target_quota' => $target,
@@ -54,12 +53,12 @@ class QuotaServiceTest extends TestCase {
         ]);
     }
 
-    private function createCollaborator(int $organizationId): int {
+    private function createCollaborator(): int {
         return (int) DB::table('collaborators')->insertGetId([
             'full_name' => 'CTV Test',
             'phone' => '09' . fake()->unique()->numerify('########'),
             'email' => fake()->unique()->safeEmail(),
-            'organization_id' => $organizationId,
+            'organization_id' => 1,
             'ref_id' => strtoupper(fake()->unique()->lexify('????????')),
             'note' => null,
             'status' => 'active',
@@ -69,13 +68,12 @@ class QuotaServiceTest extends TestCase {
     }
 
     public function test_consume_quota_on_payment_verified_updates_quota_and_annual_quota() {
-        $organization = Organization::factory()->create();
-        $intakeId = $this->createIntake($organization->id);
-        $quotaId = $this->createQuota($organization->id, $intakeId, 10, 2);
+        $intakeId = $this->createIntake();
+        $quotaId = $this->createQuota($intakeId, 10, 2);
 
         DB::table('annual_quotas')->insert([
-            'organization_id' => $organization->id,
             'name' => 'AQ 2026',
+            'organization_id' => 1,
             'major_name' => 'Công nghệ thông tin',
             'program_name' => 'REGULAR',
             'year' => 2026,
@@ -87,10 +85,10 @@ class QuotaServiceTest extends TestCase {
             'updated_at' => now(),
         ]);
 
-        $collaboratorId = $this->createCollaborator($organization->id);
+        $collaboratorId = $this->createCollaborator();
 
         $student = Student::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'collaborator_id' => $collaboratorId,
             'quota_id' => $quotaId,
             'intake_id' => $intakeId,
@@ -99,7 +97,7 @@ class QuotaServiceTest extends TestCase {
         ]);
 
         $payment = Payment::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'student_id' => $student->id,
             'primary_collaborator_id' => $collaboratorId,
             'status' => 'submitted',
@@ -109,18 +107,17 @@ class QuotaServiceTest extends TestCase {
         $this->assertTrue($result);
 
         $this->assertEquals(3, DB::table('quotas')->where('id', $quotaId)->value('current_quota'));
-        $this->assertEquals(11, DB::table('annual_quotas')->where('organization_id', $organization->id)->value('current_quota'));
+        $this->assertEquals(11, DB::table('annual_quotas')->value('current_quota'));
     }
 
     public function test_decrease_quota_on_payment_submission_alias_works() {
-        $organization = Organization::factory()->create();
-        $intakeId = $this->createIntake($organization->id);
-        $quotaId = $this->createQuota($organization->id, $intakeId, 5, 1);
+        $intakeId = $this->createIntake();
+        $quotaId = $this->createQuota($intakeId, 5, 1);
 
-        $collaboratorId = $this->createCollaborator($organization->id);
+        $collaboratorId = $this->createCollaborator();
 
         $student = Student::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'collaborator_id' => $collaboratorId,
             'quota_id' => $quotaId,
             'intake_id' => $intakeId,
@@ -129,7 +126,7 @@ class QuotaServiceTest extends TestCase {
         ]);
 
         $payment = Payment::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'student_id' => $student->id,
             'primary_collaborator_id' => $collaboratorId,
             'status' => 'submitted',
@@ -141,14 +138,13 @@ class QuotaServiceTest extends TestCase {
     }
 
     public function test_consume_quota_returns_false_when_quota_is_full() {
-        $organization = Organization::factory()->create();
-        $intakeId = $this->createIntake($organization->id);
-        $quotaId = $this->createQuota($organization->id, $intakeId, 2, 2);
+        $intakeId = $this->createIntake();
+        $quotaId = $this->createQuota($intakeId, 2, 2);
 
-        $collaboratorId = $this->createCollaborator($organization->id);
+        $collaboratorId = $this->createCollaborator();
 
         $student = Student::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'collaborator_id' => $collaboratorId,
             'quota_id' => $quotaId,
             'intake_id' => $intakeId,
@@ -157,7 +153,7 @@ class QuotaServiceTest extends TestCase {
         ]);
 
         $payment = Payment::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'student_id' => $student->id,
             'primary_collaborator_id' => $collaboratorId,
             'status' => 'submitted',
@@ -169,13 +165,12 @@ class QuotaServiceTest extends TestCase {
     }
 
     public function test_restore_quota_on_payment_reverted_decrements_current_quota() {
-        $organization = Organization::factory()->create();
-        $intakeId = $this->createIntake($organization->id);
-        $quotaId = $this->createQuota($organization->id, $intakeId, 10, 4);
+        $intakeId = $this->createIntake();
+        $quotaId = $this->createQuota($intakeId, 10, 4);
 
         DB::table('annual_quotas')->insert([
-            'organization_id' => $organization->id,
             'name' => 'AQ 2026',
+            'organization_id' => 1,
             'major_name' => 'Công nghệ thông tin',
             'program_name' => 'REGULAR',
             'year' => 2026,
@@ -187,10 +182,10 @@ class QuotaServiceTest extends TestCase {
             'updated_at' => now(),
         ]);
 
-        $collaboratorId = $this->createCollaborator($organization->id);
+        $collaboratorId = $this->createCollaborator();
 
         $student = Student::factory()->create([
-            'organization_id' => $organization->id,
+            'organization_id' => 1,
             'collaborator_id' => $collaboratorId,
             'quota_id' => $quotaId,
             'intake_id' => $intakeId,
@@ -198,17 +193,19 @@ class QuotaServiceTest extends TestCase {
             'major' => 'Công nghệ thông tin',
         ]);
 
-        $payment = Payment::factory()->create([
-            'organization_id' => $organization->id,
+        // Sử dụng saveQuietly() để bỏ qua observer tạo mới nhằm giữ nguyên current_quota = 4 của test
+        $payment = Payment::factory()->make([
+            'organization_id' => 1,
             'student_id' => $student->id,
             'primary_collaborator_id' => $collaboratorId,
             'status' => 'verified',
         ]);
+        $payment->saveQuietly();
 
         $result = $this->quotaService->restoreQuotaOnPaymentReverted($payment);
         $this->assertTrue($result);
 
         $this->assertEquals(3, DB::table('quotas')->where('id', $quotaId)->value('current_quota'));
-        $this->assertEquals(19, DB::table('annual_quotas')->where('organization_id', $organization->id)->value('current_quota'));
+        $this->assertEquals(19, DB::table('annual_quotas')->value('current_quota'));
     }
 }

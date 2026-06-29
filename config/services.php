@@ -56,4 +56,6 @@ return [
         'token' => env('TELEGRAM_BOT_TOKEN'),
     ],
 
+    'lead_lock_days' => env('LEAD_LOCK_DAYS', 14),
+
 ];

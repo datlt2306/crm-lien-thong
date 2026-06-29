@@ -154,13 +154,15 @@ class StudentsExcelExport implements FromQuery, WithHeadings, WithMapping, WithE
         }
 
         $refundStatus = '';
-        if ($student->payment && $student->payment->excess_amount > 0) {
-            $refundStatus = match ($student->payment->refund_status) {
-                'none' => 'Không có',
-                'pending' => '⏳ Chờ hoàn trả (' . number_format($student->payment->excess_amount, 0, ',', '.') . 'đ)',
-                'completed' => '✅ Đã hoàn trả',
-                default => (string) $student->payment->refund_status,
-            };
+        if ($student->payment) {
+            $pendingRefund = (float)$student->payment->adjustments()->where('refund_status', 'pending')->sum('amount');
+            $completedRefund = (float)$student->payment->adjustments()->where('refund_status', 'completed')->sum('amount');
+            
+            if ($pendingRefund > 0) {
+                $refundStatus = '⏳ Chờ hoàn trả (' . number_format($pendingRefund, 0, ',', '.') . 'đ)';
+            } elseif ($completedRefund > 0) {
+                $refundStatus = '✅ Đã hoàn trả (' . number_format($completedRefund, 0, ',', '.') . 'đ)';
+            }
         }
 
         $createdAtFormatted = $student->created_at

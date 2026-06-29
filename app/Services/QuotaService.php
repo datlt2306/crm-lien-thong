@@ -31,6 +31,11 @@ class QuotaService {
                 return false;
             }
 
+            if ($quota->current_quota >= $quota->target_quota) {
+                DB::rollBack();
+                return false;
+            }
+
             // Chuyển từ pending sang current
             $quota->incrementCurrentQuota();
 
@@ -219,5 +224,34 @@ class QuotaService {
 
     public function decreaseQuotaOnPaymentSubmission(Payment $payment): bool {
         return $this->consumeQuotaOnPaymentVerified($payment);
+    }
+
+    /**
+     * Xử lý khi sinh viên được khôi phục từ trạng thái hủy/từ chối
+     */
+    public function handleStudentRestoration(Student $student): void {
+        if (!$student->quota_id) return;
+
+        try {
+            DB::beginTransaction();
+
+            $quota = Quota::lockForUpdate()->find($student->quota_id);
+            if ($quota) {
+                if ($student->payment && $student->payment->status === Payment::STATUS_VERIFIED) {
+                    $quota->incrementCurrentQuota();
+                    $this->incrementAnnualQuota($student, $quota);
+                } else {
+                    $quota->incrementPendingQuota();
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('QuotaService::handleStudentRestoration', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

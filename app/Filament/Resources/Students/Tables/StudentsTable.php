@@ -1030,16 +1030,20 @@ class StudentsTable {
                                 'notes' => ($record->notes ? $record->notes . "\n" : "") . $transferNote,
                             ]);
 
-                            // 3. Xử lý Payment & Tiền thừa
-                            if ($record->payment && $record->payment->status === Payment::STATUS_VERIFIED) {
+                            // 3. Xử lý Payment & Tiền thừa bằng cách tạo PaymentAdjustment thay vì sửa đè Payment cũ
+                            if ($record->payment) {
                                 // Cập nhật hệ đào tạo trong payment để CommissionService lấy đúng dữ liệu mới
                                 $record->payment->update(['program_type' => $data['program_type']]);
 
-                                if ($feeDifference > 0) {
-                                    $record->payment->update([
-                                        'excess_amount' => (float)$record->payment->excess_amount + $feeDifference,
-                                        'refund_status' => 'pending',
-                                        'refund_notes' => ($record->payment->refund_notes ? $record->payment->refund_notes . "\n" : "") . "Chênh lệch phí khi chuyển hệ: " . number_format($feeDifference, 0, ',', '.') . " VNĐ",
+                                if ($feeDifference != 0) {
+                                    \App\Models\PaymentAdjustment::create([
+                                        'payment_id' => $record->payment->id,
+                                        'student_id' => $record->id,
+                                        'type' => 'transfer',
+                                        'amount' => $feeDifference, // số dương đóng thừa, số âm nợ thêm
+                                        'reason' => "Chênh lệch phí khi chuyển hệ từ {$oldProgramLabel} sang {$newProgramLabel}",
+                                        'refund_status' => $feeDifference > 0 ? 'pending' : null,
+                                        'created_by' => Auth::id(),
                                     ]);
                                 }
                             }
@@ -1105,7 +1109,7 @@ class StudentsTable {
                         ->color('success')
                         ->requiresConfirmation()
                         ->modalHeading('Xác nhận đã trả tiền thừa cho SV')
-                        ->modalDescription(fn($record) => "Học viên này đang có số tiền thừa: " . number_format($record->payment->excess_amount, 0, ',', '.') . " VNĐ. Xác nhận bạn đã chuyển khoản trả lại sinh viên?")
+                        ->modalDescription(fn($record) => "Học viên này đang có số tiền thừa: " . number_format($record->payment ? $record->payment->adjustments()->where('refund_status', 'pending')->sum('amount') : 0, 0, ',', '.') . " VNĐ. Xác nhận bạn đã chuyển khoản trả lại sinh viên?")
                         ->form([
                             \Filament\Forms\Components\FileUpload::make('refund_proof')
                                 ->label('Bằng chứng chuyển khoản')
@@ -1116,11 +1120,16 @@ class StudentsTable {
                                 ->label('Ghi chú hoàn tiền'),
                         ])
                         ->action(function (array $data, Student $record) {
-                            $record->payment->update([
-                                'refund_status' => 'completed',
-                                'refund_proof_path' => $data['refund_proof'],
-                                'refund_notes' => ($record->payment->refund_notes ? $record->payment->refund_notes . "\n" : "") . "Đã hoàn trả: " . $data['refund_notes'],
-                            ]);
+                            if ($record->payment) {
+                                $pendingAdjustments = $record->payment->adjustments()->where('refund_status', 'pending')->get();
+                                foreach ($pendingAdjustments as $adj) {
+                                    $adj->update([
+                                        'refund_status' => 'completed',
+                                        'refund_proof_path' => $data['refund_proof'],
+                                        'reason' => ($adj->reason ? $adj->reason . "\n" : "") . "Đã hoàn trả tiền thừa: " . ($data['refund_notes'] ?? ''),
+                                    ]);
+                                }
+                            }
 
                             Notification::make()
                                 ->title('Đã xác nhận hoàn tiền')
@@ -1128,10 +1137,11 @@ class StudentsTable {
                                 ->send();
                         })
                         ->visible(function (Student $record) {
-                            return Auth::user()->can('payment_verify') && 
-                                   $record->payment && 
-                                   $record->payment->excess_amount > 0 && 
-                                   $record->payment->refund_status === 'pending';
+                            if (!Auth::user()->can('payment_verify') || !$record->payment) {
+                                return false;
+                            }
+                            $pendingAmount = $record->payment->adjustments()->where('refund_status', 'pending')->sum('amount');
+                            return $pendingAmount > 0;
                         }),
 
 

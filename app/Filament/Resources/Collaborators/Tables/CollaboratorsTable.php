@@ -78,6 +78,11 @@ class CollaboratorsTable {
                     //     });
                     // })
                     // ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('wallet.balance')
+                    ->label('Số dư ví')
+                    ->money('VND')
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()

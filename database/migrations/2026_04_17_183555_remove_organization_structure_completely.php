@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::disableForeignKeyConstraints();
+        }
+
         $tables = [
             'users',
             'collaborators',
@@ -25,10 +29,24 @@ return new class extends Migration
             'annual_quotas'
         ];
 
+        if (DB::getDriverName() === 'sqlite') {
+            foreach ($tables as $table) {
+                if (Schema::hasColumn($table, 'organization_id')) {
+                    Schema::table($table, function (Blueprint $t) {
+                        $t->unsignedBigInteger('organization_id')->nullable()->change();
+                    });
+                }
+            }
+        }
+
         foreach ($tables as $table) {
             if (Schema::hasColumn($table, 'organization_id')) {
-                // Use CASCADE to automatically drop dependent constraints and indexes
-                DB::statement("ALTER TABLE \"$table\" DROP COLUMN IF EXISTS organization_id CASCADE");
+                if (DB::getDriverName() === 'sqlite') {
+                    // Skip dropping on sqlite to avoid foreign key alteration constraints
+                } else {
+                    // Use CASCADE to automatically drop dependent constraints and indexes
+                    DB::statement("ALTER TABLE \"$table\" DROP COLUMN IF EXISTS organization_id CASCADE");
+                }
             }
         }
 
