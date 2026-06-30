@@ -1,40 +1,91 @@
-# Bài 4: Hướng dẫn dành cho Cán bộ Tuyển sinh / Quản lý Hồ sơ
+# Bài 4: Hướng dẫn dành cho Cán bộ Tuyển sinh / Quản lý hồ sơ
 
-Tài liệu này hướng dẫn cán bộ tuyển sinh quy trình chăm sóc học viên mới, kiểm tra đối chiếu hồ sơ giấy và duyệt danh sách trúng tuyển nhập học chính thức.
+Tài liệu này hướng dẫn cán bộ tuyển sinh theo dõi học viên mới, kiểm tra hồ sơ và cập nhật trạng thái xử lý.
 
----
+## 1. Theo dõi học viên mới
 
-## 1. Tiếp nhận và Liên hệ tư vấn (Chăm sóc học viên mới)
-Khi học sinh điền đơn trên trang web đăng ký, thông tin của họ sẽ xuất hiện ngay trong danh sách quản lý ở trạng thái **Đăng ký mới**.
+Sau khi học viên đăng ký từ form công khai, hồ sơ sẽ xuất hiện trong danh sách quản lý học viên.
 
-1.  Đăng nhập vào hệ thống, chọn mục **Học viên (Students)**.
-    ![Hình 4.1: Danh sách tổng hợp toàn bộ học viên đăng ký mới trên hệ thống](images/admissions_student_list.png)
-2.  Lọc danh sách học viên ở trạng thái `new` (Mới).
-3.  Lấy số điện thoại và email của học sinh để liên hệ gọi điện tư vấn chương trình, giải đáp thắc mắc và hướng dẫn học sinh chuẩn bị hồ sơ giấy nộp về trường.
-4.  Sau khi gọi điện tư vấn lần đầu, chuyển trạng thái học sinh sang **Đã liên hệ (Contacted)** để các cán bộ khác tránh gọi trùng lặp.
-    ![Hình 4.2: Giao diện cập nhật thông tin và đổi trạng thái Đã liên hệ](images/admissions_contact_status.png)
+Các bước cơ bản:
 
----
+1. Mở danh sách **Học viên**.
+2. Lọc theo trạng thái cần xử lý.
+3. Liên hệ học viên để tư vấn và bổ sung thông tin nếu cần.
 
-## 2. Kiểm tra hồ sơ giấy của học sinh
-Khi học sinh gửi hồ sơ giấy (bản cứng) về văn phòng tuyển sinh của trường GTVT:
+## 2. Kiểm tra hồ sơ
 
-1.  Kiểm tra danh sách giấy tờ theo quy định:
-    *   Bằng tốt nghiệp Cao đẳng hoặc Trung cấp (bản sao công chứng).
-    *   Bảng điểm kết quả học tập (bản sao công chứng).
-    *   Bản sao Căn cước công dân (CCCD).
-    *   Phiếu đăng ký nhập học theo mẫu của trường GTVT.
-2.  Đối chiếu thông tin thực tế trên giấy tờ với thông tin học sinh khai báo trên web (Họ tên, Ngày sinh, Quê quán, Ngành đăng ký học).
-3.  Nếu hồ sơ đầy đủ và hợp lệ:
-    *   Chuyển trạng thái tuyển sinh của học sinh sang **Đã duyệt hồ sơ (Approved)**.
-    ![Hình 4.3: Giao diện kiểm tra các chi tiết thông tin hồ sơ học bạ/bằng cấp thí sinh](images/admissions_dossier_check.png)
+Khi học viên đã nộp hồ sơ hoặc bổ sung giấy tờ:
 
----
+1. Đối chiếu thông tin khai báo với hồ sơ thực tế.
+2. Kiểm tra tình trạng giấy tờ còn thiếu.
+3. Cập nhật trạng thái xét duyệt phù hợp.
 
-## 3. Xác nhận Nhập học thành công để mở khóa hoa hồng CTV
-Khi nhà trường ra quyết định trúng tuyển chính thức và học sinh hoàn thành mọi nghĩa vụ đóng học phí học kỳ đầu tiên:
+Các trạng thái thường gặp khi xử lý hồ sơ:
 
-1.  Tìm kiếm học sinh đó trên hệ thống.
-2.  Chuyển trạng thái tuyển sinh sang **Đã nhập học (Enrolled)**.
-3.  Khi chuyển sang trạng thái này, hệ thống sẽ tự động gửi email thông báo nhập học cho học sinh, đồng thời **mở khóa đợt tiền hoa hồng thứ 2** (Ví dụ: 1.450.000đ đối với hệ VHVL/Từ xa) vào ví của CTV giới thiệu để họ có thể rút tiền.
-    ![Hình 4.4: Nút bấm xác nhận học sinh Nhập học thành công trên chi tiết hồ sơ](images/admissions_enroll_student.png)
+- **Thiếu giấy tờ**
+- **Đã nộp hồ sơ**
+- **Đã xác minh**
+- **Đủ điều kiện**
+- **Không đủ điều kiện**
+
+## 3. Theo dõi thanh toán phối hợp với kế toán
+
+Cán bộ tuyển sinh có thể phối hợp kiểm tra:
+
+- Học viên đã gửi minh chứng chuyển khoản chưa
+- Thanh toán đã được xác minh chưa
+- Hồ sơ nào cần nhắc bổ sung trước khi xử lý tiếp
+
+## 4. Cập nhật trạng thái nhập học
+
+Khi học viên hoàn tất quy trình và được xác nhận nhập học:
+
+1. Mở hồ sơ học viên.
+2. Cập nhật trạng thái học viên theo quy trình hiện hành.
+3. Kiểm tra lại các thay đổi phát sinh liên quan đến hồ sơ và hoa hồng.
+
+Việc cập nhật trạng thái nhập học có thể ảnh hưởng đến:
+
+- Các khoản hoa hồng chỉ được mở khi học viên đã nhập học thực tế
+- Thống kê vận hành và báo cáo nội bộ
+
+## 5. Chuyển hệ đào tạo cho học viên
+
+Khi học viên xin đổi hệ đào tạo, cán bộ hồ sơ có thể dùng thao tác **Chuyển hệ đào tạo**.
+
+Khi thực hiện:
+
+1. Chọn **Hệ đào tạo mới**.
+2. Ghi rõ **Lý do chuyển hệ**.
+3. Kiểm tra lại đợt tuyển sinh và ngành học đang áp dụng sau chuyển hệ.
+
+Sau khi chuyển hệ:
+
+- Hệ thống tự tính lại chênh lệch lệ phí
+- Nếu học viên đóng thừa, hồ sơ có thể chuyển sang diện chờ hoàn tiền thừa
+- Hệ thống tự tính lại hoa hồng tương ứng để kế toán tiếp tục đối soát
+
+## 6. Import và xuất danh sách học viên
+
+Trong màn hình **Danh sách học viên**, cán bộ hồ sơ có thể dùng:
+
+- **Import Excel** để nhập danh sách học viên từ file Excel hoặc CSV
+- **Xuất Excel** để tải danh sách học viên theo bộ lọc hiện tại
+
+Khi import:
+
+1. Chọn **Import Excel**.
+2. Tải file dữ liệu lên.
+3. Chờ hệ thống báo kết quả nhập thành công, dòng bị trùng số điện thoại hoặc dòng lỗi dữ liệu.
+
+Khi xuất:
+
+1. Lọc danh sách theo nhu cầu.
+2. Bấm **Xuất Excel**.
+3. Hệ thống sẽ xuất đúng danh sách đang được lọc trên màn hình.
+
+## 7. Lưu ý khi xử lý hồ sơ
+
+- Tránh cập nhật trạng thái quá sớm khi chưa đủ giấy tờ.
+- Với hồ sơ chưa đủ điều kiện, cần ghi nhận rõ lý do để dễ theo dõi lại.
+- Nếu học viên đổi chương trình hoặc thay đổi thông tin quan trọng, nên phối hợp với quản trị viên hoặc bộ phận liên quan trước khi chỉnh sửa.

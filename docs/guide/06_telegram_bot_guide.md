@@ -1,65 +1,151 @@
-# Bài 6: Hướng dẫn về Kênh thông báo tự động Telegram
+# Bài 6: Hướng dẫn cấu hình thông báo Telegram
 
-Tài liệu này hướng dẫn cách điền mã kết nối ứng dụng Telegram vào hệ thống để tự động gửi thông báo tuyển sinh và hoa hồng về Group/Channel Telegram của ban quản lý trường.
+Tài liệu này hướng dẫn cách kết nối Telegram Bot và kiểm tra việc nhận thông báo của hệ thống.
 
----
+## 1. Cấu hình Bot Telegram
 
-## 1. Điền mã liên kết Telegram vào hệ thống
-Để kích hoạt gửi tin nhắn tự động, bạn cần điền các mã bảo mật Telegram vào file cấu hình môi trường `.env` ở thư mục gốc:
+Hệ thống hiện dùng biến môi trường sau để kết nối bot:
 
 ```env
-TELEGRAM_BOT_TOKEN=nhap_ma_bot_telegram_tai_day
-TELEGRAM_CHAT_ID=nhap_id_nhom_chat_telegram_tai_day
+TELEGRAM_BOT_TOKEN=nhap_token_bot_tai_day
 ```
 
-*   `TELEGRAM_BOT_TOKEN`: Mã token của Bot Telegram do BotFather cấp.
-*   `TELEGRAM_CHAT_ID`: ID của Nhóm chat (Group) hoặc Kênh (Channel) Telegram nơi ban tuyển sinh của trường muốn nhận tin nhắn.
+Sau khi thay đổi cấu hình, cần nạp lại cấu hình hệ thống để áp dụng.
 
-Sau khi sửa file cấu hình, chạy lệnh sau trên cửa sổ dòng lệnh để hệ thống nhận cấu hình mới:
+## 2. Cấu hình người nhận thông báo
+
+Hệ thống không dùng một mã nhận tin chung cho tất cả mọi người.
+
+Thông báo Telegram phụ thuộc vào ID Telegram được lưu theo từng đối tượng:
+
+- Người dùng nội bộ
+- Cộng tác viên
+- Mã ref phụ nếu có
+
+Người dùng có thể khai báo ID Telegram trong hồ sơ cá nhân tại phần cấu hình Telegram.
+
+Đối với CTV chính, có thể khai báo thêm các **nguồn phụ** và gán riêng ID Telegram cho từng nguồn phụ đó.
+
+## 3. Các loại thông báo đang hỗ trợ
+
+Tùy cấu hình từng tài khoản, hệ thống có thể gửi:
+
+- Học viên đăng ký mới
+- Có minh chứng chuyển khoản mới
+- Thanh toán xác nhận
+- Thanh toán bị từ chối
+- Phát sinh hoa hồng mới
+
+## 4. Bật hoặc tắt từng loại thông báo
+
+Trong trang hồ sơ cá nhân, người dùng có thể bật hoặc tắt riêng các nhóm thông báo Telegram.
+
+Ví dụ:
+
+- Sinh viên đăng ký mới
+- Minh chứng chuyển khoản
+- Thanh toán xác nhận
+- Thanh toán bị từ chối
+- Nhận hoa hồng mới
+
+## 5. Lệnh kiểm tra thông báo
+
+Hệ thống hiện có 2 nhóm lệnh:
+
+### a. Lệnh dùng trực tiếp trong Telegram Bot
+
+- `/start`: bắt đầu sử dụng bot, đồng thời bot trả lại **ID Telegram** của bạn
+- `/check`: xem báo cáo nhanh theo quyền của tài khoản Telegram đang dùng
+
+Khi dùng `/start`, bot sẽ:
+
+- Chào mừng bạn
+- Nhắc dùng lệnh `/check`
+- Trả về ID Telegram để bạn điền vào hệ thống
+- Nhắc mẹo gửi bill bằng cách trả lời tin nhắn thông báo học viên mới
+
+Khi dùng `/check`:
+
+- Nếu là **CTV chính**, bạn nhận báo cáo tổng hợp của mình và các nguồn phụ
+- Nếu là **CTV phụ**, bạn nhận báo cáo riêng của đúng nguồn phụ đó
+- Nếu chưa được gán quyền, bot sẽ báo bạn gửi ID Telegram cho quản trị viên
+
+### b. Lệnh kiểm tra kỹ thuật từ hệ thống
+
+Đây là các lệnh chạy trong hệ thống để gửi thử thông báo:
+
 ```bash
-php artisan config:clear
+php artisan notify:test-registration <chat_id>
+php artisan notify:test-invoice <chat_id>
+php artisan notify:test-commission <chat_id>
 ```
 
----
+Trong đó:
 
-## 2. Các tin nhắn thông báo tự động trên Telegram
+- Lệnh thứ nhất dùng để gửi thử thông báo học viên đăng ký mới
+- Lệnh thứ hai dùng để gửi thử thông báo minh chứng chuyển khoản
+- Lệnh thứ ba dùng để gửi thử thông báo hoa hồng
 
-Khi hệ thống hoạt động, bot sẽ tự động gửi tin nhắn báo về Nhóm chat Telegram mỗi khi có các sự kiện sau xảy ra:
+## 6. CTV chính nhận được gì khi dùng `/check`
 
-### a. Báo có học sinh đăng ký mới
-Gửi ngay khi học sinh điền xong đơn trên trang web:
-*   *Mẫu tin nhắn*: *"Thông báo: Học sinh Nguyễn Văn A vừa gửi đơn đăng ký học ngành CNTT - Hệ vừa học vừa làm. Mã hồ sơ: GTVT2026-PT-0002. Số điện thoại: 0912345678."*
+CTV chính nhận báo cáo tổng hợp gồm:
 
-![Hình 6.1: Tin nhắn Telegram tự động thông báo có học sinh mới vừa điền đơn đăng ký học](images/telegram_new_student_notification.png)
+- Tổng số hồ sơ
+- Tổng số tiền cộng dồn theo các hồ sơ thuộc mình và các nguồn phụ
+- Phần hồ sơ trực tiếp của mình
+- Từng nguồn phụ kèm số lượng hồ sơ theo từng hệ đào tạo
 
-### b. Báo Kế toán duyệt tiền học phí thành công
-Gửi khi kế toán xác nhận biên lai đóng phí của học sinh:
-*   *Mẫu tin nhắn*: *"Thông báo: Đã xác nhận học phí thành công cho học sinh Nguyễn Văn A. Chỉ tiêu hiện tại của lớp học này là [5/50] học sinh."*
+Nói ngắn gọn, đây là báo cáo để CTV chính theo dõi toàn bộ mạng lưới của mình.
 
-![Hình 6.2: Tin nhắn Telegram tự động thông báo kế toán đã xác thực đóng tiền học phí và số chỉ tiêu hiện tại](images/telegram_payment_verified_notification.png)
+## 7. CTV phụ nhận được gì khi dùng `/check`
 
-### c. Báo phát sinh hoa hồng mới cho Cộng tác viên
-Gửi khi phát sinh khoản hoa hồng mới đủ điều kiện chi trả:
-*   *Mẫu tin nhắn*: *"Thông báo: Ghi nhận hoa hồng tuyển sinh mới trị giá +750.000đ dành cho CTV Lê Trọng Đạt từ hồ sơ học sinh Nguyễn Văn A."*
+CTV phụ nhận báo cáo riêng theo đúng **mã nguồn phụ** đã được gán ID Telegram.
 
-![Hình 6.3: Tin nhắn Telegram tự động thông báo ví tiền CTV được cộng hoa hồng](images/telegram_commission_notification.png)
+Báo cáo hiện gồm:
 
----
+- Số lượng hồ sơ hệ Chính quy
+- Số lượng hồ sơ hệ Vừa học vừa làm
+- Số lượng hồ sơ hệ Đào tạo từ xa
+- Tổng số hồ sơ
+- Danh sách 5 hồ sơ mới nhất
+- Ghi chú thời điểm quyết toán theo từng hệ
 
-## 3. Lệnh chạy thử thông báo (Kiểm tra kết nối)
-Để kiểm tra xem Bot Telegram đã kết nối thành công với nhóm chat chưa, bạn có thể chạy các lệnh thử nghiệm sau trong Terminal:
+CTV phụ không thấy tổng hợp của các nguồn khác và cũng không thấy toàn bộ mạng lưới của CTV chính.
 
-*   **Thử gửi thông báo học sinh mới**:
-    ```bash
-    php artisan test:student-notification
-    ```
-*   **Thử gửi thông báo duyệt học phí**:
-    ```bash
-    php artisan test:invoice-notification
-    ```
-*   **Thử gửi thông báo ví CTV**:
-    ```bash
-    php artisan test:commission-notification
-    ```
+## 8. Gửi bill bằng cách trả lời tin nhắn Telegram
 
-Nếu nhóm chat nhận được tin nhắn thử nghiệm ngay lập tức, nghĩa là việc kết nối Telegram Bot đã thành công và hoạt động tốt.
+Hệ thống hỗ trợ nộp bill nhanh qua Telegram như sau:
+
+1. Chọn đúng tin nhắn thông báo học viên mới.
+2. Bấm **trả lời** tin nhắn đó.
+3. Gửi ảnh bill hoặc file ảnh bill.
+
+Hệ thống sẽ tự:
+
+- Nhận diện mã hồ sơ trong tin nhắn gốc
+- Gắn bill vào đúng hồ sơ
+- Chuyển hồ sơ sang trạng thái chờ xác minh
+- Báo lại kết quả thành công hoặc lỗi
+
+Các trường hợp bị từ chối:
+
+- Không trả lời đúng tin nhắn hồ sơ
+- Không tìm thấy mã hồ sơ
+- Gửi file không phải ảnh
+- Hồ sơ đã được xác nhận thanh toán rồi
+
+## 9. CTV có thể nhận những loại thông báo nào
+
+Tùy cấu hình trong hồ sơ cá nhân, người dùng có thể bật hoặc tắt:
+
+- Sinh viên đăng ký mới
+- Minh chứng chuyển khoản
+- Thanh toán xác nhận
+- Thanh toán bị từ chối
+- Nhận hoa hồng mới
+
+## 10. Lưu ý khi kiểm tra
+
+- Cần dùng đúng ID Telegram đã khai báo trên hệ thống.
+- Nếu không nhận được tin nhắn, kiểm tra lại `TELEGRAM_BOT_TOKEN`.
+- Nếu vẫn chưa nhận được, kiểm tra người dùng đã bật đúng nhóm thông báo hay chưa.

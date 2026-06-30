@@ -1,51 +1,117 @@
 # Bài 1: Hướng dẫn dành cho Cộng tác viên (CTV)
 
-Chào mừng bạn đến với hệ thống tuyển sinh liên thông GTVT. Tài liệu này hướng dẫn bạn cách sử dụng link giới thiệu để tuyển học sinh và theo dõi số tiền hoa hồng được nhận trực tiếp trên hệ thống.
+Tài liệu này hướng dẫn CTV cách dùng mã giới thiệu, theo dõi học viên và kiểm tra hoa hồng trên hệ thống.
 
----
+## 1. Cách lấy link giới thiệu
 
-## 1. Đăng ký tài khoản CTV mới
-1.  Truy cập vào trang đăng ký dành cho CTV.
-2.  Điền đầy đủ thông tin: Họ tên, Số điện thoại, Email, Số tài khoản ngân hàng và Tên ngân hàng của bạn.
-3.  Nhấn nút gửi yêu cầu. Cán bộ quản lý của trường sẽ xem xét, phê duyệt tài khoản và cấp cho bạn một **Mã giới thiệu** (Ví dụ: `LETRONGDAT`).
+Sau khi tài khoản CTV được tạo, bạn sẽ có ít nhất một mã giới thiệu.
 
-![Hình 1.1: Ảnh minh họa mẫu điền đơn đăng ký tài khoản CTV mới](images/ctv_registration_form.png)
+- Link tuyển sinh có dạng: `https://<ten-mien>/ref/<MA_GIOI_THIEU>`
+- Ví dụ: `https://crm.tuyensinh.edu.vn/ref/LETRONGDAT`
 
----
+Khi học viên đăng ký qua link này, hệ thống sẽ ghi nhận nguồn giới thiệu tương ứng.
 
-## 2. Cách lấy Link giới thiệu để gửi cho học sinh
-Sau khi có Mã giới thiệu, bạn sẽ có một đường link tuyển sinh riêng. Hãy gửi link này cho những học sinh quan tâm đến khóa học:
+## 2. Thời gian giữ lead
 
-*   **Công thức đường link**: `https://<ten-mien-he-thong>/ref/<MA_CTV_CUA_BAN>`
-    *   *Ví dụ*: `https://crm.tuyensinh.edu.vn/ref/LETRONGDAT`
-*   **Cách thức hoạt động**: Khi học sinh click vào link này, hệ thống sẽ tự động ghi nhớ bạn là người giới thiệu của học sinh đó trong vòng **30 ngày**. Dù học sinh không đăng ký ngay lúc đó, nhưng trong vòng 30 ngày tiếp theo nếu họ quay lại trang web đăng ký học, hệ thống vẫn ghi nhận học sinh đó thuộc về bạn giới thiệu.
+- Mặc định hệ thống giữ lead cho CTV trong **14 ngày**.
+- Trong thời gian này, hồ sơ vẫn được gắn với CTV đã giới thiệu trước đó.
+- Thời gian này có thể được quản trị viên thay đổi trong cấu hình hệ thống.
 
-![Hình 1.2: Ảnh minh họa giao diện sao chép Link giới thiệu tuyển sinh của CTV](images/ctv_referral_link.png)
+## 3. Theo dõi danh sách học viên
 
----
+Sau khi đăng nhập, bạn có thể xem danh sách học viên thuộc nguồn của mình.
 
-## 3. Theo dõi danh sách học sinh của mình
-Bạn đăng nhập vào trang cá nhân của CTV để xem danh sách học sinh mà mình đã giới thiệu cùng trạng thái hiện tại của họ:
-*   **Đăng ký mới**: Học sinh vừa điền đơn đăng ký học xong, chưa nộp tiền.
-*   **Đã nộp hóa đơn**: Học sinh đã chuyển tiền học phí/lệ phí thành công và đã tải ảnh biên lai gửi tiền lên web.
-*   **Đã nhập học**: Học sinh đã hoàn tất nộp hồ sơ giấy và được trường GTVT phê duyệt trúng tuyển chính thức.
+Các thông tin thường cần theo dõi:
 
-![Hình 1.3: Ảnh minh họa bảng danh sách học sinh đăng ký qua mã giới thiệu](images/ctv_student_list.png)
+- Học viên mới đăng ký
+- Học viên đã gửi minh chứng chuyển khoản
+- Học viên đã được xác minh thanh toán
+- Học viên đã hoàn tất nhập học
 
----
+## 4. Theo dõi hoa hồng
 
-## 4. Theo dõi & Đối soát tiền hoa hồng
+Hệ thống hiển thị các dòng hoa hồng phát sinh theo từng học viên.
 
-Hệ thống cung cấp trang **Danh sách hoa hồng** trên trang cá nhân của bạn để quản lý và theo dõi dòng tiền:
+Các trạng thái chính:
 
-### Các trạng thái của khoản hoa hồng:
-*   **Chờ nhập học (Pending)**: Khoản tiền hoa hồng phát sinh từ hồ sơ của học sinh nhưng chưa đến hạn nhận (Ví dụ: Đợt 2 của hệ VHVL/Từ xa chỉ được mở khóa khi học sinh nộp đủ hồ sơ giấy và chính thức nhập học).
-*   **Có thể thanh toán (Payable)**: Khoản hoa hồng đã đủ điều kiện nhận. Nhà trường sẽ tự động đối soát danh sách này để chuyển khoản cho bạn.
-*   **Đã thanh toán (Paid)**: Khoản hoa hồng nhà trường đã chuyển khoản thành công vào tài khoản ngân hàng của bạn và đính kèm biên lai chuyển tiền.
+- **Chờ xử lý**: Chưa đến điều kiện chi trả, thường dùng cho khoản chờ nhập học
+- **Có thể thanh toán**: Đã đủ điều kiện để kế toán đối soát và thanh toán
+- **Đã thanh toán** hoặc **Đã chốt & Đã chi**: Đã được xử lý thanh toán
+- **CTV đã nhận tiền**: Đã xác nhận ở bước đối soát hoặc điều chỉnh nghiệp vụ
 
-![Hình 1.4: Ảnh minh họa giao diện Danh sách hoa hồng và các trạng thái thanh toán của CTV](images/ctv_wallet_dashboard.png)
+## 5. Cách hiểu thời điểm nhận hoa hồng
 
-### Quy trình nhận tiền:
-1. Bạn không cần làm lệnh rút tiền trên web.
-2. Nhà trường sẽ định kỳ đối soát các khoản hoa hồng có trạng thái **Có thể thanh toán** trên hệ thống.
-3. Kế toán trường thực hiện chuyển khoản trực tiếp vào số tài khoản ngân hàng của bạn và cập nhật trạng thái dòng hoa hồng sang **Đã thanh toán** kèm ảnh biên lai giao dịch thành công. Bạn sẽ nhận được thông báo biến động số dư qua Telegram Bot.
+Tùy chính sách áp dụng, hoa hồng có thể được mở theo một trong hai mốc:
+
+- **Sau khi nộp phí**: Khi kế toán đã xác nhận học viên nộp tiền thành công
+- **Sau khi sinh viên nhập học thực tế**: Khi học viên đã được cập nhật là nhập học
+
+## 6. Nhận thông báo Telegram
+
+CTV có thể nhận thông báo Telegram nếu đã khai báo đúng ID Telegram trong hồ sơ cá nhân.
+
+Hệ thống hiện hỗ trợ các thông báo như:
+
+- Có học viên đăng ký mới
+- Có minh chứng chuyển khoản mới
+- Thanh toán đã được xác nhận
+- Phát sinh hoa hồng mới
+
+## 7. CTV chính và CTV phụ nhận gì trên Telegram
+
+Hệ thống hiện phân biệt hai nhóm:
+
+- **CTV chính**: là tài khoản cộng tác viên chính
+- **CTV phụ**: là nguồn phụ được tạo thêm trong phần **Quản lý nguồn CTV Phụ**
+
+### CTV chính nhận được gì
+
+CTV chính có thể nhận:
+
+- Thông báo có học viên đăng ký mới
+- Thông báo có minh chứng chuyển khoản mới
+- Thông báo thanh toán đã được xác nhận
+- Thông báo phát sinh hoa hồng mới
+- Báo cáo tổng hợp khi dùng lệnh kiểm tra trên Telegram
+
+Báo cáo tổng hợp của CTV chính hiện gồm:
+
+- Tổng số hồ sơ
+- Tổng số tiền cộng dồn theo các hồ sơ đang thuộc mình và các nguồn phụ
+- Phần trực tiếp của chính mình
+- Phần tách riêng theo từng nguồn phụ
+
+### CTV phụ nhận được gì
+
+CTV phụ nhận thông tin theo đúng mã nguồn phụ của mình.
+
+Khi dùng lệnh kiểm tra, CTV phụ sẽ thấy:
+
+- Số lượng hồ sơ theo từng hệ đào tạo
+- Tổng số hồ sơ của nguồn đó
+- Danh sách 5 hồ sơ mới nhất
+- Ghi chú thời điểm quyết toán theo từng hệ
+
+CTV phụ không nhận báo cáo tổng hợp toàn bộ mạng lưới của CTV chính.
+
+## 8. Gửi bill qua Telegram
+
+Ngoài cách gửi bill trên web, hệ thống còn cho phép gửi bill nhanh qua Telegram.
+
+Cách dùng:
+
+1. Mở tin nhắn Telegram thông báo học viên mới.
+2. Bấm **trả lời** đúng tin nhắn đó.
+3. Gửi ảnh bill chuyển khoản hoặc file ảnh bill.
+
+Lưu ý:
+
+- Hệ thống chỉ nhận khi bạn **trả lời đúng tin nhắn thông báo hồ sơ**
+- Nếu hồ sơ đã được xác nhận thanh toán, hệ thống sẽ từ chối nhận thêm bill
+- Nếu gửi file không phải ảnh, hệ thống sẽ báo lỗi
+
+## 9. Lưu ý khi sử dụng
+
+- Luôn gửi đúng link có chứa mã giới thiệu của bạn.
+- Kiểm tra kỹ số điện thoại học viên vì đây là dữ liệu dễ dùng để đối chiếu.
+- Nếu chưa nhận được thông báo Telegram, cần kiểm tra lại ID Telegram trong hồ sơ cá nhân.

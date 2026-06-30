@@ -1,47 +1,65 @@
 # Bài 2: Hướng dẫn dành cho Học sinh / Thí sinh
 
-Tài liệu này hướng dẫn học sinh các bước đăng ký học trực tuyến, nộp biên lai đóng tiền lệ phí và tự theo dõi tiến độ xét duyệt hồ sơ của mình.
+Tài liệu này hướng dẫn học viên đăng ký hồ sơ, nộp minh chứng chuyển khoản và tra cứu tiến độ xử lý.
 
----
+## 1. Đăng ký hồ sơ trực tuyến
 
-## 1. Điền đơn đăng ký xét tuyển trực tuyến
-1.  Truy cập vào Link đăng ký do người giới thiệu gửi cho bạn (Ví dụ: `https://crm.tuyensinh.edu.vn/ref/LETRONGDAT`).
-2.  Điền đầy đủ và chính xác các thông tin cá nhân trong form đăng ký:
-    *   **Họ và tên**: Điền chữ hoa có dấu giống trên giấy khai sinh (Ví dụ: *Kim Hồng Phong*).
-    *   **Ngày sinh / Quê quán**: Điền đúng theo Căn cước công dân.
-    *   **Số điện thoại**: Điền số điện thoại bạn đang sử dụng chính (Hệ thống sẽ dùng số này để đối chiếu tiền đóng học phí).
-    *   **Email**: Nhập email cá nhân để nhận các thông báo tự động từ nhà trường.
-3.  Chọn **Đợt tuyển sinh** và **Chương trình học/Ngành học** bạn đăng ký (Ví dụ: *Công nghệ thông tin - Hệ Vừa học vừa làm*).
-4.  Tích chọn ô xác minh *"Tôi không phải là người máy"* và nhấn nút **Gửi đơn đăng ký**.
+1. Truy cập link tuyển sinh do nhà trường hoặc CTV gửi.
+2. Điền đầy đủ thông tin cá nhân và thông tin học tập theo biểu mẫu.
+3. Chọn đúng ngành, hệ đào tạo và đợt tuyển sinh mong muốn.
+4. Gửi biểu mẫu đăng ký.
 
-![Hình 2.1: Mẫu điền đơn đăng ký xét tuyển trực tuyến dành cho học sinh](images/student_registration_form.png)
+Link đăng ký thường có dạng:
 
----
+- `https://<ten-mien>/ref/<MA_GIOI_THIEU>`
 
-## 2. Nộp biên lai đóng tiền lệ phí tuyển sinh
-Sau khi gửi đơn đăng ký thành công, hệ thống sẽ đưa bạn đến trang nộp lệ phí:
+## 2. Nộp minh chứng chuyển khoản
 
-1.  Thực hiện chuyển tiền qua ngân hàng vào số tài khoản của trường GTVT theo thông tin hiển thị trên màn hình:
-    *   *Mức phí Hệ Chính quy*: 1,750,000đ.
-    *   *Mức phí Hệ VHVL / Hệ Từ xa*: 750,000đ.
-2.  Chụp lại màn hình giao dịch chuyển khoản thành công (Biên lai/Hóa đơn gửi tiền).
-3.  Quay lại trang nộp lệ phí, nhập Số điện thoại của bạn, chọn đúng hệ học và số tiền đã chuyển.
-4.  Nhấn nút chọn ảnh biên lai đã chụp và bấm **Xác nhận nộp biên lai**.
-5.  Trạng thái hồ sơ của bạn lúc này sẽ là "Đang chờ duyệt". Kế toán trường sẽ kiểm tra tài khoản ngân hàng và duyệt tiền cho bạn.
+Sau khi đăng ký, học viên có thể nộp minh chứng chuyển khoản tại trang:
 
-![Hình 2.2: Giao diện học sinh tải ảnh biên lai gửi tiền lên hệ thống](images/student_upload_bill.png)
+- `https://<ten-mien>/ref/<MA_GIOI_THIEU>/payment`
 
----
+Các bước thực hiện:
 
-## 3. Tự theo dõi tiến độ hồ sơ cá nhân
-Để học sinh có thể theo dõi tiến trình xét tuyển mà **không cần tạo tài khoản mật khẩu phức tạp**:
+1. Chuyển khoản theo thông tin hiển thị trên màn hình.
+2. Chuẩn bị ảnh chụp hoặc tệp minh chứng chuyển khoản.
+3. Điền đúng số điện thoại hoặc thông tin nhận diện theo biểu mẫu.
+4. Tải minh chứng lên hệ thống và gửi xác nhận.
 
-1.  Khi đơn đăng ký được gửi đi thành công, hệ thống sẽ gửi một đường dẫn tra cứu bảo mật riêng biệt về Email của bạn.
-2.  Bạn chỉ cần nhấn vào đường dẫn đó để mở trang **Theo dõi hồ sơ cá nhân**.
-3.  Trên màn hình tra cứu, bạn sẽ biết được:
-    *   Trường GTVT đã nhận được tiền chuyển khoản của bạn chưa.
-    *   Hồ sơ giấy tờ của bạn đã được cán bộ tuyển sinh duyệt chưa.
-    *   Bạn đã chính thức trúng tuyển nhập học hay chưa.
-    *   Mã số hồ sơ chính thức của bạn (Ví dụ: `GTVT2026-REG-0001`).
+Sau khi gửi, trạng thái thanh toán thường chuyển sang **chờ xác minh**.
 
-![Hình 2.3: Trang theo dõi tiến độ và trạng thái hồ sơ cá nhân của học sinh](images/student_profile_tracking.png)
+## 3. Tra cứu hồ sơ
+
+Hệ thống hỗ trợ tra cứu hồ sơ công khai theo mã hồ sơ tại:
+
+- `/hoso`
+- hoặc `/hoso/{ma_ho_so}`
+
+Người học có thể:
+
+1. Mở trang tra cứu hồ sơ.
+2. Nhập mã hồ sơ nếu cần.
+3. Xem trạng thái hồ sơ, thanh toán và thông tin liên quan.
+
+## 4. Các thông tin có thể xem khi tra cứu
+
+Tùy hồ sơ thực tế, màn hình tra cứu có thể hiển thị:
+
+- Mã hồ sơ
+- Trạng thái hồ sơ
+- Trạng thái xét duyệt hồ sơ
+- Trạng thái thanh toán
+- Số tiền đã ghi nhận
+- Liên kết xem minh chứng hoặc biên nhận nếu đã có
+
+## 5. Một số trạng thái thường gặp
+
+- Trạng thái hồ sơ: Mới, Đã liên hệ, Chờ xác minh, Đã duyệt, Đã nhập học
+- Tình trạng bổ sung giấy tờ: Thiếu giấy tờ, Đã nộp hồ sơ, Đã xác minh, Đủ điều kiện, Không đủ điều kiện
+- Trạng thái thanh toán: Chưa nộp tiền, Đã nộp (chờ xác minh), Đã xác nhận, Đã hoàn trả
+
+## 6. Lưu ý khi điền thông tin
+
+- Dùng đúng số điện thoại đang sử dụng để thuận tiện đối chiếu.
+- Điền đúng email và thông tin giấy tờ tùy thân.
+- Giữ lại mã hồ sơ để tra cứu về sau.
