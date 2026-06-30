@@ -114,11 +114,28 @@ class CommissionResource extends Resource {
                         default => 'gray'
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('payment.amount')
+                \Filament\Tables\Columns\TextColumn::make('payment_amount')
                     ->label('SV đóng phí')
+                    ->state(fn (Commission $record) => $record->payment?->amount)
                     ->money('VND')
-                    ->sortable()
-                    ->visible(fn(): bool => !$isCtv),
+                    ->sortable(query: function ($query, $direction) {
+                        return $query->addSelect([
+                            'payment_amount_sort' => \App\Models\Payment::select('amount')
+                                ->whereColumn('id', 'commissions.payment_id')
+                                ->limit(1)
+                        ])->orderBy('payment_amount_sort', $direction);
+                    })
+                    ->visible(fn(): bool => !$isCtv)
+                    ->summarize(
+                        \Filament\Tables\Columns\Summarizers\Summarizer::make()
+                            ->label('Tổng phí thu')
+                            ->money('VND')
+                            ->using(function ($query) {
+                                $q = clone $query;
+                                $paymentIds = $q->pluck('commissions.payment_id');
+                                return \App\Models\Payment::whereIn('id', $paymentIds)->sum('amount');
+                            })
+                    ),
 
                 \Filament\Tables\Columns\TextColumn::make('items.recipient.full_name')
                     ->label('CTV nhận')
@@ -160,7 +177,33 @@ class CommissionResource extends Resource {
                         return "Đã chi: " . number_format($paid, 0, ',', '.') . " | Còn lại: " . number_format($remaining, 0, ',', '.');
                     })
                     ->sortable()
-                    ->visible(fn(): bool => !$isCtv),
+                    ->visible(fn(): bool => !$isCtv)
+                    ->summarize([
+                        \Filament\Tables\Columns\Summarizers\Summarizer::make()
+                            ->label('Tổng hoa hồng')
+                            ->money('VND')
+                            ->using(function ($query) {
+                                $q = clone $query;
+                                $ids = $q->pluck('commissions.id');
+                                return \App\Models\CommissionItem::whereIn('commission_id', $ids)
+                                    ->where('status', '!=', \App\Models\CommissionItem::STATUS_CANCELLED)
+                                    ->sum('amount');
+                            }),
+                        \Filament\Tables\Columns\Summarizers\Summarizer::make()
+                            ->label('Tổng đã chi')
+                            ->money('VND')
+                            ->using(function ($query) {
+                                $q = clone $query;
+                                $ids = $q->pluck('commissions.id');
+                                return \App\Models\CommissionItem::whereIn('commission_id', $ids)
+                                    ->whereIn('status', [
+                                        \App\Models\CommissionItem::STATUS_PAID,
+                                        \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                        \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED
+                                    ])
+                                    ->sum('amount');
+                            }),
+                    ]),
 
                 \Filament\Tables\Columns\IconColumn::make('is_adjusted')
                     ->label('Điều chỉnh')
@@ -696,7 +739,7 @@ class CommissionResource extends Resource {
             ])
             ->headerActions([
                 Action::make('create')
-                    ->label('Thêm mới')
+                    ->label('Xuất file Excel')
                     ->modalHeading('Thêm hoa hồng thủ công')
                     ->form([
                         \Filament\Forms\Components\Select::make('payment_id')

@@ -229,17 +229,45 @@ class IntakesTable {
                     ->size('sm')
                     ->tooltip('Các hành động khả dụng'),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make()
-                        ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa các đợt tuyển sinh đã chọn')
-                        ->modalDescription('Hồ sơ sẽ được chuyển vào Thùng rác.'),
-                    \Filament\Actions\RestoreBulkAction::make()
-                        ->label('Khôi phục đã chọn'),
-                    \Filament\Actions\ForceDeleteBulkAction::make()
-                        ->label('Xóa vĩnh viễn đã chọn'),
-                ]),
+            ->toolbarActions([
+                \Filament\Actions\Action::make('show_active')
+                    ->label(fn() => 'Tất cả (' . \App\Models\Intake::whereNull('deleted_at')->count() . ')')
+                    ->icon('heroicon-o-calendar')
+                    ->color(fn() => !session('intakes_show_trashed', false) ? 'primary' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->action(function () {
+                        session(['intakes_show_trashed' => false]);
+                    }),
+                \Filament\Actions\Action::make('show_trashed')
+                    ->label(fn() => 'Thùng rác (' . \App\Models\Intake::onlyTrashed()->count() . ')')
+                    ->icon('heroicon-o-trash')
+                    ->color(fn() => session('intakes_show_trashed', false) ? 'danger' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->visible(fn() => \App\Models\Intake::onlyTrashed()->count() > 0)
+                    ->action(function () {
+                        session(['intakes_show_trashed' => true]);
+                    }),
+                BulkActionGroup::make(
+                    session('intakes_show_trashed', false)
+                        ? [
+                            \Filament\Actions\RestoreBulkAction::make()
+                                ->label('Khôi phục đã chọn'),
+                            \Filament\Actions\ForceDeleteBulkAction::make()
+                                ->label('Xóa vĩnh viễn đã chọn')
+                                ->modalHeading('Xóa vĩnh viễn đợt tuyển sinh đã chọn')
+                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các đợt tuyển sinh đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
+                        ]
+                        : [
+                            \Filament\Actions\DeleteBulkAction::make()
+                                ->label('Bỏ vào thùng rác')
+                                ->modalHeading('Bỏ đợt tuyển sinh đã chọn vào thùng rác')
+                                ->modalDescription('Bạn có chắc chắn muốn bỏ các đợt tuyển sinh đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                                ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_delete')),
+                        ]
+                )
+                ->label('Hành động hàng loạt'),
             ])
             ->defaultSort('created_at', 'desc');
     }

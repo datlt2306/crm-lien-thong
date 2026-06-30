@@ -40,6 +40,13 @@ class AnnualQuotaResource extends Resource {
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
         $q = parent::getEloquentQuery();
+        
+        if (session('annual_quotas_show_trashed', false)) {
+            $q->onlyTrashed();
+        } else {
+            $q->whereNull('deleted_at');
+        }
+
         $user = \Illuminate\Support\Facades\Auth::user();
         if (!$user) {
             return $q->whereNull('id');

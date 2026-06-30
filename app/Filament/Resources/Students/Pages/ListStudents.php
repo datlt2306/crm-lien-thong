@@ -23,26 +23,13 @@ class ListStudents extends ListRecords {
     //     return \Filament\Resources\Pages\ListRecords\TabPosition::Header;
     // }
 
-    // public function getTabs(): array
-    // {
-    //     return [
-    //         'active' => Tab::make('Học viên')
-    //             ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('students.deleted_at'))
-    //             ->badge(fn() => \App\Models\Student::whereNull('deleted_at')->count())
-    //             ->badgeColor('success'),
-    //         'trash' => Tab::make('Thùng rác')
-    //             ->icon('heroicon-o-trash')
-    //             ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
-    //             ->badge(fn() => \App\Models\Student::onlyTrashed()->count())
-    //             ->badgeColor('danger'),
-    //     ];
-    // }
 
-    // protected function getHeaderActions(): array {
-    //     return [];
-    // }
+
+    protected function getHeaderActions(): array {
+        return [];
+    }
 
     public function getTitle(): string {
-        return '';
+        return 'Danh sách học viên';
     }
 }

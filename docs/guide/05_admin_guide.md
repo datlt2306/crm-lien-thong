@@ -46,7 +46,7 @@ Khi học sinh đã nộp hồ sơ hoặc đóng học phí nhưng xin đổi sa
 3.  Trong bảng lựa chọn hiện ra:
     *   Chọn Ngành học/Hệ đào tạo mới mà học sinh muốn chuyển sang.
     *   Nhập lý do chuyển đổi.
-4.  Nhấn xác nhận. Hệ thống sẽ tự động chuyển chỉ tiêu của học sinh sang ngành mới, tạo bảng tính toán học phí thừa/thiếu cho học sinh, tính lại tiền hoa hồng cho CTV giới thiệu và khấu trừ vào ví của họ nếu hệ học mới có mức hoa hồng thấp hơn hệ cũ.
+4.  Nhấn xác nhận. Hệ thống sẽ tự động chuyển chỉ tiêu của học sinh sang ngành mới, tạo bảng tính toán học phí thừa/thiếu cho học sinh, tính lại tiền hoa hồng cho CTV giới thiệu và tự động ghi nhận dòng khấu trừ giảm vào danh sách đối soát hoa hồng của CTV nếu hệ học mới có mức hoa hồng thấp hơn hệ cũ.
 
 ---
 

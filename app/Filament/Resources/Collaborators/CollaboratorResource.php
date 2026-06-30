@@ -64,6 +64,13 @@ class CollaboratorResource extends Resource {
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery();
+        
+        if (session('collaborators_show_trashed', false)) {
+            $query->onlyTrashed();
+        } else {
+            $query->whereNull('deleted_at');
+        }
+
         $user = Auth::user();
 
         if (!$user) {

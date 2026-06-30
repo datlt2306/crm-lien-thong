@@ -48,6 +48,18 @@ class CommissionPolicyResource extends Resource {
         ];
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
+        $query = parent::getEloquentQuery();
+        
+        if (session('commission_policies_show_trashed', false)) {
+            $query->onlyTrashed();
+        } else {
+            $query->whereNull('deleted_at');
+        }
+
+        return $query;
+    }
+
     public static function getPages(): array {
         return [
             'index' => ListCommissionPolicies::route('/'),

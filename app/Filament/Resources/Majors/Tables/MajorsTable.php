@@ -61,17 +61,44 @@ class MajorsTable
                     ->size('sm')
                     ->tooltip('Các hành động khả dụng'),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make()
-                        ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa các ngành học đã chọn')
-                        ->modalDescription('Hồ sơ sẽ được chuyển vào Thùng rác.'),
-                    \Filament\Actions\RestoreBulkAction::make()
-                        ->label('Khôi phục đã chọn'),
-                    \Filament\Actions\ForceDeleteBulkAction::make()
-                        ->label('Xóa vĩnh viễn đã chọn'),
-                ]),
+            ->toolbarActions([
+                \Filament\Actions\Action::make('show_active')
+                    ->label(fn() => 'Tất cả (' . \App\Models\Major::whereNull('deleted_at')->count() . ')')
+                    ->icon('heroicon-o-academic-cap')
+                    ->color(fn() => !session('majors_show_trashed', false) ? 'primary' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->action(function () {
+                        session(['majors_show_trashed' => false]);
+                    }),
+                \Filament\Actions\Action::make('show_trashed')
+                    ->label(fn() => 'Thùng rác (' . \App\Models\Major::onlyTrashed()->count() . ')')
+                    ->icon('heroicon-o-trash')
+                    ->color(fn() => session('majors_show_trashed', false) ? 'danger' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->visible(fn() => \App\Models\Major::onlyTrashed()->count() > 0)
+                    ->action(function () {
+                        session(['majors_show_trashed' => true]);
+                    }),
+                BulkActionGroup::make(
+                    session('majors_show_trashed', false)
+                        ? [
+                            \Filament\Actions\RestoreBulkAction::make()
+                                ->label('Khôi phục đã chọn'),
+                            \Filament\Actions\ForceDeleteBulkAction::make()
+                                ->label('Xóa vĩnh viễn đã chọn')
+                                ->modalHeading('Xóa vĩnh viễn ngành học đã chọn')
+                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các ngành học đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
+                        ]
+                        : [
+                            \Filament\Actions\DeleteBulkAction::make()
+                                ->label('Bỏ vào thùng rác')
+                                ->modalHeading('Bỏ ngành học đã chọn vào thùng rác')
+                                ->modalDescription('Bạn có chắc chắn muốn bỏ các ngành học đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.'),
+                        ]
+                )
+                ->label('Hành động hàng loạt'),
             ])
             ->defaultSort('id', 'desc');
     }

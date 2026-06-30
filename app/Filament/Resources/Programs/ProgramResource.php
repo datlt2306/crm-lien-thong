@@ -45,6 +45,18 @@ class ProgramResource extends Resource
         return [];
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
+        $query = parent::getEloquentQuery();
+        
+        if (session('programs_show_trashed', false)) {
+            $query->onlyTrashed();
+        } else {
+            $query->whereNull('deleted_at');
+        }
+
+        return $query;
+    }
+
     public static function getPages(): array
     {
         return [

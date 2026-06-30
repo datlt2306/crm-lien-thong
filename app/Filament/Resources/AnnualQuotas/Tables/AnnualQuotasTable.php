@@ -138,17 +138,45 @@ class AnnualQuotasTable {
                         ->label('Xóa vĩnh viễn'),
                 ])->label('Hành động')->icon('heroicon-m-ellipsis-vertical')->color('gray')->button()->size('sm'),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make()
-                        ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa các chỉ tiêu năm đã chọn')
-                        ->modalDescription('Hồ sơ sẽ được chuyển vào Thùng rác.'),
-                    \Filament\Actions\RestoreBulkAction::make()
-                        ->label('Khôi phục đã chọn'),
-                    \Filament\Actions\ForceDeleteBulkAction::make()
-                        ->label('Xóa vĩnh viễn đã chọn'),
-                ]),
+            ->toolbarActions([
+                \Filament\Actions\Action::make('show_active')
+                    ->label(fn() => 'Tất cả (' . \App\Models\AnnualQuota::whereNull('deleted_at')->count() . ')')
+                    ->icon('heroicon-o-presentation-chart-line')
+                    ->color(fn() => !session('annual_quotas_show_trashed', false) ? 'primary' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->action(function () {
+                        session(['annual_quotas_show_trashed' => false]);
+                    }),
+                \Filament\Actions\Action::make('show_trashed')
+                    ->label(fn() => 'Thùng rác (' . \App\Models\AnnualQuota::onlyTrashed()->count() . ')')
+                    ->icon('heroicon-o-trash')
+                    ->color(fn() => session('annual_quotas_show_trashed', false) ? 'danger' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->visible(fn() => \App\Models\AnnualQuota::onlyTrashed()->count() > 0)
+                    ->action(function () {
+                        session(['annual_quotas_show_trashed' => true]);
+                    }),
+                BulkActionGroup::make(
+                    session('annual_quotas_show_trashed', false)
+                        ? [
+                            \Filament\Actions\RestoreBulkAction::make()
+                                ->label('Khôi phục đã chọn'),
+                            \Filament\Actions\ForceDeleteBulkAction::make()
+                                ->label('Xóa vĩnh viễn đã chọn')
+                                ->modalHeading('Xóa vĩnh viễn chỉ tiêu năm đã chọn')
+                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các chỉ tiêu năm đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
+                        ]
+                        : [
+                            \Filament\Actions\DeleteBulkAction::make()
+                                ->label('Bỏ vào thùng rác')
+                                ->modalHeading('Bỏ chỉ tiêu năm đã chọn vào thùng rác')
+                                ->modalDescription('Bạn có chắc chắn muốn bỏ các chỉ tiêu năm đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                                ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_delete')),
+                        ]
+                )
+                ->label('Hành động hàng loạt'),
             ])
             ->defaultSort('year', 'desc');
     }

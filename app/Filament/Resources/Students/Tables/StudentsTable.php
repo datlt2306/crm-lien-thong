@@ -39,6 +39,89 @@ class StudentsTable {
                     ->label('Thêm học viên mới')
                     ->url(fn() => \App\Filament\Resources\Students\StudentResource::getUrl('create'))
                     ->visible(fn() => Auth::user()?->can('student_create')),
+                \Filament\Actions\Action::make('import_excel')
+                    ->label('Import Excel')
+                    ->icon('heroicon-o-document-arrow-up')
+                    ->color('warning')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('file')
+                            ->label('Chọn file Excel')
+                            ->disk('local')
+                            ->directory('temp-imports')
+                            ->storeFiles(false)
+                            ->required()
+                            ->acceptedFileTypes([
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-excel',
+                                'text/csv'
+                            ]),
+                    ])
+                    ->action(function (array $data) {
+                        // storeFiles(false) means $data['file'] is a TemporaryUploadedFile object
+                        // Use getRealPath() to get the actual temp file path without touching any disk driver
+                        $uploadedFile = $data['file'];
+                        $filePath = $uploadedFile instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile
+                            ? $uploadedFile->getRealPath()
+                            : (is_string($data['file']) ? Storage::disk('local')->path($data['file']) : null);
+
+                        if (!$filePath || !file_exists($filePath)) {
+                            Notification::make()
+                                ->title('Lỗi xử lý file')
+                                ->danger()
+                                ->body('Không tìm thấy file đã upload. Vui lòng thử lại.')
+                                ->send();
+                            return;
+                        }
+
+                        $import = new \App\Imports\StudentsImport();
+                        try {
+                            Excel::import($import, $filePath);
+
+                            $successCount = count($import->successRows);
+                            $skippedCount = count($import->skippedRows);
+                            $validationErrorCount = count($import->validationErrors);
+
+                            $body = "Đã nhập thành công {$successCount} học viên.";
+
+                            if ($skippedCount > 0) {
+                                $skippedList = collect($import->skippedRows)->map(fn($r) => "{$r['name']} ({$r['phone']})")->implode(', ');
+                                $body .= "\n\n⚠️ Đã bỏ qua {$skippedCount} học viên trùng số điện thoại: {$skippedList}.";
+                            }
+
+                            if ($validationErrorCount > 0) {
+                                $errorList = implode("\n", array_slice($import->validationErrors, 0, 5));
+                                if ($validationErrorCount > 5) {
+                                    $errorList .= "\n... và " . ($validationErrorCount - 5) . " lỗi khác.";
+                                }
+                                $body .= "\n\n❌ Lỗi dữ liệu ({$validationErrorCount} dòng):\n{$errorList}";
+                            }
+
+                            Notification::make()
+                                ->title('Kết quả Import Excel')
+                                ->success()
+                                ->body($body)
+                                ->persistent()
+                                ->send();
+
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Lỗi xử lý file')
+                                ->danger()
+                                ->body($e->getMessage())
+                                ->send();
+                        }
+                    }),
+                \Filament\Actions\Action::make('export_excel')
+                    ->label('Xuất Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(fn() => Auth::user()->can('student_export'))
+                    ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
+                        $query = $livewire->getFilteredTableQuery();
+                        $query->with(['payment']);
+                        $filename = 'danh_sach_hoc_vien_' . date('Y-m-d_His') . '.xlsx';
+                        return Excel::download(new StudentsExcelExport($query), $filename);
+                    }),
             ])
             ->striped()
             ->recordUrl(function (Student $record) {
@@ -1167,25 +1250,43 @@ class StudentsTable {
                     ->size('sm')
             ])
             ->toolbarActions([
-                Action::make('export_excel')
-                    ->label('Xuất Excel')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->visible(fn() => Auth::user()->can('student_export'))
-                    ->action(function (\Filament\Tables\Contracts\HasTable $livewire) {
-                        $query = $livewire->getFilteredTableQuery();
-                        $query->with(['payment']);
-                        $filename = 'danh_sach_hoc_vien_' . date('Y-m-d_His') . '.xlsx';
-                        return Excel::download(new StudentsExcelExport($query), $filename);
+                Action::make('show_active')
+                    ->label(fn() => 'Tất cả (' . \App\Models\Student::whereNull('deleted_at')->count() . ')')
+                    ->icon('heroicon-o-users')
+                    ->color(fn() => !session('students_show_trashed', false) ? 'primary' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->action(function () {
+                        session(['students_show_trashed' => false]);
                     }),
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->label('Xóa đã chọn'),
-                    RestoreBulkAction::make()
-                        ->label('Khôi phục đã chọn'),
-                    ForceDeleteBulkAction::make()
-                        ->label('Xóa vĩnh viễn đã chọn'),
-                ]),
+                Action::make('show_trashed')
+                    ->label(fn() => 'Thùng rác (' . \App\Models\Student::onlyTrashed()->count() . ')')
+                    ->icon('heroicon-o-trash')
+                    ->color(fn() => session('students_show_trashed', false) ? 'danger' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->visible(fn() => \App\Models\Student::onlyTrashed()->count() > 0)
+                    ->action(function () {
+                        session(['students_show_trashed' => true]);
+                    }),
+                BulkActionGroup::make(
+                    session('students_show_trashed', false)
+                        ? [
+                            RestoreBulkAction::make()
+                                ->label('Khôi phục đã chọn'),
+                            ForceDeleteBulkAction::make()
+                                ->label('Xóa vĩnh viễn đã chọn')
+                                ->modalHeading('Xóa vĩnh viễn học viên đã chọn')
+                                ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu các học viên đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
+                        ]
+                        : [
+                            DeleteBulkAction::make()
+                                ->label('Bỏ vào thùng rác')
+                                ->modalHeading('Bỏ học viên đã chọn vào thùng rác')
+                                ->modalDescription('Bạn có chắc chắn muốn bỏ các học viên đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.'),
+                        ]
+                )
+                ->label('Hành động hàng loạt'),
             ])
             ->emptyStateHeading('Không có học viên')
             ->defaultSort('id', 'desc');

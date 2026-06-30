@@ -228,46 +228,7 @@ class CommissionService {
     }
 
     /**
-     * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
-     */
-    /**
-     * Thêm hoa hồng vào ví CTV và ghi nhận giao dịch ví
-     */
-    public function addCommissionToWallet(\App\Models\Collaborator $collaborator, float $amount, string $description, ?int $commissionItemId = null, ?int $commissionAdjustmentId = null): void {
-        DB::transaction(function () use ($collaborator, $amount, $description, $commissionItemId, $commissionAdjustmentId) {
-            $wallet = \App\Models\Wallet::firstOrCreate(
-                ['collaborator_id' => $collaborator->id],
-                ['balance' => 0, 'total_received' => 0, 'total_paid' => 0]
-            );
-
-            // Khóa dòng ví để chống race condition
-            $wallet = \App\Models\Wallet::where('id', $wallet->id)->lockForUpdate()->first();
-
-            $balanceBefore = (float)$wallet->balance;
-            if ($amount >= 0) {
-                $wallet->increment('balance', $amount);
-                $wallet->increment('total_received', $amount);
-            } else {
-                $wallet->decrement('balance', abs($amount));
-                $wallet->increment('total_paid', abs($amount));
-            }
-            $balanceAfter = (float)$wallet->balance;
-
-            \App\Models\WalletTransaction::create([
-                'wallet_id' => $wallet->id,
-                'type' => $amount >= 0 ? 'deposit' : 'withdrawal',
-                'amount' => $amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceAfter,
-                'description' => $description,
-                'commission_item_id' => $commissionItemId,
-                'meta' => $commissionAdjustmentId ? ['commission_adjustment_id' => $commissionAdjustmentId] : null,
-            ]);
-        });
-    }
-
-    /**
-     * CTV cấp 1 xác nhận đã nhận tiền → nạp ví và chuyển trạng thái
+     * CTV cấp 1 xác nhận đã nhận tiền → chuyển trạng thái
      */
     public function confirmDirectReceived(CommissionItem $item, int $userId): void {
         DB::transaction(function () use ($item, $userId) {
@@ -279,17 +240,6 @@ class CommissionService {
             if ($lockedItem->status !== CommissionItem::STATUS_PAYMENT_CONFIRMED) return;
 
             $lockedItem->markAsReceivedConfirmed($userId);
-
-            // Nạp tiền vào Ví CTV khả dụng
-            if ($lockedItem->recipient) {
-                $studentName = $lockedItem->commission?->student?->full_name ?? 'Sinh viên';
-                $this->addCommissionToWallet(
-                    $lockedItem->recipient,
-                    (float)$lockedItem->amount,
-                    "Nhận hoa hồng giới thiệu sinh viên {$studentName}",
-                    $lockedItem->id
-                );
-            }
         });
     }
 
@@ -454,17 +404,7 @@ class CommissionService {
                     ]);
 
                     if ($difference < 0) {
-                        $collaborator = \App\Models\Collaborator::find($recipientId);
-                        if ($collaborator) {
-                            $studentName = $payment->student->full_name ?? 'Sinh viên';
-                            $this->addCommissionToWallet(
-                                $collaborator,
-                                $difference,
-                                "Khấu trừ chênh lệch hoa hồng do sinh viên {$studentName} chuyển hệ",
-                                null,
-                                $adjustment->id
-                            );
-                        }
+                        // Trừ trực tiếp trong hệ thống bằng cách ghi nhận CommissionAdjustment âm
                     }
                 }
             }
@@ -502,18 +442,6 @@ class CommissionService {
                                 'status' => 'received_confirmed',
                                 'created_by' => Auth::id(),
                             ]);
-
-                            $collaborator = \App\Models\Collaborator::find($recipientId);
-                            if ($collaborator) {
-                                $studentName = $payment->student->full_name ?? 'Sinh viên';
-                                $this->addCommissionToWallet(
-                                    $collaborator,
-                                    $difference,
-                                    "Thu hồi hoa hồng do sinh viên {$studentName} chuyển hệ",
-                                    null,
-                                    $adjustment->id
-                                );
-                            }
                         }
                     }
                 }

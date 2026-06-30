@@ -63,8 +63,13 @@ class StudentResource extends Resource {
         $user = Auth::user();
         
         $query = static::getModel()::query()
-            ->withTrashed() // Cho phép truy vấn cả bản ghi đã xóa (cần thiết cho Tab Thùng rác)
             ->with(['payment', 'collaborator', 'intake']);
+
+        if (session('students_show_trashed', false)) {
+            $query->onlyTrashed();
+        } else {
+            $query->whereNull('students.deleted_at');
+        }
 
         if (!$user) {
             return $query->whereNull('students.id');
@@ -80,7 +85,7 @@ class StudentResource extends Resource {
             return $query->whereRelation('collaborator', 'email', $user->email);
         }
 
-        // 3. Nhân sự văn phòng: Nếu có quyền xem danh sách thì thấy tất cả (vì đã có Tab lọc Active/Inactive/Trash)
+        // 3. Nhân sự văn phòng: Nếu có quyền xem danh sách thì thấy tất cả
         if ($user->can('student_view_any')) {
             return $query;
         }

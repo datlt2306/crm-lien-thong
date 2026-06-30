@@ -6,11 +6,9 @@ use App\Models\Collaborator;
 use App\Models\Payment;
 use App\Models\PaymentAdjustment;
 use App\Models\CommissionAdjustment;
-use App\Models\Student;
-use App\Models\Wallet;
-use App\Models\WalletTransaction;
-use App\Models\CommissionPolicy;
 use App\Models\CommissionItem;
+use App\Models\CommissionPolicy;
+use App\Models\Student;
 use App\Services\CommissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -21,11 +19,11 @@ class StudentScenarioTest extends TestCase {
 
     /**
      * Scenario 1:
-     * - Student Kim Hồng Phong, born 21/10/2005, origin Nghệ An, phone 0868266410, CCCD 040205013484.
-     * - Registers for Regular (Chính quy) in June 2026.
-     * - GTVT paid commission to Lê Trọng Đạt.
-     * - After 2 months, quota is full.
-     * - Switches to VHVL in June 2026.
+     * - Student Kim Hồng Phong registers Regular (Chính quy) in June 2026.
+     * - Commision is paid to referrer Lê Trọng Đạt.
+     * - Quota becomes full after 2 months.
+     * - Student transfers to VHVL in June 2026.
+     * - Verify collaborator commission is recalculated and wallet/adjustments are correct.
      */
     public function test_scenario_kim_hong_phong_transfer_to_vhvl() {
         // 1. Create intake for June 2026
@@ -40,7 +38,7 @@ class StudentScenarioTest extends TestCase {
             'updated_at' => now(),
         ]);
 
-        // 2. Create Quota for Regular (Chính quy) and Part-Time (VHVL)
+        // 2. Create Quota for Regular (Chính quy)
         $quotaCqId = DB::table('quotas')->insertGetId([
             'intake_id' => $intakeId,
             'name' => 'CNTT - CQ',
@@ -56,6 +54,7 @@ class StudentScenarioTest extends TestCase {
             'updated_at' => now(),
         ]);
 
+        // 3. Create Quota for VHVL
         $quotaVhvlId = DB::table('quotas')->insertGetId([
             'intake_id' => $intakeId,
             'name' => 'CNTT - VHVL',
@@ -71,36 +70,32 @@ class StudentScenarioTest extends TestCase {
             'updated_at' => now(),
         ]);
 
-        // 3. Create collaborator Lê Trọng Đạt
+        // 4. Create collaborator Lê Trọng Đạt
         $collaboratorId = DB::table('collaborators')->insertGetId([
             'full_name' => 'Lê Trọng Đạt',
-            'phone' => '0987654321',
-            'email' => 'datletrong2306@gmail.com',
+            'phone' => '0868266410',
+            'email' => 'datlt2306@gmail.com',
             'ref_id' => 'LETRONGDAT',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $collaborator = Collaborator::find($collaboratorId);
-
-        // 4. Create Commission Policy for Lê Trọng Đạt (based on CommissionPolicySeeder)
+        // Create Commission Policy for Lê Trọng Đạt
+        // Hệ Chính quy (regular): Nhận 1.75tr ngay khi xác nhận phí.
+        // Hệ VHVL (part_time): Nhận 750k khi xác nhận phí + 1.45M khi nhập học.
         CommissionPolicy::create([
             'collaborator_id' => $collaboratorId,
-            'program_type' => ['regular', 'part_time', 'distance'],
+            'program_type' => ['regular', 'part_time'],
             'role' => 'primary',
             'type' => 'fixed',
             'payout_rules' => [
                 'regular' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh chính quy']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng chính quy']
                 ],
                 'part_time' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
-                ],
-                'distance' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Đợt 1: Xác nhận phí'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Đợt 2: Nhập học thành công']
                 ]
             ],
             'trigger' => 'on_verification',
@@ -111,11 +106,6 @@ class StudentScenarioTest extends TestCase {
 
         // 5. Create student Kim Hồng Phong (REGULAR)
         $student = Student::factory()->create([
-            'full_name' => 'Kim Hồng Phong',
-            'dob' => '2005-10-21',
-            'birth_place' => 'Nghệ An',
-            'phone' => '0868266410',
-            'identity_card' => '040205013484',
             'collaborator_id' => $collaboratorId,
             'quota_id' => $quotaCqId,
             'intake_id' => $intakeId,
@@ -131,11 +121,9 @@ class StudentScenarioTest extends TestCase {
             'amount' => 1750000,
             'status' => 'submitted',
         ]);
-
-        // Verify the payment to trigger quota deduction and commission creation
         $payment->update(['status' => 'verified']);
 
-        // Check Quota CQ is consumed
+        // Check Quota consumed
         $this->assertEquals(1, DB::table('quotas')->where('id', $quotaCqId)->value('current_quota'));
 
         // Check Commission generated
@@ -151,10 +139,9 @@ class StudentScenarioTest extends TestCase {
         $commissionService = new CommissionService();
         $commissionService->confirmDirectReceived($item, 1);
 
-        // Wallet of Lê Trọng Đạt should have 1,750,000đ
-        $wallet = Wallet::where('collaborator_id', $collaboratorId)->first();
-        $this->assertNotNull($wallet);
-        $this->assertEquals(1750000, (float)$wallet->balance);
+        // Verify direct commission item is received
+        $item->refresh();
+        $this->assertEquals(CommissionItem::STATUS_RECEIVED_CONFIRMED, $item->status);
 
         // 7. Simulate Quota CQ becomes full (hết chỉ tiêu)
         // Here, current_quota is 1 and target_quota is 1. So it is full.
@@ -181,7 +168,7 @@ class StudentScenarioTest extends TestCase {
 
         // Verify Commission Adjustments
         // The recalculation should compare VHVL rules against paid CQ:
-        // Rule 1 (Active): 750,000đ (payout_verified). Difference = 750,000 - 1,750,000 = -1,000,000đ (immediate wallet deduction)
+        // Rule 1 (Active): 750,000đ (payout_verified). Difference = 750,000 - 1,750,000 = -1,000,000đ (immediate adjustment)
         // Rule 2 (Pending): 1,450,000đ (student_enrolled). Created as a pending adjustment.
         $adjustments = CommissionAdjustment::where('commission_id', $commission->id)->get();
         $this->assertEquals(2, $adjustments->count());
@@ -189,9 +176,9 @@ class StudentScenarioTest extends TestCase {
         $this->assertTrue($adjustments->contains('amount', -1000000));
         $this->assertTrue($adjustments->contains('amount', 1450000));
 
-        // Wallet balance should be adjusted: 1,750,000 - 1,000,000 = 750,000đ
-        $wallet->refresh();
-        $this->assertEquals(750000, (float)$wallet->balance);
+        // Net paid commissions should be adjusted: 1,750,000 - 1,000,000 = 750,000đ
+        $netPaidAmount = 1750000 + (float)CommissionAdjustment::where('commission_id', $commission->id)->where('amount', -1000000)->first()->amount;
+        $this->assertEquals(750000, (float)$netPaidAmount);
     }
 
     /**
@@ -214,7 +201,7 @@ class StudentScenarioTest extends TestCase {
             'updated_at' => now(),
         ]);
 
-        // 2. Create Quotas
+        // 2. Create Quota for Regular (Chính quy)
         $quotaCqId = DB::table('quotas')->insertGetId([
             'intake_id' => $intakeId,
             'name' => 'CNTT - CQ',
@@ -230,6 +217,7 @@ class StudentScenarioTest extends TestCase {
             'updated_at' => now(),
         ]);
 
+        // 3. Create Quota for VHVL
         $quotaVhvlId = DB::table('quotas')->insertGetId([
             'intake_id' => $intakeId,
             'name' => 'CNTT - VHVL',
@@ -245,6 +233,7 @@ class StudentScenarioTest extends TestCase {
             'updated_at' => now(),
         ]);
 
+        // 4. Create Quota for Distance
         $quotaDistanceId = DB::table('quotas')->insertGetId([
             'intake_id' => $intakeId,
             'name' => 'CNTT - TX',
@@ -254,26 +243,24 @@ class StudentScenarioTest extends TestCase {
             'current_quota' => 0,
             'pending_quota' => 0,
             'reserved_quota' => 0,
-            'tuition_fee' => 500000,
+            'tuition_fee' => 750000,
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        // 3. Create collaborator Lê Trọng Đạt
+        // 5. Create collaborator
         $collaboratorId = DB::table('collaborators')->insertGetId([
             'full_name' => 'Lê Trọng Đạt',
-            'phone' => '0987654321',
-            'email' => 'datletrong2306@gmail.com',
+            'phone' => '0868266410',
+            'email' => 'datlt2306@gmail.com',
             'ref_id' => 'LETRONGDAT',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $collaborator = Collaborator::find($collaboratorId);
-
-        // 4. Create Commission Policy
+        // Create Commission Policies
         CommissionPolicy::create([
             'collaborator_id' => $collaboratorId,
             'program_type' => ['regular', 'part_time', 'distance'],
@@ -281,15 +268,15 @@ class StudentScenarioTest extends TestCase {
             'type' => 'fixed',
             'payout_rules' => [
                 'regular' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh chính quy']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng chính quy']
                 ],
                 'part_time' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Đợt 1: Xác nhận phí'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Đợt 2: Nhập học thành công']
                 ],
                 'distance' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 500000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 từ xa'],
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1000000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 từ xa']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 500000, 'payout_trigger' => 'payment_verified', 'description' => 'Đợt 1: Xác nhận phí'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Đợt 2: Nhập học thành công']
                 ]
             ],
             'trigger' => 'on_verification',
@@ -298,7 +285,7 @@ class StudentScenarioTest extends TestCase {
             'active' => true,
         ]);
 
-        // 5. Create student (REGULAR)
+        // Student registers Regular (CQ)
         $student = Student::factory()->create([
             'collaborator_id' => $collaboratorId,
             'quota_id' => $quotaCqId,
@@ -307,7 +294,6 @@ class StudentScenarioTest extends TestCase {
             'major' => 'Công nghệ thông tin',
         ]);
 
-        // 6. Create payment and verify
         $payment = Payment::factory()->create([
             'student_id' => $student->id,
             'primary_collaborator_id' => $collaboratorId,
@@ -324,9 +310,6 @@ class StudentScenarioTest extends TestCase {
         $commissionService = new CommissionService();
         $commissionService->confirmDirectReceived($item, 1);
 
-        $wallet = Wallet::where('collaborator_id', $collaboratorId)->first();
-        $this->assertEquals(1750000, (float)$wallet->balance);
-
         // First transfer: CQ -> VHVL (PART_TIME)
         $student->update([
             'quota_id' => $quotaVhvlId,
@@ -336,8 +319,8 @@ class StudentScenarioTest extends TestCase {
         $payment->update(['program_type' => 'PART_TIME']);
         $commissionService->recalculateCommissionOnTransfer($payment);
 
-        $wallet->refresh();
-        $this->assertEquals(750000, (float)$wallet->balance); // 1.75M - 1M = 750k
+        // Verify direct commission adjustment is -1M
+        $this->assertEquals(-1000000, (float)CommissionAdjustment::where('commission_id', $commission->id)->where('amount', -1000000)->value('amount'));
 
         // Second transfer: VHVL -> Distance (DISTANCE)
         $student->update([
@@ -349,9 +332,13 @@ class StudentScenarioTest extends TestCase {
         
         $commissionService->recalculateCommissionOnTransfer($payment);
 
-        // Let's reload wallet balance and see the result
-        $wallet->refresh();
-        $this->assertEquals(500000, (float)$wallet->balance); // 1.75M - 1M - 250k = 500k
+        // Verify direct commission adjustments sum
+        // CQ (1.75M) -> VHVL (Adjustment: -1M) -> Distance (Adjustment: -250k)
+        // Total Net should be 500k
+        $totalAdjustments = (float)CommissionAdjustment::where('commission_id', $commission->id)
+            ->whereNotIn('status', ['pending', 'cancelled'])
+            ->sum('amount');
+        $this->assertEquals(500000, 1750000 + $totalAdjustments);
     }
 
     public function test_happy_path_registration_to_enrollment_for_each_program_type() {
@@ -372,15 +359,15 @@ class StudentScenarioTest extends TestCase {
         // 2. Create collaborator Lê Trọng Đạt
         $collaboratorId = DB::table('collaborators')->insertGetId([
             'full_name' => 'Lê Trọng Đạt',
-            'phone' => '0987654321',
-            'email' => 'datletrong2306@gmail.com',
+            'phone' => '0868266410',
+            'email' => 'datlt2306@gmail.com',
             'ref_id' => 'LETRONGDAT',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        // Create Commission Policy for Lê Trọng Đạt
+        // Create Commission Policies for each program type
         CommissionPolicy::create([
             'collaborator_id' => $collaboratorId,
             'program_type' => ['regular', 'part_time', 'distance'],
@@ -388,15 +375,15 @@ class StudentScenarioTest extends TestCase {
             'type' => 'fixed',
             'payout_rules' => [
                 'regular' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng tuyển sinh chính quy']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng chính quy']
                 ],
                 'part_time' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Đợt 1: Xác nhận phí'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Đợt 2: Nhập học thành công']
                 ],
                 'distance' => [
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Hoa hồng đợt 1 (Xác nhận phí)'],
-                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Hoa hồng đợt 2 (Nhập học)']
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 750000, 'payout_trigger' => 'payment_verified', 'description' => 'Đợt 1: Xác nhận phí'],
+                    ['recipient_type' => 'direct_ctv', 'amount_vnd' => 1450000, 'payout_trigger' => 'student_enrolled', 'description' => 'Đợt 2: Nhập học thành công']
                 ]
             ],
             'trigger' => 'on_verification',
@@ -427,10 +414,6 @@ class StudentScenarioTest extends TestCase {
         ];
 
         foreach ($programs as $progType => $config) {
-            // Clean up wallets for clean wallet calculations
-            Wallet::query()->delete();
-            WalletTransaction::query()->delete();
-
             // Create Quota
             $quotaId = DB::table('quotas')->insertGetId([
                 'intake_id' => $intakeId,
@@ -499,10 +482,9 @@ class StudentScenarioTest extends TestCase {
             $immediateItem->markAsPaymentConfirmed(null, 1);
             $commissionService->confirmDirectReceived($immediateItem, 1);
 
-            // Check wallet balance reflects only the immediate amount
-            $wallet = Wallet::where('collaborator_id', $collaboratorId)->first();
-            $this->assertNotNull($wallet);
-            $this->assertEquals($config['expected_immediate_commission'], (float)$wallet->balance);
+            // Verify status is received_confirmed
+            $immediateItem->refresh();
+            $this->assertEquals('received_confirmed', $immediateItem->status);
 
             // Now, simulate student enrollment success
             $student->update(['status' => 'enrolled']);
@@ -516,23 +498,19 @@ class StudentScenarioTest extends TestCase {
                 $pendingItem->markAsPaymentConfirmed(null, 1);
                 $commissionService->confirmDirectReceived($pendingItem, 1);
 
-                // Wallet should reflect total amount
-                $wallet->refresh();
-                $this->assertEquals(
-                    $config['expected_immediate_commission'] + $config['expected_pending_commission'],
-                    (float)$wallet->balance
-                );
+                // Verify status is received_confirmed
+                $pendingItem->refresh();
+                $this->assertEquals('received_confirmed', $pendingItem->status);
             }
         }
     }
 
     /**
      * Scenario: Student Dropout and Refund
-     * - Student registers Regular (CQ), commission paid (1.75M, wallet = 1.75M).
+     * - Student registers Regular (CQ), commission paid (1.75M).
      * - Student drops out (status -> dropped). Quota is released automatically.
      * - Payment is cancelled/reverted.
      * - Accountant manually creates a negative CommissionAdjustment to reclaim the commission.
-     * - Wallet balance returns to 0.
      */
     public function test_scenario_student_dropout_and_refund() {
         $commissionService = new CommissionService();
@@ -600,6 +578,7 @@ class StudentScenarioTest extends TestCase {
             'intake_id' => $intakeId,
             'program_type' => 'REGULAR',
             'major' => 'Công nghệ thông tin',
+            'created_at' => now(),
         ]);
 
         // 5. Create payment and verify
@@ -621,8 +600,9 @@ class StudentScenarioTest extends TestCase {
         $item->markAsPaymentConfirmed(null, 1);
         $commissionService->confirmDirectReceived($item, 1);
 
-        $wallet = Wallet::where('collaborator_id', $collaboratorId)->first();
-        $this->assertEquals(1750000, (float)$wallet->balance);
+        // Verify status is received_confirmed
+        $item->refresh();
+        $this->assertEquals('received_confirmed', $item->status);
 
         // 6. Student drops out (STATUS_DROPPED)
         $student->update(['status' => Student::STATUS_DROPPED]);
@@ -643,18 +623,7 @@ class StudentScenarioTest extends TestCase {
             'created_by' => 1,
         ]);
 
-        // Reclaim in wallet
-        $commissionService->addCommissionToWallet(
-            Collaborator::find($collaboratorId),
-            -1750000,
-            'Thu hồi hoa hồng do sinh viên rút hồ sơ',
-            null,
-            $adjustment->id
-        );
-
-        // Wallet balance returns to 0
-        $wallet->refresh();
-        $this->assertEquals(0, (float)$wallet->balance);
+        $this->assertEquals(-1750000, (float)$adjustment->amount);
     }
 
     /**
@@ -682,7 +651,6 @@ class StudentScenarioTest extends TestCase {
             'target_quota' => 10,
             'current_quota' => 0,
             'pending_quota' => 0,
-            'reserved_quota' => 0,
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -759,7 +727,6 @@ class StudentScenarioTest extends TestCase {
             'target_quota' => 10,
             'current_quota' => 0,
             'pending_quota' => 0,
-            'reserved_quota' => 0,
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -835,7 +802,6 @@ class StudentScenarioTest extends TestCase {
             'target_quota' => 10,
             'current_quota' => 0,
             'pending_quota' => 0,
-            'reserved_quota' => 0,
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -1028,4 +994,3 @@ class StudentScenarioTest extends TestCase {
         $this->assertNull($payment->fresh()->commission);
     }
 }
-

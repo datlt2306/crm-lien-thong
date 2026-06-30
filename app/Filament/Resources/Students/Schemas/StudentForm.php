@@ -653,7 +653,8 @@ class StudentForm {
                                             return 'Chưa có dữ liệu.';
                                         }
 
-                                        $query = \App\Models\AuditLog::where('student_id', $record->id);
+                                        $query = \App\Models\AuditLog::where('student_id', $record->id)
+                                            ->where('auditable_type', \App\Models\Student::class);
 
                                         // Filter theo date range
                                         $dateFrom = $get('history_date_from');
@@ -700,6 +701,9 @@ class StudentForm {
                                             'source' => 'Hình thức tuyển sinh',
                                             'notes' => 'Ghi chú',
                                             'payment_status' => 'Trạng thái thanh toán',
+                                            'quota_id' => 'Chỉ tiêu lớp học',
+                                            'collaborator_id' => 'Người giới thiệu (CTV)',
+                                            'has_transferred' => 'Đã chuyển hệ',
                                         ];
 
                                         $formatValue = function ($value, $field = '') {
@@ -787,7 +791,31 @@ class StudentForm {
 
                                             // Format program_type
                                             if ($field === 'program_type') {
-                                                return $str === 'regular' ? 'Chính quy' : ($str === 'part_time' ? 'Vừa học vừa làm' : $str);
+                                                $labels = [
+                                                    'regular' => 'Chính quy',
+                                                    'REGULAR' => 'Chính quy',
+                                                    'part_time' => 'Vừa học vừa làm',
+                                                    'PART_TIME' => 'Vừa học vừa làm',
+                                                    'distance' => 'Từ xa',
+                                                    'DISTANCE' => 'Từ xa',
+                                                ];
+                                                return $labels[$str] ?? (isset($labels[strtolower($str)]) ? $labels[strtolower($str)] : $str);
+                                            }
+
+                                            // Format quota_id: hiển thị tên chỉ tiêu/lớp tuyển
+                                            if ($field === 'quota_id' && !empty($value)) {
+                                                $quota = \App\Models\Quota::find($value);
+                                                if ($quota) {
+                                                    $progLabel = $quota->program_name === 'REGULAR' ? 'Chính quy' : ($quota->program_name === 'PART_TIME' ? 'Vừa học vừa làm' : 'Từ xa');
+                                                    return $quota->name . ' (' . $progLabel . ')';
+                                                }
+                                                return (string) $value;
+                                            }
+
+                                            // Format collaborator_id: hiển thị tên CTV
+                                            if ($field === 'collaborator_id' && !empty($value)) {
+                                                $collaborator = \App\Models\Collaborator::find($value);
+                                                return $collaborator ? $collaborator->full_name : 'Trống';
                                             }
 
                                             // Format intake_id: hiển thị tên đợt tuyển

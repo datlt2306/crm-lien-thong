@@ -44,6 +44,13 @@ class IntakeResource extends Resource {
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder {
         $query = parent::getEloquentQuery();
+        
+        if (session('intakes_show_trashed', false)) {
+            $query->onlyTrashed();
+        } else {
+            $query->whereNull('deleted_at');
+        }
+
         $user = \Illuminate\Support\Facades\Auth::user();
 
         if (!$user) {

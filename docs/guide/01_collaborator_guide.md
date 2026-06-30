@@ -1,6 +1,6 @@
 # Bài 1: Hướng dẫn dành cho Cộng tác viên (CTV)
 
-Chào mừng bạn đến với hệ thống tuyển sinh liên thông GTVT. Tài liệu này hướng dẫn bạn cách sử dụng link giới thiệu để tuyển học sinh, theo dõi số tiền hoa hồng tích lũy và yêu cầu rút tiền về tài khoản ngân hàng của mình.
+Chào mừng bạn đến với hệ thống tuyển sinh liên thông GTVT. Tài liệu này hướng dẫn bạn cách sử dụng link giới thiệu để tuyển học sinh và theo dõi số tiền hoa hồng được nhận trực tiếp trên hệ thống.
 
 ---
 
@@ -34,21 +34,18 @@ Bạn đăng nhập vào trang cá nhân của CTV để xem danh sách học si
 
 ---
 
-## 4. Ví tiền hoa hồng & Quy trình nhận tiền
+## 4. Theo dõi & Đối soát tiền hoa hồng
 
-Hệ thống cung cấp một **Ví tiền tích lũy** trên trang cá nhân của bạn để quản lý tiền hoa hồng:
+Hệ thống cung cấp trang **Danh sách hoa hồng** trên trang cá nhân của bạn để quản lý và theo dõi dòng tiền:
 
-### Các đợt nhận hoa hồng:
-*   **Hệ Chính quy (CQ)**: Bạn sẽ nhận toàn bộ tiền hoa hồng (Ví dụ: 1.750.000đ) vào Ví ngay sau khi Kế toán trường duyệt biên lai nộp lệ phí tuyển sinh của học sinh.
-*   **Hệ Vừa học vừa làm (VHVL) và Hệ Từ xa**: Tiền được cộng làm 2 đợt:
-    *   *Đợt 1 (Đóng lệ phí tuyển sinh)*: Nhận **750.000đ** vào Ví khả dụng ngay khi kế toán duyệt biên lai.
-    *   *Đợt 2 (Duyệt nhập học)*: Khoản tiền **1.450.000đ** ban đầu sẽ ở trạng thái "Chờ khóa". Khi học sinh nộp đủ hồ sơ giấy và được cán bộ trường duyệt trúng tuyển chính thức (Đã nhập học), khoản tiền này sẽ tự động chuyển vào Ví để bạn có thể rút.
+### Các trạng thái của khoản hoa hồng:
+*   **Chờ nhập học (Pending)**: Khoản tiền hoa hồng phát sinh từ hồ sơ của học sinh nhưng chưa đến hạn nhận (Ví dụ: Đợt 2 của hệ VHVL/Từ xa chỉ được mở khóa khi học sinh nộp đủ hồ sơ giấy và chính thức nhập học).
+*   **Có thể thanh toán (Payable)**: Khoản hoa hồng đã đủ điều kiện nhận. Nhà trường sẽ tự động đối soát danh sách này để chuyển khoản cho bạn.
+*   **Đã thanh toán (Paid)**: Khoản hoa hồng nhà trường đã chuyển khoản thành công vào tài khoản ngân hàng của bạn và đính kèm biên lai chuyển tiền.
 
-![Hình 1.4: Ảnh minh họa giao diện Ví tiền tích lũy và theo dõi biến động số dư hoa hồng](images/ctv_wallet_dashboard.png)
+![Hình 1.4: Ảnh minh họa giao diện Danh sách hoa hồng và các trạng thái thanh toán của CTV](images/ctv_wallet_dashboard.png)
 
-### Các bước yêu cầu rút tiền về tài khoản ngân hàng:
-1.  Đăng nhập vào trang cá nhân của bạn, chọn mục **Yêu cầu rút tiền**.
-2.  Nhập số tiền bạn muốn rút (Số tiền này phải nhỏ hơn hoặc bằng số dư khả dụng hiện có trong ví).
-3.  Bấm gửi yêu cầu. Kế toán trường sẽ nhận được thông tin, thực hiện chuyển khoản vào số tài khoản ngân hàng của bạn và phê duyệt lệnh rút trên hệ thống. Số dư ví của bạn sẽ tự động trừ đi tương ứng.
-
-![Hình 1.5: Ảnh minh họa Form làm lệnh yêu cầu rút tiền về ngân hàng](images/ctv_withdraw_request.png)
+### Quy trình nhận tiền:
+1. Bạn không cần làm lệnh rút tiền trên web.
+2. Nhà trường sẽ định kỳ đối soát các khoản hoa hồng có trạng thái **Có thể thanh toán** trên hệ thống.
+3. Kế toán trường thực hiện chuyển khoản trực tiếp vào số tài khoản ngân hàng của bạn và cập nhật trạng thái dòng hoa hồng sang **Đã thanh toán** kèm ảnh biên lai giao dịch thành công. Bạn sẽ nhận được thông báo biến động số dư qua Telegram Bot.

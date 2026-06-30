@@ -61,6 +61,13 @@ class UserResource extends Resource {
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery();
+        
+        if (session('users_show_trashed', false)) {
+            $query->onlyTrashed();
+        } else {
+            $query->whereNull('deleted_at');
+        }
+
         $user = Auth::user();
 
         if (!$user) {

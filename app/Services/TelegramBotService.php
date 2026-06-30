@@ -281,11 +281,29 @@ class TelegramBotService
 
     public function sendMessage($chatId, $text)
     {
-        if (!$this->token) return;
-        Http::post("https://api.telegram.org/bot{$this->token}/sendMessage", [
-            'chat_id' => $chatId,
-            'text' => $text,
-            'parse_mode' => 'Markdown',
-        ]);
+        if (!$this->token) {
+            Log::error('TelegramBotService: TELEGRAM_BOT_TOKEN is not configured!');
+            return;
+        }
+
+        try {
+            $response = Http::timeout(10)->post("https://api.telegram.org/bot{$this->token}/sendMessage", [
+                'chat_id' => $chatId,
+                'text' => $text,
+                'parse_mode' => 'Markdown',
+            ]);
+
+            if (!$response->successful() || !$response->json('ok')) {
+                Log::error('TelegramBotService sendMessage failed', [
+                    'chat_id' => $chatId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('TelegramBotService sendMessage exception: ' . $e->getMessage(), [
+                'chat_id' => $chatId,
+            ]);
+        }
     }
 }

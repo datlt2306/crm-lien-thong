@@ -22,3 +22,24 @@ Route::middleware(['auth:web'])->group(function () {
 
 // Telegram Bot Webhook
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle']);
+
+// Temporary debug route - remove after diagnosis
+Route::get('/telegram/debug', function () {
+    $token = config('services.telegram-bot-api.token');
+    $results = ['token_configured' => !empty($token)];
+
+    if ($token) {
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(10)
+                ->get("https://api.telegram.org/bot{$token}/getMe");
+            $results['getMe'] = $response->json();
+            $results['outbound_ok'] = $response->json('ok') === true;
+        } catch (\Exception $e) {
+            $results['outbound_ok'] = false;
+            $results['error'] = $e->getMessage();
+        }
+    }
+
+    return response()->json($results);
+});
+

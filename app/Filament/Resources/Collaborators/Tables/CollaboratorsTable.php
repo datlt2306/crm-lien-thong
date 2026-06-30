@@ -78,8 +78,27 @@ class CollaboratorsTable {
                     //     });
                     // })
                     // ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('wallet.balance')
-                    ->label('Số dư ví')
+                TextColumn::make('payable_commissions')
+                    ->label('Hoa hồng chưa chi')
+                    ->state(function ($record) {
+                        return $record->commissionItems()
+                            ->where('status', \App\Models\CommissionItem::STATUS_PAYABLE)
+                            ->sum('amount');
+                    })
+                    ->money('VND')
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('paid_commissions')
+                    ->label('Hoa hồng đã chi')
+                    ->state(function ($record) {
+                        return $record->commissionItems()
+                            ->whereIn('status', [
+                                \App\Models\CommissionItem::STATUS_PAID,
+                                \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED
+                            ])
+                            ->sum('amount');
+                    })
                     ->money('VND')
                     ->sortable()
                     ->toggleable(),
@@ -303,52 +322,82 @@ class CollaboratorsTable {
                     ->tooltip('Các hành động khả dụng')
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    // Bulk duyệt CTV
-                    BulkAction::make('approve')
-                        ->label('Duyệt đã chọn')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->modalHeading('Duyệt cộng tác viên đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn duyệt các cộng tác viên đã chọn?')
-                        ->modalSubmitActionLabel('Duyệt')
-                        ->modalCancelActionLabel('Hủy')
-                        ->visible(fn() => Gate::allows('viewAny', Collaborator::class))
-                        ->action(function ($records) {
-                            foreach ($records as $record) {
-                                // Kiểm tra quyền cho từng record
-                                if (Gate::allows('approve', $record) && $record->status === 'pending') {
-                                    $record->update(['status' => 'active']);
+                Action::make('show_active')
+                    ->label(fn() => 'Tất cả (' . \App\Models\Collaborator::whereNull('deleted_at')->count() . ')')
+                    ->icon('heroicon-o-users')
+                    ->color(fn() => !session('collaborators_show_trashed', false) ? 'primary' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->action(function () {
+                        session(['collaborators_show_trashed' => false]);
+                    }),
+                Action::make('show_trashed')
+                    ->label(fn() => 'Thùng rác (' . \App\Models\Collaborator::onlyTrashed()->count() . ')')
+                    ->icon('heroicon-o-trash')
+                    ->color(fn() => session('collaborators_show_trashed', false) ? 'danger' : 'gray')
+                    ->button()
+                    ->size('sm')
+                    ->visible(fn() => \App\Models\Collaborator::onlyTrashed()->count() > 0)
+                    ->action(function () {
+                        session(['collaborators_show_trashed' => true]);
+                    }),
+                BulkActionGroup::make(
+                    session('collaborators_show_trashed', false)
+                        ? [
+                            \Filament\Actions\RestoreBulkAction::make()
+                                ->label('Khôi phục đã chọn'),
+                            \Filament\Actions\ForceDeleteBulkAction::make()
+                                ->label('Xóa vĩnh viễn đã chọn')
+                                ->modalHeading('Xóa vĩnh viễn cộng tác viên đã chọn')
+                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các cộng tác viên đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
+                        ]
+                        : [
+                            BulkAction::make('approve')
+                                ->label('Duyệt đã chọn')
+                                ->icon('heroicon-o-check-circle')
+                                ->color('success')
+                                ->requiresConfirmation()
+                                ->modalHeading('Duyệt cộng tác viên đã chọn')
+                                ->modalDescription('Bạn có chắc chắn muốn duyệt các cộng tác viên đã chọn?')
+                                ->modalSubmitActionLabel('Duyệt')
+                                ->modalCancelActionLabel('Hủy')
+                                ->visible(fn() => Gate::allows('viewAny', Collaborator::class))
+                                ->action(function ($records) {
+                                    foreach ($records as $record) {
+                                        // Kiểm tra quyền cho từng record
+                                        if (Gate::allows('approve', $record) && $record->status === 'pending') {
+                                            $record->update(['status' => 'active']);
 
-                                    // Tạo user account nếu có email
-                                    if ($record->email) {
-                                        $user = \App\Models\User::where('email', $record->email)->first();
-                                        if (!$user) {
-                                            \App\Models\User::create([
-                                                'name' => $record->full_name,
-                                                'email' => $record->email,
-                                                'password' => \Illuminate\Support\Facades\Hash::make('123456'),
-                                                'role' => 'collaborator',
-                                                'collaborator_id' => $record->id,
-                                            ]);
+                                            // Tạo user account nếu có email
+                                            if ($record->email) {
+                                                $user = \App\Models\User::where('email', $record->email)->first();
+                                                if (!$user) {
+                                                    \App\Models\User::create([
+                                                        'name' => $record->full_name,
+                                                        'email' => $record->email,
+                                                        'password' => \Illuminate\Support\Facades\Hash::make('123456'),
+                                                        'role' => 'collaborator',
+                                                        'collaborator_id' => $record->id,
+                                                    ]);
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }
 
-                            \Filament\Notifications\Notification::make()
-                                ->title('Đã duyệt các cộng tác viên thành công!')
-                                ->success()
-                                ->send();
-                        }),
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Đã duyệt các cộng tác viên thành công!')
+                                        ->success()
+                                        ->send();
+                                }),
 
-                    DeleteBulkAction::make()
-                        ->label('Xóa đã chọn')
-                        ->modalHeading('Xóa cộng tác viên đã chọn')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa các cộng tác viên đã chọn? Hồ sơ sẽ được chuyển vào Thùng rác.')
-                        ->visible(fn() => Gate::allows('viewAny', Collaborator::class)),
-                ]),
+                            DeleteBulkAction::make()
+                                ->label('Bỏ vào thùng rác')
+                                ->modalHeading('Bỏ cộng tác viên đã chọn vào thùng rác')
+                                ->modalDescription('Bạn có chắc chắn muốn bỏ các cộng tác viên đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                                ->visible(fn() => Gate::allows('viewAny', Collaborator::class)),
+                        ]
+                )
+                ->label('Hành động hàng loạt'),
             ])
             ->defaultSort('id', 'desc');
     }

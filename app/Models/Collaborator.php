@@ -74,9 +74,7 @@ class Collaborator extends Model {
         return $this->hasMany(RefCode::class);
     }
 
-    public function wallet() {
-        return $this->hasOne(Wallet::class);
-    }
+
 
     // ===== LOẠI BỎ LOGIC CTV CẤP 2 =====
     // Đã xóa: isLevel1(), isLevel2()

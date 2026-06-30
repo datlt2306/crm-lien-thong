@@ -38,9 +38,9 @@ Gửi khi kế toán xác nhận biên lai đóng phí của học sinh:
 
 ![Hình 6.2: Tin nhắn Telegram tự động thông báo kế toán đã xác thực đóng tiền học phí và số chỉ tiêu hiện tại](images/telegram_payment_verified_notification.png)
 
-### c. Báo phát sinh hoa hồng cho Cộng tác viên
-Gửi khi ví của CTV được cộng thêm tiền thưởng giới thiệu:
-*   *Mẫu tin nhắn*: *"Thông báo: Số dư ví tích lũy của CTV Lê Trọng Đạt vừa được cộng thêm +750.000đ từ hồ sơ học sinh Nguyễn Văn A."*
+### c. Báo phát sinh hoa hồng mới cho Cộng tác viên
+Gửi khi phát sinh khoản hoa hồng mới đủ điều kiện chi trả:
+*   *Mẫu tin nhắn*: *"Thông báo: Ghi nhận hoa hồng tuyển sinh mới trị giá +750.000đ dành cho CTV Lê Trọng Đạt từ hồ sơ học sinh Nguyễn Văn A."*
 
 ![Hình 6.3: Tin nhắn Telegram tự động thông báo ví tiền CTV được cộng hoa hồng](images/telegram_commission_notification.png)
 
