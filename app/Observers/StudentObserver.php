@@ -7,6 +7,8 @@ use App\Services\CommissionService;
 use App\Services\DashboardCacheService;
 
 class StudentObserver {
+    public static bool $skipNotifications = false;
+
     protected CommissionService $commissionService;
     protected \App\Services\QuotaService $quotaService;
 
@@ -102,6 +104,10 @@ class StudentObserver {
             $idPart = sprintf('%03d', $student->id % 1000);
             $student->profile_code = "HS{$year}{$randomPart}{$idPart}";
             $student->saveQuietly();
+        }
+
+        if (self::$skipNotifications) {
+            return;
         }
 
         $sentTelegramChatIds = [];
