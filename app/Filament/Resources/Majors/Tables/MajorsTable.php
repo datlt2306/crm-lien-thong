@@ -48,7 +48,23 @@ class MajorsTable
                     \Filament\Actions\DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa ngành học')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa ngành học này? Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa ngành học này?')
+                        ->before(function (\Filament\Actions\DeleteAction $action, Major $record) {
+                            $code = $record->code;
+                            $name = $record->name;
+                            $hasRelations = Student::whereIn('major_name', [$code, $name])->exists()
+                                || Quota::whereIn('major_name', [$code, $name])->exists()
+                                || AnnualQuota::whereIn('major_name', [$code, $name])->exists();
+
+                            if ($hasRelations) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa ngành học')
+                                    ->body('Ngành học này đang có học viên đăng ký hoặc nằm trong bảng chỉ tiêu năm/chỉ tiêu đợt. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
+                            }
+                        }),
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục'),
                     \Filament\Actions\ForceDeleteAction::make()
@@ -77,28 +93,43 @@ class MajorsTable
                     ->color(fn() => session('majors_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\Major::onlyTrashed()->count() > 0)
+                    
                     ->action(function () {
                         session(['majors_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('majors_show_trashed', false)
-                        ? [
-                            \Filament\Actions\RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            \Filament\Actions\ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn ngành học đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các ngành học đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            \Filament\Actions\DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ ngành học đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các ngành học đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.'),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('majors_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('majors_show_trashed', false)),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Xóa hàng loạt')
+                        ->modalHeading('Bỏ vào thùng rác')
+                        ->modalDescription('Bạn có chắc chắn muốn bỏ các mục đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                        ->before(function (\Filament\Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records) {
+                            $hasActive = $records->contains(function ($record) {
+                                $code = $record->code;
+                                $name = $record->name;
+                                return Student::whereIn('major_name', [$code, $name])->exists()
+                                    || Quota::whereIn('major_name', [$code, $name])->exists()
+                                    || AnnualQuota::whereIn('major_name', [$code, $name])->exists();
+                            });
+
+                            if ($hasActive) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa hàng loạt')
+                                    ->body('Một hoặc nhiều ngành học được chọn đang có học viên hoặc nằm trong chỉ tiêu tuyển sinh/năm. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
+                            }
+                        })
+                        ->visible(fn () => !session('majors_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->defaultSort('id', 'desc');
     }

@@ -19,4 +19,8 @@ class ListQuotas extends ListRecords {
 
         return $actions;
     }
+
+    public function getTitle(): string {
+        return '';
+    }
 }

@@ -99,8 +99,11 @@ class AnnualQuotaForm {
                             ->label('Chỉ tiêu cả năm')
                             ->required()
                             ->numeric()
-                            ->minValue(1)
-                            ->suffix('học viên'),
+                            ->minValue(fn ($record) => $record ? $record->current_quota : 1)
+                            ->suffix('học viên')
+                            ->validationMessages([
+                                'min' => 'Chỉ tiêu cả năm không được thấp hơn số lượng học viên đã tuyển thực tế (:min học viên).',
+                            ]),
 
                         TextInput::make('current_quota')
                             ->label('Đã tuyển (cộng dồn)')

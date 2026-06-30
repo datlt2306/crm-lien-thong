@@ -106,9 +106,12 @@ class QuotaForm {
                             ->label('🎯 Chỉ tiêu mục tiêu')
                             ->required()
                             ->numeric()
-                            ->minValue(1)
+                            ->minValue(fn ($record) => $record ? $record->current_quota : 1)
                             ->default(0)
                             ->suffix('học viên')
+                            ->validationMessages([
+                                'min' => 'Chỉ tiêu mục tiêu không được thấp hơn số lượng học viên đã tuyển (:min học viên).',
+                            ])
                             ->placeholder('Nhập số lượng dự kiến...')
                             ->helperText('Số lượng học viên dự kiến tuyển sinh cho ngành này')
                             ->live()

@@ -131,6 +131,16 @@ class AnnualQuotasTable {
                         ->label('Xóa')
                         ->modalHeading('Xóa chỉ tiêu năm')
                         ->modalDescription('Bạn có chắc chắn muốn xóa chỉ tiêu năm này? Hồ sơ sẽ được chuyển vào Thùng rác.')
+                        ->before(function (\Filament\Actions\DeleteAction $action, AnnualQuota $record) {
+                            if ($record->current_quota > 0) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa chỉ tiêu')
+                                    ->body("Chỉ tiêu này đã tuyển sinh {$record->current_quota} học viên. Không thể xóa chỉ tiêu đang hoạt động.")
+                                    ->send();
+                                $action->halt();
+                            }
+                        })
                         ->visible(fn() => $canDelete),
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục'),
@@ -154,29 +164,36 @@ class AnnualQuotasTable {
                     ->color(fn() => session('annual_quotas_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\AnnualQuota::onlyTrashed()->count() > 0)
+                    
                     ->action(function () {
                         session(['annual_quotas_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('annual_quotas_show_trashed', false)
-                        ? [
-                            \Filament\Actions\RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            \Filament\Actions\ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn chỉ tiêu năm đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các chỉ tiêu năm đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            \Filament\Actions\DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ chỉ tiêu năm đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các chỉ tiêu năm đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
-                                ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('annual_quota_delete')),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('annual_quotas_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('annual_quotas_show_trashed', false)),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Xóa hàng loạt')
+                        ->modalHeading('Bỏ vào thùng rác')
+                        ->modalDescription('Bạn có chắc chắn muốn bỏ các mục đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                        ->before(function (\Filament\Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records) {
+                            $hasActive = $records->contains(fn($r) => $r->current_quota > 0);
+                            if ($hasActive) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa hàng loạt')
+                                    ->body('Một hoặc nhiều chỉ tiêu năm được chọn đã có học viên đăng ký tuyển sinh. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
+                            }
+                        })
+                        ->visible(fn () => !session('annual_quotas_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->defaultSort('year', 'desc');
     }

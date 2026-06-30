@@ -178,29 +178,25 @@ class CommissionPoliciesTable {
                     ->color(fn() => session('commission_policies_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\CommissionPolicy::onlyTrashed()->count() > 0)
+                    
                     ->action(function () {
                         session(['commission_policies_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('commission_policies_show_trashed', false)
-                        ? [
-                            \Filament\Actions\RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            \Filament\Actions\ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn chính sách hoa hồng đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các chính sách hoa hồng đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            \Filament\Actions\DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ chính sách hoa hồng đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các chính sách hoa hồng đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
-                                ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('commission_policy_delete')),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('commission_policies_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('commission_policies_show_trashed', false)),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Xóa hàng loạt')
+                        ->modalHeading('Bỏ vào thùng rác')
+                        ->modalDescription('Bạn có chắc chắn muốn bỏ các mục đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                        ->visible(fn () => !session('commission_policies_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->defaultSort('id', 'desc');
     }

@@ -77,7 +77,9 @@ class CommissionItem extends Model {
      * Kiểm tra xem có thể thanh toán không
      */
     public function canBePaid(): bool {
-        return in_array($this->status, [self::STATUS_PAYABLE, self::STATUS_PENDING]);
+        // Chỉ STATUS_PAYABLE mới có thể chi - đã được khởi động bởi trigger
+        // STATUS_PENDING = chưa đủ điều kiện (SV chưa nhập học) → KHÔNG chi
+        return $this->status === self::STATUS_PAYABLE;
     }
 
     /**
@@ -158,10 +160,12 @@ class CommissionItem extends Model {
      */
     public function canAdvanceToNextStatus(): bool {
         $nextStatuses = [
-            self::STATUS_PENDING => [self::STATUS_PAYABLE, self::STATUS_CANCELLED],
-            self::STATUS_PAYABLE => [self::STATUS_PAID, self::STATUS_CANCELLED],
-            self::STATUS_PAID => [],
-            self::STATUS_CANCELLED => [],
+            self::STATUS_PENDING           => [self::STATUS_PAYABLE, self::STATUS_CANCELLED],
+            self::STATUS_PAYABLE           => [self::STATUS_PAYMENT_CONFIRMED, self::STATUS_PAID, self::STATUS_CANCELLED],
+            self::STATUS_PAID              => [],
+            self::STATUS_PAYMENT_CONFIRMED => [self::STATUS_RECEIVED_CONFIRMED, self::STATUS_PAYABLE],
+            self::STATUS_RECEIVED_CONFIRMED => [],
+            self::STATUS_CANCELLED         => [],
         ];
 
         return !empty($nextStatuses[$this->status] ?? []);
@@ -172,10 +176,12 @@ class CommissionItem extends Model {
      */
     public function getNextAvailableStatuses(): array {
         $nextStatuses = [
-            self::STATUS_PENDING => [self::STATUS_PAYABLE, self::STATUS_CANCELLED],
-            self::STATUS_PAYABLE => [self::STATUS_PAID, self::STATUS_CANCELLED],
-            self::STATUS_PAID => [],
-            self::STATUS_CANCELLED => [],
+            self::STATUS_PENDING           => [self::STATUS_PAYABLE, self::STATUS_CANCELLED],
+            self::STATUS_PAYABLE           => [self::STATUS_PAYMENT_CONFIRMED, self::STATUS_PAID, self::STATUS_CANCELLED],
+            self::STATUS_PAID              => [],
+            self::STATUS_PAYMENT_CONFIRMED => [self::STATUS_RECEIVED_CONFIRMED, self::STATUS_PAYABLE],
+            self::STATUS_RECEIVED_CONFIRMED => [],
+            self::STATUS_CANCELLED         => [],
         ];
 
         return $nextStatuses[$this->status] ?? [];

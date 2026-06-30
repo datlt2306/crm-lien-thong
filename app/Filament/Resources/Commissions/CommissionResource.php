@@ -97,8 +97,11 @@ class CommissionResource extends Resource {
                 \Filament\Tables\Columns\TextColumn::make('student.program_type')
                     ->label('Hệ tuyển sinh')
                     ->state(function (Commission $record) {
-                        return $record->rule['program_type'] ?? 
-                                $record->student?->program_type;
+                        // Luôn ưu tiên program_type thực tế của sinh viên (chính xác nhất)
+                        // Rule snapshot có thể lỗi thời nếu SV đã chuyển hệ
+                        return $record->student?->program_type
+                            ?? $record->rule['program_type']
+                            ?? null;
                     })
                     ->formatStateUsing(fn($state) => match (strtolower((string)$state)) {
                         'regular' => '🎓 Chính quy',
@@ -123,19 +126,9 @@ class CommissionResource extends Resource {
                             'payment_amount_sort' => \App\Models\Payment::select('amount')
                                 ->whereColumn('id', 'commissions.payment_id')
                                 ->limit(1)
-                        ])->orderBy('payment_amount_sort', $direction);
+                         ])->orderBy('payment_amount_sort', $direction);
                     })
-                    ->visible(fn(): bool => !$isCtv)
-                    ->summarize(
-                        \Filament\Tables\Columns\Summarizers\Summarizer::make()
-                            ->label('Tổng phí thu')
-                            ->money('VND')
-                            ->using(function ($query) {
-                                $q = clone $query;
-                                $paymentIds = $q->pluck('commissions.payment_id');
-                                return \App\Models\Payment::whereIn('id', $paymentIds)->sum('amount');
-                            })
-                    ),
+                    ->visible(fn(): bool => !$isCtv),
 
                 \Filament\Tables\Columns\TextColumn::make('items.recipient.full_name')
                     ->label('CTV nhận')
@@ -177,33 +170,7 @@ class CommissionResource extends Resource {
                         return "Đã chi: " . number_format($paid, 0, ',', '.') . " | Còn lại: " . number_format($remaining, 0, ',', '.');
                     })
                     ->sortable()
-                    ->visible(fn(): bool => !$isCtv)
-                    ->summarize([
-                        \Filament\Tables\Columns\Summarizers\Summarizer::make()
-                            ->label('Tổng hoa hồng')
-                            ->money('VND')
-                            ->using(function ($query) {
-                                $q = clone $query;
-                                $ids = $q->pluck('commissions.id');
-                                return \App\Models\CommissionItem::whereIn('commission_id', $ids)
-                                    ->where('status', '!=', \App\Models\CommissionItem::STATUS_CANCELLED)
-                                    ->sum('amount');
-                            }),
-                        \Filament\Tables\Columns\Summarizers\Summarizer::make()
-                            ->label('Tổng đã chi')
-                            ->money('VND')
-                            ->using(function ($query) {
-                                $q = clone $query;
-                                $ids = $q->pluck('commissions.id');
-                                return \App\Models\CommissionItem::whereIn('commission_id', $ids)
-                                    ->whereIn('status', [
-                                        \App\Models\CommissionItem::STATUS_PAID,
-                                        \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
-                                        \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED
-                                    ])
-                                    ->sum('amount');
-                            }),
-                    ]),
+                    ->visible(fn(): bool => !$isCtv),
 
                 \Filament\Tables\Columns\IconColumn::make('is_adjusted')
                     ->label('Điều chỉnh')
@@ -355,9 +322,9 @@ class CommissionResource extends Resource {
                         ->icon('heroicon-o-check-circle')
                         ->color('warning')
                         ->requiresConfirmation()
-                        ->modalHeading('Đánh dấu có thể thanh toán')
-                        ->modalDescription('Đánh dấu commission này đã đến hạn chi, CTV có thể nhận.')
-                        ->modalSubmitActionLabel('Xác nhận')
+                        ->modalHeading('Đánh dấu có thể thanh toán (Ghi đè thủ công)')
+                        ->modalDescription('⚠️ Thao tác này sẽ đánh dấu TẤT CẢ các đợt hoa hồng đang chờ (kể cả đợt chưa đến hạn) là CÓ THỂ CHI. Chỉ thực hiện khi bạn chắc chắn tất cả điều kiện đã được thỏa mãn (VD: SV đã nhập học).')
+                        ->modalSubmitActionLabel('Xác nhận ghi đè')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (Commission $record) use ($user): bool {
                             return $record->items()->where('status', CommissionItem::STATUS_PENDING)->exists() && $user->can('commission_update');
@@ -389,11 +356,15 @@ class CommissionResource extends Resource {
                         ->modalSubmitActionLabel('Xác nhận thanh toán')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (Commission $record) use ($user): bool {
+                            // Chỉ hiển thị khi có item đã đến hạn chi (STATUS_PAYABLE)
+                            // STATUS_PENDING = chưa đủ điều kiện (VD: SV chưa nhập học) ⇒ không chi
                             return $user->can('commission_payout')
-                                && $record->items()->where('role', 'direct')->whereIn('status', [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])->exists();
+                                && $record->items()->where('role', 'direct')->where('status', CommissionItem::STATUS_PAYABLE)->exists();
                         })
                         ->action(function (Commission $record, array $data) {
-                            $record->items()->where('role', 'direct')->whereIn('status', [CommissionItem::STATUS_PAYABLE, CommissionItem::STATUS_PENDING])
+                            // Chỉ chi các item đã đến hạn (STATUS_PAYABLE) - có payable_at được set
+                            // Không chi STATUS_PENDING vì chưa thỏa điều kiện trigger (SV chưa nhập học, v.v.)
+                            $record->items()->where('role', 'direct')->where('status', CommissionItem::STATUS_PAYABLE)
                                 ->each(function ($item) use ($data) {
                                     $item->markAsPaymentConfirmed($data['bill'] ?? null, \Illuminate\Support\Facades\Auth::user()->id);
                                     
@@ -477,12 +448,13 @@ class CommissionResource extends Resource {
                                         $major = $student->major;
                                         $ext = $file->getClientOriginalExtension();
                                         
-                                        $systemCode = match (strtoupper((string)$student->program_type)) {
-                                            'regular', 'CHÍNH QUY' => 'CQ',
-                                            'part_time', 'VỪA HỌC VỪA LÀM' => 'VHVL',
-                                            'distance', 'TỪ XA' => 'TX',
-                                            default => $student->program_type
+                                        $systemCode = match (strtolower((string)$student->program_type)) {
+                                            'regular' => 'CQ',
+                                            'part_time' => 'VHVL',
+                                            'distance' => 'TX',
+                                            default => strtoupper($student->program_type)
                                         };
+
 
                                         $fileName = "{$profileCode}_{$fullName}_{$major}_{$systemCode}.{$ext}";
                                         
@@ -673,12 +645,11 @@ class CommissionResource extends Resource {
                             foreach ($records as $record) {
                                 $studentName = $record->student?->full_name ?? 'N/A';
                                 
+                                // Chỉ chi items đã đến hạn (STATUS_PAYABLE) - có payable_at
+                                // KHÔNG chi STATUS_PENDING (chưa thỏa điều kiện trigger)
+                                // KHÔNG chi STATUS_PAID (legacy, bulk action này chỉ confirm)
                                 $record->items()
-                                    ->whereIn('status', [
-                                        CommissionItem::STATUS_PAYABLE, 
-                                        CommissionItem::STATUS_PENDING,
-                                        CommissionItem::STATUS_PAID
-                                    ])
+                                    ->where('status', CommissionItem::STATUS_PAYABLE)
                                     ->each(function ($item) use (&$batchData, &$totalAmount, &$successCount, $studentName, $userId) {
                                         $collaboratorName = $item->recipient?->full_name ?? 'N/A';
                                         $amount = (float)($item->amount ?? 0);
@@ -738,90 +709,199 @@ class CommissionResource extends Resource {
                 ]),
             ])
             ->headerActions([
-                Action::make('create')
-                    ->label('Xuất file Excel')
-                    ->modalHeading('Thêm hoa hồng thủ công')
+                Action::make('export_fee_closing')
+                    ->label('Xuất bảng kê lệ phí')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
                     ->form([
-                        \Filament\Forms\Components\Select::make('payment_id')
-                            ->label('Đợt thanh toán (Học viên)')
-                            ->options(fn () => \App\Models\Payment::query()
-                                ->with('student')
-                                ->latest()
-                                ->get()
-                                ->mapWithKeys(fn($p) => [
-                                    $p->id => ($p->student?->full_name ?? 'N/A') . " - " . number_format($p->amount, 0, ',', '.') . " VND (" . ($p->student?->profile_code ?? 'N/A') . ")"
-                                ])
-                            )
-                            ->searchable()
-                            ->required(),
-                        \Filament\Forms\Components\Select::make('recipient_collaborator_id')
-                            ->label('Người nhận hoa hồng (CTV)')
-                            ->options(fn () => \App\Models\Collaborator::query()->pluck('full_name', 'id'))
-                            ->searchable()
-                            ->required(),
-                        \Filament\Forms\Components\TextInput::make('amount')
-                            ->label('Số tiền hoa hồng')
-                            ->numeric()
-                            ->required(),
-                        \Filament\Forms\Components\Select::make('role')
-                            ->label('Vai trò nhận')
-                            ->options([
-                                'direct' => 'Trực tiếp (CTV cấp 1)',
-                                'override' => 'Gián tiếp (CTV cấp 2/QL)',
-                            ])
-                            ->default('direct')
-                            ->required(),
+                        \Filament\Schemas\Components\Grid::make(2)
+                            ->schema([
+                                \Filament\Forms\Components\DatePicker::make('start_date')
+                                    ->label('Từ ngày')
+                                    ->default(now()->startOfMonth())
+                                    ->required()
+                                    ->native(true)
+                                    ->live(onBlur: true),
+                                \Filament\Forms\Components\DatePicker::make('end_date')
+                                    ->label('Đến ngày')
+                                    ->default(now())
+                                    ->required()
+                                    ->native(true)
+                                    ->afterOrEqual('start_date'),
+                            ]),
                         \Filament\Forms\Components\Select::make('status')
-                            ->label('Trạng thái chi trả')
+                            ->label('Trạng thái hoa hồng')
                             ->options([
-                                \App\Models\CommissionItem::STATUS_PENDING => 'Chờ đối soát (Chưa nhập học)',
-                                \App\Models\CommissionItem::STATUS_PAYABLE => 'Có thể thanh toán (Đến hạn)',
-                                \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED => 'Đã chốt chi (Đã xác nhận thanh toán)',
+                                'all' => 'Tất cả trạng thái (Đã chi & Chưa chi)',
+                                \App\Models\CommissionItem::STATUS_PAYABLE => 'Chưa chi (Đang chờ đối soát)',
+                                \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED => 'Đã chi (Xác nhận thanh toán)',
                             ])
-                            ->default(\App\Models\CommissionItem::STATUS_PAYABLE)
+                            ->default('all')
                             ->required(),
-                        \Filament\Forms\Components\Textarea::make('notes')
-                            ->label('Ghi chú')
-                            ->placeholder('Nhập ghi chú hoặc lý do tạo thủ công...'),
+                        \Filament\Forms\Components\Select::make('collaborator_id')
+                            ->label('Người hướng dẫn')
+                            ->options(\App\Models\Collaborator::pluck('full_name', 'id'))
+                            ->searchable()
+                            ->required()
+                            ->hidden(fn() => Auth::user()->hasRole('collaborator'))
+                            ->dehydrated(true)
+                            ->default(function() {
+                                $user = Auth::user();
+                                if ($user->hasRole('collaborator')) {
+                                    return \App\Models\Collaborator::where('email', $user->email)->first()?->id;
+                                }
+                                return null;
+                            })
+                            ->placeholder('Bắt buộc chọn một CTV')
+                            ->helperText('Chọn CTV để lọc danh sách học viên'),
+                        \Filament\Forms\Components\TextInput::make('title')
+                            ->label('Tiêu đề bảng kê')
+                            ->hidden(fn() => Auth::user()->hasRole('collaborator'))
+                            ->placeholder('Ví dụ: BẢNG KÊ HOA HỒNG CTV NGUYỄN VĂN A')
+                            ->helperText('Để trống để tự động tạo theo mẫu: Danh sách lệ phí [Tên CTV] từ [Ngày] - [Ngày]'),
+                        \Filament\Forms\Components\TextInput::make('note')
+                            ->label('Ghi chú chung')
+                            ->hidden(fn() => Auth::user()->hasRole('collaborator'))
+                            ->placeholder('Nhập ghi chú cho bảng kê (ví dụ: Lệ phí hồ sơ, Học phí...)')
+                            ->default(''),
                     ])
                     ->action(function (array $data) {
-                        $payment = \App\Models\Payment::find($data['payment_id']);
-                        if (!$payment) return;
+                        $user = Auth::user();
+                        if ($user->hasRole('collaborator')) {
+                            $data['collaborator_id'] = \App\Models\Collaborator::where('email', $user->email)->first()?->id;
+                        }
+                        
+                        $startDate = \Carbon\Carbon::parse($data['start_date'])->startOfDay();
+                        $endDate = \Carbon\Carbon::parse($data['end_date'])->endOfDay();
+                        $collaboratorId = $data['collaborator_id'];
 
-                        \Illuminate\Support\Facades\DB::transaction(function () use ($data, $payment) {
-                            $commission = Commission::firstOrCreate(
-                                ['payment_id' => $payment->id],
-                                [
-                                    'student_id' => $payment->student_id,
-                                    'rule' => [
-                                        'description' => 'Tạo thủ công',
-                                        'amount' => $payment->amount,
-                                    ],
-                                    'generated_at' => now(),
-                                ]
-                            );
+                        if ($data['status'] === 'all') {
+                            $dateField = 'payable_at';
+                        } else {
+                            $dateField = $data['status'] === \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED ? 'payment_confirmed_at' : 'payable_at';
+                        }
 
-                            CommissionItem::create([
-                                'commission_id' => $commission->id,
-                                'recipient_collaborator_id' => $data['recipient_collaborator_id'],
-                                'role' => $data['role'],
-                                'amount' => $data['amount'],
-                                'status' => $data['status'],
-                                'trigger' => 'manual',
-                                'payable_at' => ($data['status'] === CommissionItem::STATUS_PAYABLE) ? now() : null,
-                                'visibility' => 'visible',
-                                'meta' => [
-                                    'description' => $data['notes'] ?? 'Tạo thủ công',
-                                ],
+                        $query = \App\Models\CommissionItem::query()
+                            ->where('recipient_collaborator_id', $collaboratorId)
+                            ->whereBetween($dateField, [$startDate, $endDate]);
+
+                        if ($data['status'] === 'all') {
+                            $query->whereIn('status', [
+                                \App\Models\CommissionItem::STATUS_PAYABLE,
+                                \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED,
+                                \App\Models\CommissionItem::STATUS_PAID
                             ]);
-                        });
+                        } else if ($data['status'] === \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED) {
+                            $query->whereIn('status', [
+                                \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                \App\Models\CommissionItem::STATUS_RECEIVED_CONFIRMED,
+                                \App\Models\CommissionItem::STATUS_PAID
+                            ]);
+                        } else {
+                            $query->where('status', $data['status']);
+                        }
+
+                        $count = $query->count();
 
                         \Filament\Notifications\Notification::make()
-                            ->title('Tạo hoa hồng thành công')
-                            ->success()
+                            ->info()
+                            ->title('Thông tin đối soát')
+                            ->body("Tìm thấy {$count} mục hoa hồng phù hợp với tiêu chí.")
                             ->send();
-                    })
-                    ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('commission_update') || \Illuminate\Support\Facades\Auth::user()?->role === 'super_admin'),
+
+                        if ($count === 0) {
+                            return;
+                        }
+
+                        $filename = 'Chot-so-le-phi-' . $startDate->format('d-m') . '-to-' . $endDate->format('d-m-Y') . '.xlsx';
+                        
+                        return \Maatwebsite\Excel\Facades\Excel::download(
+                            new \App\Exports\FeeClosingExport($data),
+                            $filename
+                        );
+                    }),
+
+                Action::make('import_reconciliation')
+                    ->label('Import đối soát (Từ Excel)')
+                    ->icon('heroicon-o-document-arrow-up')
+                    ->color('warning')
+                    ->form([
+                        \Filament\Forms\Components\FileUpload::make('file')
+                            ->label('Chọn file Excel đã đối soát')
+                            ->disk('local')
+                            ->directory('temp-imports')
+                            ->required()
+                            ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']),
+                        \Filament\Forms\Components\Placeholder::make('help')
+                            ->label('Hướng dẫn')
+                            ->content(new \Illuminate\Support\HtmlString('
+                                <ul class="list-disc ml-5 text-sm">
+                                    <li>Bước 1: Nhấn "Xuất bảng kê lệ phí" để tải file danh sách về.</li>
+                                    <li>Bước 2: Mở file Excel, điền chữ <b>"X"</b> vào cột <b>"Xác nhận đã chi (Điền X)"</b> cho những người đã trả tiền.</li>
+                                    <li>Bước 3: Lưu file và tải lên tại đây.</li>
+                                    <li class="text-danger-600 font-bold">Lưu ý: KHÔNG ĐƯỢC thay đổi cột "ID" trong file Excel.</li>
+                                </ul>
+                            ')),
+                    ])
+                    ->visible(fn() => Auth::user()->can('commission_payout'))
+                    ->action(function (array $data) {
+                        $filePath = \Illuminate\Support\Facades\Storage::disk('local')->path($data['file']);
+                        
+                        try {
+                            $spreadsheet = \Maatwebsite\Excel\Facades\Excel::toArray([], $filePath);
+                            $totalUpdated = 0;
+                            $userId = Auth::id();
+
+                            foreach ($spreadsheet as $sheet) {
+                                // Bỏ qua 2 dòng đầu (Tiêu đề và Header)
+                                $rows = array_slice($sheet, 2);
+                                
+                                foreach ($rows as $row) {
+                                    // Cột I là Xác nhận (index 8), Cột J là ID (index 9)
+                                    $confirmValue = trim((string)($row[8] ?? ''));
+                                    $itemId = $row[9] ?? null;
+
+                                    if (!empty($confirmValue) && $itemId) {
+                                        $item = \App\Models\CommissionItem::find($itemId);
+                                        
+                                        if ($item && $item->status === \App\Models\CommissionItem::STATUS_PAYABLE) {
+                                            $item->updateQuietly([
+                                                'status' => \App\Models\CommissionItem::STATUS_PAYMENT_CONFIRMED,
+                                                'payment_confirmed_at' => now(),
+                                                'payment_confirmed_by' => $userId,
+                                            ]);
+                                            $totalUpdated++;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Xoá file sau khi xong
+                            \Illuminate\Support\Facades\Storage::disk('local')->delete($data['file']);
+
+                            if ($totalUpdated > 0) {
+                                \Filament\Notifications\Notification::make()
+                                    ->success()
+                                    ->title("Đối soát thành công")
+                                    ->body("Đã cập nhật trạng thái 'Đã chi' cho {$totalUpdated} mục hoa hồng.")
+                                    ->send();
+                            } else {
+                                \Filament\Notifications\Notification::make()
+                                    ->warning()
+                                    ->title("Không có dữ liệu thay đổi")
+                                    ->body("Không tìm thấy mục hoa hồng nào có đánh dấu 'X' hoặc các mục đã được chốt trước đó.")
+                                    ->send();
+                            }
+
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->danger()
+                                ->title("Lỗi xử lý file")
+                                ->body($e->getMessage())
+                                ->send();
+                        }
+                    }),
             ])
             ->modifyQueryUsing(function ($query) {
                 $user = Auth::user();

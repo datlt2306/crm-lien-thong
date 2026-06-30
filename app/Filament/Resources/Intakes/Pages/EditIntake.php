@@ -27,7 +27,24 @@ class EditIntake extends EditRecord {
 
     protected function getHeaderActions(): array {
         return [
-            DeleteAction::make(),
+            DeleteAction::make()
+                ->before(function (DeleteAction $action) {
+                    $intake = $this->record;
+                    $hasStudents = Quota::where('intake_id', $intake->id)
+                        ->where(function ($q) {
+                            $q->where('current_quota', '>', 0)
+                                ->orWhere('pending_quota', '>', 0);
+                        })->exists() || Student::whereIn('quota_id', Quota::where('intake_id', $intake->id)->pluck('id'))->exists();
+
+                    if ($hasStudents) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Không thể xóa đợt tuyển sinh')
+                            ->body('Đợt tuyển sinh này đã có học viên đăng ký tuyển sinh trong các chỉ tiêu tuyển sinh thành phần. Không thể thực hiện xóa.')
+                            ->send();
+                        $action->halt();
+                    }
+                }),
         ];
     }
 

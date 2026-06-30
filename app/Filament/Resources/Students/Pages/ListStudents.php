@@ -9,9 +9,18 @@ use Illuminate\Support\Facades\Auth;
 
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\Student;
 
 class ListStudents extends ListRecords {
     protected static string $resource = StudentResource::class;
+
+    public function mount(): void {
+        parent::mount();
+        session()->forget('students_show_trashed');
+    }
+
+
+    
 
     protected function getHeaderWidgets(): array
     {

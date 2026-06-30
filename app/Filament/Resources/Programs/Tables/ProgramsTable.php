@@ -48,7 +48,23 @@ class ProgramsTable
                     \Filament\Actions\DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa hệ đào tạo')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa hệ đào tạo này? Hồ sơ sẽ được chuyển vào Thùng rác.'),
+                        ->modalDescription('Bạn có chắc chắn muốn xóa hệ đào tạo này?')
+                        ->before(function (\Filament\Actions\DeleteAction $action, Program $record) {
+                            $code = $record->code;
+                            $name = $record->name;
+                            $hasRelations = Student::whereIn('program_type', [$code, $name])->exists()
+                                || Quota::whereIn('program_name', [$code, $name])->exists()
+                                || AnnualQuota::whereIn('program_name', [$code, $name])->exists();
+
+                            if ($hasRelations) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa hệ đào tạo')
+                                    ->body('Hệ đào tạo này đang có học viên đăng ký hoặc nằm trong bảng chỉ tiêu năm/chỉ tiêu đợt. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
+                            }
+                        }),
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục'),
                     \Filament\Actions\ForceDeleteAction::make()
@@ -77,28 +93,43 @@ class ProgramsTable
                     ->color(fn() => session('programs_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\Program::onlyTrashed()->count() > 0)
+                    
                     ->action(function () {
                         session(['programs_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('programs_show_trashed', false)
-                        ? [
-                            \Filament\Actions\RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            \Filament\Actions\ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn hệ đào tạo đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các hệ đào tạo đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            \Filament\Actions\DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ hệ đào tạo đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các hệ đào tạo đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.'),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('programs_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('programs_show_trashed', false)),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Xóa hàng loạt')
+                        ->modalHeading('Bỏ vào thùng rác')
+                        ->modalDescription('Bạn có chắc chắn muốn bỏ các mục đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                        ->before(function (\Filament\Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records) {
+                            $hasActive = $records->contains(function ($record) {
+                                $code = $record->code;
+                                $name = $record->name;
+                                return Student::whereIn('program_type', [$code, $name])->exists()
+                                    || Quota::whereIn('program_name', [$code, $name])->exists()
+                                    || AnnualQuota::whereIn('program_name', [$code, $name])->exists();
+                            });
+
+                            if ($hasActive) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa hàng loạt')
+                                    ->body('Một hoặc nhiều hệ đào tạo được chọn đang có học viên hoặc nằm trong chỉ tiêu tuyển sinh/năm. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
+                            }
+                        })
+                        ->visible(fn () => !session('programs_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->defaultSort('id', 'desc');
     }

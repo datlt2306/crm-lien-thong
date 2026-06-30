@@ -153,29 +153,22 @@ class QuotasTable {
                     EditAction::make()
                         ->label('Chỉnh sửa')
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_update')),
-                    DeleteAction::make()
+                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa chỉ tiêu tuyển sinh')
-                        ->modalDescription('Nếu chỉ tiêu này đã có học viên đăng ký, hệ thống sẽ tự động chuyển sang trạng thái Tạm dừng thay vì xóa vĩnh viễn.')
-                        ->modalSubmitActionLabel('Xóa/Tạm dừng')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete'))
-                        ->action(function ($record) {
-                            $hasStudents = Student::where('quota_id', $record->id)->exists();
-
+                        ->modalDescription('Bạn có chắc chắn muốn xóa chỉ tiêu tuyển sinh này?')
+                        ->before(function (\Filament\Actions\DeleteAction $action, Quota $record) {
+                            $hasStudents = $record->current_quota > 0 || Student::where('quota_id', $record->id)->exists();
                             if ($hasStudents) {
-                                $record->update(['status' => Quota::STATUS_INACTIVE]);
                                 Notification::make()
-                                    ->title('Đã chuyển sang Tạm dừng')
-                                    ->body("Chỉ tiêu này đã có học viên đăng ký nên không thể xóa. Trạng thái đã được cập nhật thành Tạm dừng.")
-                                    ->warning()
+                                    ->danger()
+                                    ->title('Không thể xóa chỉ tiêu')
+                                    ->body("Chỉ tiêu này đã có học viên đăng ký tuyển sinh. Không thể thực hiện xóa.")
                                     ->send();
-                            } else {
-                                $record->delete();
-                                Notification::make()
-                                    ->title('Đã xóa vĩnh viễn')
-                                    ->success() ->send();
+                                $action->halt();
                             }
-                        }),
+                        })
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete')),
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -189,31 +182,21 @@ class QuotasTable {
                     DeleteBulkAction::make()
                         ->label('Xóa đã chọn')
                         ->modalHeading('Xóa các chỉ tiêu đã chọn')
-                        ->modalDescription('Các chỉ tiêu đã có học viên sẽ được tự động chuyển sang trạng thái Tạm dừng.')
-                        ->modalSubmitActionLabel('Bắt đầu xử lý')
-                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete'))
-                        ->action(function ($records) {
-                            $deleted = 0;
-                            $deactivated = 0;
-
-                            foreach ($records as $record) {
-                                $hasStudents = Student::where('quota_id', $record->id)->exists();
-
-                                if ($hasStudents) {
-                                    $record->update(['status' => Quota::STATUS_INACTIVE]);
-                                    $deactivated++;
-                                } else {
-                                    $record->delete();
-                                    $deleted++;
-                                }
+                        ->modalDescription('Bạn có chắc chắn muốn xóa các chỉ tiêu tuyển sinh đã chọn?')
+                        ->before(function (\Filament\Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records) {
+                            $hasActive = $records->contains(function ($record) {
+                                return $record->current_quota > 0 || Student::where('quota_id', $record->id)->exists();
+                            });
+                            if ($hasActive) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa hàng loạt')
+                                    ->body('Một hoặc nhiều chỉ tiêu tuyển sinh được chọn đã có học viên đăng ký. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
                             }
-
-                            Notification::make()
-                                ->title('Xử lý hoàn tất')
-                                ->body("Đã xóa $deleted chỉ tiêu và chuyển Tạm dừng $deactivated chỉ tiêu có học viên.")
-                                ->success()
-                                ->send();
-                        }),
+                        })
+                        ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('quota_delete')),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

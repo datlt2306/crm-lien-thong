@@ -116,7 +116,7 @@ class UsersTable {
                     DeleteAction::make()
                         ->label('Xóa')
                         ->modalHeading('Xóa người dùng')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa người dùng này? Tài khoản sẽ được chuyển vào Thùng rác.')
+                        ->modalDescription('Bạn có chắc chắn muốn vô hiệu hóa tài khoản này? Tài khoản sẽ được lưu lại và có thể khôi phục sau.')
                         ->visible(fn($record) => Gate::allows('delete', $record)),
                 ])
                     ->label('Hành động')
@@ -137,34 +137,30 @@ class UsersTable {
                         session(['users_show_trashed' => false]);
                     }),
                 Action::make('show_trashed')
-                    ->label(fn() => 'Thùng rác (' . \App\Models\User::onlyTrashed()->count() . ')')
-                    ->icon('heroicon-o-trash')
+                    ->label(fn() => 'Vô hiệu hóa (' . \App\Models\User::onlyTrashed()->count() . ')')
+                    ->icon('heroicon-o-no-symbol')
                     ->color(fn() => session('users_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\User::onlyTrashed()->count() > 0)
+                    
                     ->action(function () {
                         session(['users_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('users_show_trashed', false)
-                        ? [
-                            \Filament\Actions\RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            \Filament\Actions\ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn người dùng đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các tài khoản người dùng đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ người dùng đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các người dùng đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
-                                ->visible(fn() => Gate::allows('viewAny', \App\Models\User::class)),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('users_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('users_show_trashed', false)),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Vô hiệu hóa hàng loạt')
+                        ->modalHeading('Vô hiệu hóa tài khoản đã chọn')
+                        ->modalDescription('Bạn có chắc chắn muốn vô hiệu hóa các tài khoản đã chọn? Bạn có thể khôi phục lại sau.')
+                        ->visible(fn () => !session('users_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->defaultSort('id', 'desc');
     }

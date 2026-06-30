@@ -70,17 +70,28 @@ class IntakesTable {
     public static function configure(Table $table): Table {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        $dedupedQuotaIds = Quota::query()
-            ->selectRaw('MAX(id) as id')
-            ->whereNotNull('intake_id')
-            ->groupBy(
-                'intake_id',
-                DB::raw('LOWER(TRIM(COALESCE(major_name, name)))'),
-                DB::raw("UPPER(TRIM(COALESCE(program_name, '')))")
-            );
+        $showTrashed = session('intakes_show_trashed', false);
 
-        $query = Quota::query()
-            ->join('intakes as i', 'i.id', '=', 'quotas.intake_id')
+        $dedupedQuotaIdsQuery = Quota::query()
+            ->selectRaw('MAX(id) as id')
+            ->whereNotNull('intake_id');
+
+        if ($showTrashed) {
+            $dedupedQuotaIdsQuery->onlyTrashed();
+        }
+
+        $dedupedQuotaIds = $dedupedQuotaIdsQuery->groupBy(
+            'intake_id',
+            DB::raw('LOWER(TRIM(COALESCE(major_name, name)))'),
+            DB::raw("UPPER(TRIM(COALESCE(program_name, '')))")
+        );
+
+        $query = Quota::query();
+        if ($showTrashed) {
+            $query->onlyTrashed();
+        }
+
+        $query->join('intakes as i', 'i.id', '=', 'quotas.intake_id')
             ->select('quotas.*', 'i.start_date as intake_start_date', 'i.end_date as intake_end_date', 'i.status as intake_status')
             ->with(['intake'])
             ->whereIn('quotas.id', $dedupedQuotaIds);
@@ -216,6 +227,17 @@ class IntakesTable {
                         ->label('Xóa')
                         ->modalHeading('Xóa đợt tuyển sinh')
                         ->modalDescription('Bạn có chắc chắn muốn xóa đợt tuyển sinh này? Hồ sơ sẽ được chuyển vào Thùng rác.')
+                        ->before(function (\Filament\Actions\DeleteAction $action, Quota $record) {
+                            $hasStudents = $record->current_quota > 0 || Student::where('quota_id', $record->id)->exists();
+                            if ($hasStudents) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Không thể xóa')
+                                    ->body('Đợt tuyển sinh này đã có học viên đăng ký tuyển sinh. Không thể thực hiện xóa.')
+                                    ->send();
+                                $action->halt();
+                            }
+                        })
                         ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_delete')),
                     \Filament\Actions\RestoreAction::make()
                         ->label('Khôi phục'),
@@ -231,7 +253,15 @@ class IntakesTable {
             ])
             ->toolbarActions([
                 \Filament\Actions\Action::make('show_active')
-                    ->label(fn() => 'Tất cả (' . \App\Models\Intake::whereNull('deleted_at')->count() . ')')
+                    ->label(fn() => 'Tất cả (' . Quota::query()->whereIn('id', Quota::query()
+                        ->selectRaw('MAX(id) as id')
+                        ->whereNotNull('intake_id')
+                        ->groupBy(
+                            'intake_id',
+                            DB::raw('LOWER(TRIM(COALESCE(major_name, name)))'),
+                            DB::raw("UPPER(TRIM(COALESCE(program_name, '')))")
+                        )
+                    )->count() . ')')
                     ->icon('heroicon-o-calendar')
                     ->color(fn() => !session('intakes_show_trashed', false) ? 'primary' : 'gray')
                     ->button()
@@ -240,34 +270,38 @@ class IntakesTable {
                         session(['intakes_show_trashed' => false]);
                     }),
                 \Filament\Actions\Action::make('show_trashed')
-                    ->label(fn() => 'Thùng rác (' . \App\Models\Intake::onlyTrashed()->count() . ')')
+                    ->label(fn() => 'Thùng rác (' . Quota::query()->onlyTrashed()->whereIn('id', Quota::query()
+                        ->onlyTrashed()
+                        ->selectRaw('MAX(id) as id')
+                        ->whereNotNull('intake_id')
+                        ->groupBy(
+                            'intake_id',
+                            DB::raw('LOWER(TRIM(COALESCE(major_name, name)))'),
+                            DB::raw("UPPER(TRIM(COALESCE(program_name, '')))")
+                        )
+                    )->count() . ')')
                     ->icon('heroicon-o-trash')
                     ->color(fn() => session('intakes_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\Intake::onlyTrashed()->count() > 0)
                     ->action(function () {
                         session(['intakes_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('intakes_show_trashed', false)
-                        ? [
-                            \Filament\Actions\RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            \Filament\Actions\ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn đợt tuyển sinh đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn các đợt tuyển sinh đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            \Filament\Actions\DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ đợt tuyển sinh đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các đợt tuyển sinh đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
-                                ->visible(fn() => \Illuminate\Support\Facades\Auth::user()?->can('intake_delete')),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('intakes_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('intakes_show_trashed', false)),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Xóa hàng loạt')
+                        ->modalHeading('Bỏ vào thùng rác')
+                        ->modalDescription('Bạn có chắc chắn muốn bỏ các mục đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                        ->visible(fn () => !session('intakes_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->defaultSort('created_at', 'desc');
     }

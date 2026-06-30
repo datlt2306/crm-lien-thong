@@ -652,6 +652,7 @@ class StudentsTable {
                                 ->helperText('Tải lên ảnh bill chuyển khoản hoặc phiếu thu để kế toán xác minh.'),
                         ])
                         ->visible(function (Student $record): bool {
+                            if ($record->trashed()) return false;
                             $user = Auth::user();
                             
                             // Nếu đã được kế toán xác minh (VERIFIED) thì không cho sửa bill nữa
@@ -722,6 +723,7 @@ class StudentsTable {
                         ->modalSubmitActionLabel('Xác nhận')
                         ->modalCancelActionLabel('Hủy')
                         ->visible(function (Student $record): bool {
+                            if ($record->trashed()) return false;
                             $user = Auth::user();
 
                             // Kiểm tra quyền thay đổi trạng thái nhập học
@@ -830,6 +832,7 @@ class StudentsTable {
                                 ->helperText('Bạn có thể tải lên phiếu thu ngay bây giờ hoặc bổ sung sau bằng hành động "Tải lên Phiếu thu".'),
                         ])
                         ->visible(function (Student $record): bool {
+                            if ($record->trashed()) return false;
                             $user = Auth::user();
                             if (!$user->can('payment_verify')) return false;
                             
@@ -926,6 +929,7 @@ class StudentsTable {
                             ];
                         })
                         ->visible(function (Student $record): bool {
+                            if ($record->trashed()) return false;
                             $user = Auth::user();
                             if ($record->payment && $record->payment->receipt_path) {
                                 return $user->can('payment_update_receipt');
@@ -961,6 +965,7 @@ class StudentsTable {
                         ])
                         ->modalSubmitActionLabel('Xác nhận hoàn trả')
                         ->visible(function (Student $record): bool {
+                            if ($record->trashed()) return false;
                             $user = Auth::user();
                             if (!$record->payment || $record->payment->status !== \App\Models\Payment::STATUS_VERIFIED) {
                                 return false;
@@ -1184,7 +1189,7 @@ class StudentsTable {
                                 ->body("Đã chuyển sang hệ " . (\App\Models\Student::getProgramTypeOptions()[$data['program_type']] ?? $data['program_type']) . " " . ($intakeName ? "({$intakeName})" : "") . ". " . ($feeDifference > 0 ? "Số tiền thừa: " . number_format($feeDifference, 0, ',', '.') . " VNĐ" : ""))
                                 ->send();
                         })
-                        ->visible(fn() => Auth::user()->can('student_update')),
+                        ->visible(fn(Student $record) => !$record->trashed() && Auth::user()->can('student_update')),
 
                     Action::make('confirm_refund')
                         ->label('Xác nhận hoàn tiền thừa')
@@ -1220,6 +1225,7 @@ class StudentsTable {
                                 ->send();
                         })
                         ->visible(function (Student $record) {
+                            if ($record->trashed()) return false;
                             if (!Auth::user()->can('payment_verify') || !$record->payment) {
                                 return false;
                             }
@@ -1230,18 +1236,9 @@ class StudentsTable {
 
                     RestoreAction::make()
                         ->label('Khôi phục')
-                        ->color('success'),
-
-                    ForceDeleteAction::make()
-                        ->label('Xóa vĩnh viễn')
-                        ->modalHeading('Xóa vĩnh viễn học viên')
-                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu học viên khỏi hệ thống. Bạn chắc chắn chứ?'),
-
-                    DeleteAction::make()
-                        ->label('Xóa (BẢN MỚI)')
-                        ->modalHeading('Xóa học viên')
-                        ->modalDescription('Bạn có chắc chắn muốn xóa học viên này? Hồ sơ sẽ được chuyển vào Thùng rác và có thể khôi phục sau.')
-                        ->visible(fn(Student $record) => Auth::user()->can('student_delete') && !$record->trashed()),
+                        ->color('success')
+                        ->visible(fn(Student $record) => $record->trashed()),
+                  
                 ])
                     ->label('Hành động')
                     ->icon('heroicon-m-ellipsis-vertical')
@@ -1265,28 +1262,101 @@ class StudentsTable {
                     ->color(fn() => session('students_show_trashed', false) ? 'danger' : 'gray')
                     ->button()
                     ->size('sm')
-                    ->visible(fn() => \App\Models\Student::onlyTrashed()->count() > 0)
+                    
                     ->action(function () {
                         session(['students_show_trashed' => true]);
                     }),
-                BulkActionGroup::make(
-                    session('students_show_trashed', false)
-                        ? [
-                            RestoreBulkAction::make()
-                                ->label('Khôi phục đã chọn'),
-                            ForceDeleteBulkAction::make()
-                                ->label('Xóa vĩnh viễn đã chọn')
-                                ->modalHeading('Xóa vĩnh viễn học viên đã chọn')
-                                ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu các học viên đã chọn khỏi hệ thống. Bạn chắc chắn chứ?'),
-                        ]
-                        : [
-                            DeleteBulkAction::make()
-                                ->label('Bỏ vào thùng rác')
-                                ->modalHeading('Bỏ học viên đã chọn vào thùng rác')
-                                ->modalDescription('Bạn có chắc chắn muốn bỏ các học viên đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.'),
-                        ]
-                )
-                ->label('Hành động hàng loạt'),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\RestoreBulkAction::make()
+                        ->label('Khôi phục')
+                        ->visible(fn () => session('students_show_trashed', false)),
+                    \Filament\Actions\ForceDeleteBulkAction::make()
+                        ->label('Xóa vĩnh viễn hàng loạt')
+                        ->modalHeading('Xóa vĩnh viễn đã chọn')
+                        ->modalDescription('Hành động này sẽ xóa hoàn toàn dữ liệu đã chọn khỏi hệ thống. Bạn chắc chắn chứ?')
+                        ->visible(fn () => session('students_show_trashed', false)),
+                    \Filament\Actions\BulkAction::make('confirm_enrollment_bulk')
+                        ->label('Xác nhận nhập học hàng loạt')
+                        ->icon('heroicon-o-academic-cap')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận nhập học hàng loạt')
+                        ->modalDescription('Hệ thống sẽ kiểm tra điều kiện lệ phí và hồ sơ của các sinh viên được chọn trước khi xác nhận nhập học.')
+                        ->modalSubmitActionLabel('Xác nhận')
+                        ->modalCancelActionLabel('Hủy')
+                        ->visible(fn() => Auth::user()->can('student_change_status') && !session('students_show_trashed', false))
+                        ->action(function ($records) {
+                            $successCount = 0;
+                            $failures = [];
+                            
+                            $requiredDocuments = [
+                                'phieu_tuyen_sinh',
+                                'phieu_xet_tuyen',
+                                'bang_cao_dang',
+                                'bang_thpt',
+                                'bang_diem',
+                                'giay_khai_sinh',
+                                'cccd',
+                                'giay_kham_suc_khoe',
+                                'anh_4x6',
+                            ];
+
+                            $docLabels = [
+                                'phieu_tuyen_sinh' => 'Phiếu tuyển sinh',
+                                'phieu_xet_tuyen' => 'Phiếu xét tuyển',
+                                'bang_cao_dang' => 'Bằng CĐ',
+                                'bang_thpt' => 'Bằng THPT',
+                                'bang_diem' => 'Bảng điểm',
+                                'giay_khai_sinh' => 'Giấy khai sinh',
+                                'cccd' => 'CCCD',
+                                'giay_kham_suc_khoe' => 'Giấy khám sức khỏe',
+                                'anh_4x6' => 'Ảnh 4x6',
+                            ];
+
+                            foreach ($records as $record) {
+                                // 1. Kiểm tra trạng thái thanh toán
+                                if (!$record->payment || $record->payment->status !== \App\Models\Payment::STATUS_VERIFIED) {
+                                    $failures[] = "SV {$record->full_name} ({$record->profile_code}): Lệ phí chưa được xác minh";
+                                    continue;
+                                }
+
+                                // 2. Kiểm tra tài liệu
+                                $checklist = $record->document_checklist ?? [];
+                                $missingDocs = array_diff($requiredDocuments, $checklist);
+                                if (!empty($missingDocs)) {
+                                    $missingList = array_map(fn($doc) => $docLabels[$doc] ?? $doc, $missingDocs);
+                                    $failures[] = "SV {$record->full_name} ({$record->profile_code}): Thiếu hồ sơ (" . implode(', ', $missingList) . ")";
+                                    continue;
+                                }
+
+                                // 3. Thực hiện nhập học
+                                $record->update(['status' => Student::STATUS_ENROLLED]);
+                                $successCount++;
+                            }
+
+                            if ($successCount > 0) {
+                                \Filament\Notifications\Notification::make()
+                                    ->success()
+                                    ->title("Đã xác nhận nhập học thành công")
+                                    ->body("Thành công: {$successCount} học viên.")
+                                    ->send();
+                            }
+
+                            if (!empty($failures)) {
+                                \Filament\Notifications\Notification::make()
+                                    ->danger()
+                                    ->title("Một số học viên không đủ điều kiện nhập học")
+                                    ->body(implode("\n", array_map(fn($f) => "• " . $f, $failures)))
+                                    ->duration(15000)
+                                    ->send();
+                            }
+                        }),
+                    \Filament\Actions\DeleteBulkAction::make()
+                        ->label('Xóa hàng loạt')
+                        ->modalHeading('Bỏ vào thùng rác')
+                        ->modalDescription('Bạn có chắc chắn muốn bỏ các mục đã chọn vào Thùng rác? Bạn có thể khôi phục lại sau.')
+                        ->visible(fn () => !session('students_show_trashed', false)),
+                ])->label('Hành động hàng loạt'),
             ])
             ->emptyStateHeading('Không có học viên')
             ->defaultSort('id', 'desc');
